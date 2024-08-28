@@ -646,6 +646,14 @@ def main():
         ctr += 1
         if ctr % 100 == 0:
             print(ctr)
+    
+    # Save the metadata about trimming to a file
+    with open(os.path.join(output_dir, 'trimming_metadata.tsv'), mode = 'w', encoding = 'utf-8') as file:
+        file.write('htid\ttotal_words\tpct_trim\tpct_header\tremaining_words\n')
+        for htid, data in trimming_metadata.items():
+            file.write(htid + '\t' + str(data['total_words']) + '\t' + str(data['pct_trim']) + '\t' + str(data['pct_header']) + '\t' + str(data['remaining_words']) + '\n')
+        
+    print('Done!')
 
 if __name__ == '__main__':
     main()
