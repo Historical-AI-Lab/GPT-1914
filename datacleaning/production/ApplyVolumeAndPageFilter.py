@@ -393,7 +393,7 @@ def apply_volume_filter(volumematrix, metadata):
     X = scaler.transform(volumematrix.drop(['title', 'inferred_date'], axis=1))
     y = volume_model.predict_proba(X)
 
-    filtered_out = ['exclude' for x in y if x > 0.8 else 'ok']
+    filtered_out = ['exclude' if x > 0.8 else 'ok' for x in y[:, 1]]
     metadata['exclude'] = filtered_out
 
     return metadata
@@ -477,7 +477,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--meta", help="the path to the metadata file")
     parser.add_argument("-f", "--folder", help="the path to the folder containing the text files")
-    parser.add_argument("-o", "--output", help="the path to the output file")
+    parser.add_argument("-o", "--output", help="the path to the output directory")
 
     args = parser.parse_args()
 
@@ -494,7 +494,7 @@ def main():
     if args.output:
         output_dir = args.output
     else:
-        sys.exit("Please provide the path to the output file")
+        sys.exit("Please provide the path to the output directory")
     
     page_model = joblib.load('page_RF_model4.pkl') # This is the page-level model that will be used to filter out paratext
 
