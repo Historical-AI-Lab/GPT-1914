@@ -371,6 +371,7 @@ def labeled_volume(htid, textroot):
     textpath = path + postfix + '/' + postfix + '.norm.txt'
 
     if not os.path.isfile(textpath):
+        print(textpath, 'does not exist.')
         return []
 
     pages = paginate_file(textpath)
