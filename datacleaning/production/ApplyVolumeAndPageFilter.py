@@ -503,7 +503,7 @@ def main():
     
     metadata = pd.read_csv(meta_path, sep = '\t', low_memory = False)
 
-    htids = metadata['htid'].tolist()
+    htids = metadata['HTid'].tolist()
     
     allpages = []
 
