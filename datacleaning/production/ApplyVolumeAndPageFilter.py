@@ -518,7 +518,7 @@ def main():
             alreadyhave.add(htid)
 
         #try:
-        pages = labeled_volume(htid, folder_path)
+        pages = labeled_volume(htid, input_dir)
         if len(pages) < 1:
             print('No pages in', htid)
             continue
