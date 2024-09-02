@@ -489,11 +489,19 @@ def main():
     
     if args.folder:
         input_dir = args.folder
+        # if the input directory doesn't end in a slash we add one
+        if input_dir[-1] != '/':
+            input_dir = input_dir + '/'
+        
     else:
         sys.exit("Please provide the path to the folder containing the text files")
     
     if args.output:
         output_dir = args.output
+        # if the output directory doesn't end in a slash we add one
+        if output_dir[-1] != '/':
+            output_dir = output_dir + '/'
+
     else:
         sys.exit("Please provide the path to the output directory")
     
