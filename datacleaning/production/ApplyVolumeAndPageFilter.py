@@ -528,20 +528,20 @@ def main():
         try:
             pages = labeled_volume(htid, input_dir)
             if len(pages) < 1:
-                print('No pages in', htid)
+                print('No pages in', htid, flush=True)
                 continue
         except:
-            print('Error with', htid)
+            print('Error with', htid, flush=True)
             continue
         
         ctr += 1
         if ctr % 50 == 1:
-            print(ctr)
+            print(ctr, flush=True)
 
         allpages.extend(pages)
 
     print('Total volumes:', ctr)
-    print('Total pages:', len(allpages))
+    print('Total pages:', len(allpages), flush=True)
 
     featurematrix = pd.DataFrame(allpages)
 
@@ -579,7 +579,7 @@ def main():
     # Now we have a featurematrix with a row for each page, and a volumematrix
     # with a row for each volume. Let's use the volumematrix to filter out
     # volumes that are not in English or contain purely reference material.
-
+    print('Applying volume filter...', flush=True)
     filtered_meta = apply_volume_filter(volumematrix, metadata)
 
     # Now we're going to apply a page-level filter to each volume that remains.
@@ -587,6 +587,8 @@ def main():
 
     ctr = 0
     trimming_metadata = dict()
+
+    print('Trimming volumes...', flush=True)
 
     for htid in filtered_meta.index:
         if filtered_meta.loc[htid, 'exclude'] == 'exclude':
@@ -653,7 +655,7 @@ def main():
         
         ctr += 1
         if ctr % 100 == 0:
-            print(ctr)
+            print(ctr, flush=True)
     
     # Save the metadata about trimming to a file
     with open(os.path.join(output_dir, 'trimming_metadata.tsv'), mode = 'w', encoding = 'utf-8') as file:
