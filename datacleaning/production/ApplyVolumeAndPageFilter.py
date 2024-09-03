@@ -525,21 +525,20 @@ def main():
         else:
             alreadyhave.add(htid)
 
-        #try:
-        pages = labeled_volume(htid, input_dir)
-        if len(pages) < 1:
-            print('No pages in', htid)
+        try:
+            pages = labeled_volume(htid, input_dir)
+            if len(pages) < 1:
+                print('No pages in', htid)
+                continue
+        except:
+            print('Error with', htid)
             continue
-        #except:
-            # print('Error with', htid)
-            # continue
         
         ctr += 1
         if ctr % 50 == 1:
             print(ctr)
 
         allpages.extend(pages)
-
 
     print('Total volumes:', ctr)
     print('Total pages:', len(allpages))
