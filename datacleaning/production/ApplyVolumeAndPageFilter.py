@@ -386,7 +386,7 @@ def labeled_volume(htid, textroot):
 
     return pages
 
-def apply_volume_filter(volumematrix, metadat, volume_model, scaler):
+def apply_volume_filter(volumematrix, metadata, volume_model, scaler):
 
     usedfeatures = volumematrix.loc[ : , ['fracalpha', 'fracnumeric', 'verbs', 'top2000words', 'max_top2000words']]
 
