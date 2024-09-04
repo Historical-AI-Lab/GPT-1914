@@ -546,7 +546,7 @@ def main():
     featurematrix = pd.DataFrame(allpages)
 
     volumematrix = featurematrix.groupby('htid').mean().reset_index()
-    metadata['htid'] = metadata['htid'].apply(clean_pairtree)
+    metadata['htid'] = metadata['HTid'].apply(clean_pairtree)
     metadata.set_index('htid', inplace = True)
     volumematrix.set_index('htid', inplace = True)
     volumematrix = volumematrix.merge(metadata[['title', 'inferred_date']], left_index=True, right_index=True, how='inner')
