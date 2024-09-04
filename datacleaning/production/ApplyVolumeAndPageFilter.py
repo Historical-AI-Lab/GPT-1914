@@ -590,7 +590,9 @@ def main():
     trimming_metadata = dict()
 
     print('Trimming volumes...', flush=True)
-
+    print(featurematrix.shape, flush=True)
+    print(featurematrix.columns, flush=True)
+    print(featurematrix.index, flush=True)
     for htid in filtered_meta.index:
         if filtered_meta.loc[htid, 'exclude'] == 'exclude':
             continue
