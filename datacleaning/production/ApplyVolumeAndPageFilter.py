@@ -386,12 +386,11 @@ def labeled_volume(htid, textroot):
 
     return pages
 
-def apply_volume_filter(volumematrix, metadata):
+def apply_volume_filter(volumematrix, metadat, volume_model, scaler):
 
-    volume_model = joblib.load('logreg_for_volume_filter.pkl')
-    scaler = joblib.load('scaler_for_volume_filter.pkl')
+    usedfeatures = volumematrix.loc[ : , ['fracalpha', 'fracnumeric', 'verbs', 'top2000words', 'max_top2000words']]
 
-    X = scaler.transform(volumematrix.drop(['title', 'inferred_date'], axis=1))
+    X = scaler.transform(usedfeatures)
     y = volume_model.predict_proba(X)
 
     filtered_out = ['exclude' if x > 0.8 else 'ok' for x in y[:, 1]]
@@ -506,6 +505,8 @@ def main():
         sys.exit("Please provide the path to the output directory")
     
     page_model = joblib.load('page_RF_model4.pkl') # This is the page-level model that will be used to filter out paratext
+    volume_model = joblib.load('logreg_for_volume_filter.pkl')
+    scaler = joblib.load('scaler_for_volume_filter.pkl')
 
     ctr = 0
     alreadyhave = set()
@@ -580,7 +581,7 @@ def main():
     # with a row for each volume. Let's use the volumematrix to filter out
     # volumes that are not in English or contain purely reference material.
     print('Applying volume filter...', flush=True)
-    filtered_meta = apply_volume_filter(volumematrix, metadata)
+    filtered_meta = apply_volume_filter(volumematrix, metadata, volume_model, scaler)
 
     # Now we're going to apply a page-level filter to each volume that remains.
     # We'll identify pages that are likely to be paratext, and remove them.
@@ -594,7 +595,7 @@ def main():
         if filtered_meta.loc[htid, 'exclude'] == 'exclude':
             continue
         pages = featurematrix[featurematrix.index == htid]
-        probabilities = clf.predict_proba(pages)
+        probabilities = page_model.predict_proba(pages)
 
         # Create a dataframe with columns for pagenum, htid, and probability
         vol_df = pd.DataFrame({
