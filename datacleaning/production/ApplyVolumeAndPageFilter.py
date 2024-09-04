@@ -596,7 +596,7 @@ def main():
     for htid in filtered_meta.index:
         if filtered_meta.loc[htid, 'exclude'] == 'exclude':
             continue
-        pages = featurematrix[featurematrix.index == htid].drop(['htid', 'n2000words'], axis=1)
+        pages = featurematrix[featurematrix['htid'] == htid].drop(['htid', 'n2000words'], axis=1)
         print(htid, pages.shape, flush=True)
         probabilities = page_model.predict_proba(pages)
 
