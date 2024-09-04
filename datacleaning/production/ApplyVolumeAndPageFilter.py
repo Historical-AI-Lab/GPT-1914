@@ -384,7 +384,7 @@ def labeled_volume(htid, textroot):
     
     pages = add_relative_features(pages, htid)
 
-    return pages
+    return pages, textpath
 
 def apply_volume_filter(volumematrix, metadata, volume_model, scaler):
 
@@ -516,6 +516,7 @@ def main():
     htids = metadata['HTid'].tolist()
     
     allpages = []
+    pathdictionary = dict()
 
     for htid in htids:
 
@@ -527,7 +528,8 @@ def main():
             alreadyhave.add(htid)
 
         try:
-            pages = labeled_volume(htid, input_dir)
+            pages, path_to_vol = labeled_volume(htid, input_dir)
+            pathdictionary[htid] = path_to_vol
             if len(pages) < 1:
                 print('No pages in', htid, flush=True)
                 continue
@@ -611,7 +613,7 @@ def main():
         vol_df = vol_df.reset_index(drop=True)
         vol_df['inferred_labels'] = simple_probabilistic_cut(vol_df, threshold = 0.5, longlookweight = 0.1)
     
-        input_path = os.path.join(input_dir, htid + '.norm.txt')
+        input_path = pathdictionary[htid]
         output_path = os.path.join(output_dir, htid + '.trim.txt')
 
         pages = []
