@@ -518,6 +518,8 @@ def main():
     allpages = []
     pathdictionary = dict()
 
+    foundhtids = []
+
     for htid in htids:
 
         htid = clean_pairtree(htid)
@@ -542,11 +544,15 @@ def main():
             print(ctr, flush=True)
 
         allpages.extend(pages)
+        foundhtids.append(clean_pairtree(htid))
 
     print('Total volumes:', ctr)
     print('Total pages:', len(allpages), flush=True)
 
     featurematrix = pd.DataFrame(allpages)
+
+    # Now we have a featurematrix with a row for each page. We're going to
+    # use it to create a volumematrix, with a row for each volume.
 
     volumematrix = featurematrix.groupby('htid').mean().reset_index()
     metadata['htid'] = metadata['HTid'].apply(clean_pairtree)
@@ -582,6 +588,18 @@ def main():
     # Now we have a featurematrix with a row for each page, and a volumematrix
     # with a row for each volume. Let's use the volumematrix to filter out
     # volumes that are not in English or contain purely reference material.
+
+    # Before we can do that, we need to deal with the problem that some rows
+    # in the metadata file don't have corresponding rows in the volumematrix,
+    # because we couldn't find text files for them. We'll exclude those rows,
+    # by only keeping rows where the index is in the 'foundhtids' list.
+    # Note that we have transformed both the index, and the elements of the 'foundhtids'
+    # list, to a standard form that eliminates pairtree encoding.
+
+    metadata = metadata.loc[foundhtids, :]
+    print('Metadata rows after filtering:', len(metadata))
+    print('Volumematrix rows after filtering:', len(volumematrix))
+
     print('Applying volume filter...', flush=True)
     filtered_meta = apply_volume_filter(volumematrix, metadata, volume_model, scaler)
 
