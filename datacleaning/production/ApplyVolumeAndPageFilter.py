@@ -473,11 +473,13 @@ def main():
     # -m --meta: the path to the metadata file
     # -f --folder: the path to the folder containing the text files
     # -o --output: the path to the output file
+    # -p --processname: the name of the process, which will be used to name the trimming_metadata file
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--meta", help="the path to the metadata file")
     parser.add_argument("-f", "--folder", help="the path to the folder containing the text files")
     parser.add_argument("-o", "--output", help="the path to the output directory")
+    parser.add_argument("-p", "--processname", help="the name of the process")
 
     args = parser.parse_args()
 
@@ -503,6 +505,11 @@ def main():
 
     else:
         sys.exit("Please provide the path to the output directory")
+    
+    if args.processname:
+        processname = args.processname
+    else:
+        processname = 'default'
     
     page_model = joblib.load('page_RF_model4.pkl') # This is the page-level model that will be used to filter out paratext
     volume_model = joblib.load('logreg_for_volume_filter.pkl')
@@ -682,7 +689,7 @@ def main():
             print(ctr, flush=True)
     
     # Save the metadata about trimming to a file
-    with open(os.path.join(output_dir, 'trimming_metadata.tsv'), mode = 'w', encoding = 'utf-8') as file:
+    with open(os.path.join(output_dir, 'trimming_metadata_' + processname + '.tsv'), mode = 'w', encoding = 'utf-8') as file:
         file.write('htid\ttotal_words\tpct_trim\tpct_header\tremaining_words\n')
         for htid, data in trimming_metadata.items():
             file.write(htid + '\t' + str(data['total_words']) + '\t' + str(data['pct_trim']) + '\t' + str(data['pct_header']) + '\t' + str(data['remaining_words']) + '\n')
