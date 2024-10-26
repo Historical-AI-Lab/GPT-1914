@@ -135,7 +135,7 @@ def main(input_folder, output_folder, time_limit):
             break
         
         if filename.endswith('.txt'):
-            print(f'Processing {filename}')
+            print(f'Processing {filename}', flush = True)
             with open(os.path.join(input_folder, filename), 'r') as f:
                 text = f.read()
                 if len(text) > 2000000:
