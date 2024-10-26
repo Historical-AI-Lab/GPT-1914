@@ -12,7 +12,7 @@
 # #tokensRoberta #tokensGPT2 sentence
 
 import os
-import sys
+import sys, time
 # import nltk
 import torch
 import argparse
@@ -100,7 +100,7 @@ def split_text_at_whitespace(text, max_length=2000000):
 
     return chunks
 
-def main(input_folder, output_folder):
+def main(input_folder, output_folder, time_limit):
     # Load tokenizers
     roberta_tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
     gpt2_tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
@@ -111,6 +111,9 @@ def main(input_folder, output_folder):
     
     # If a file exists named output_folder.processed_files.txt,
     # read it and skip the files that have already been processed.
+
+    # record the start time
+    start_time = time.time()
 
     processed_files = set()
     processed_file = os.path.join(output_folder, 'processed_files.txt')
@@ -124,7 +127,13 @@ def main(input_folder, output_folder):
         if filename in processed_files:
             print(f'{filename} has already been processed. Skipping...')
             continue
-
+        
+        # Check if the time limit has been reached
+        elapsed_time = time.time() - start_time
+        if elapsed_time > time_limit * 3600:
+            print(f'Time limit of {time_limit} hours reached. Exiting...')
+            break
+        
         if filename.endswith('.txt'):
             print(f'Processing {filename}')
             with open(os.path.join(input_folder, filename), 'r') as f:
@@ -157,6 +166,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Sentence splitter')
     parser.add_argument('-i', '--input_folder', default='input', help='Input folder (default: input)')
     parser.add_argument('-o', '--output_folder', default='output', help='Output folder (default: output)')
+    parser.add_argument('-t', '--time_limit', type=int, default=24, help='Maximum wall time in hours (default: 24)')
     args = parser.parse_args()
 
     if args.input_folder == 'input':
@@ -164,5 +174,5 @@ if __name__ == '__main__':
     if args.output_folder == 'output':
         print('No output folder provided. Using default: output')
 
-    main(args.input_folder, args.output_folder)
+    main(args.input_folder, args.output_folder, args.time_limit)
 
