@@ -118,44 +118,119 @@ def split_text_at_whitespace(text, max_length=2000000):
 
     return chunks
 
-def recursive_split(row, roberta_tokenizer, gpt2_tokenizer, max_length = 500):
+def recursive_split(row, roberta_tokenizer, gpt2_tokenizer, max_length=500, depth=0):
     '''
-    Split a sentence into smaller chunks of fewer than 500 tokens each.'''
-
-    onelessthanmax = max_length - 1
-    listofrows = []
-
-    maxtokens = max(row['#tokensRoberta'], row['#tokensGPT2'])
-    words = row['sentence'].split()
-    num_chunks = (maxtokens + onelessthanmax) // max_length
-    chunk_size = (len(words) + num_chunks - 1) // num_chunks
-
-    sentencepieces = []
-    for i in range(0, len(words), chunk_size):
-        sentencepiece = ' '.join(words[i:i + chunk_size])
-        sentencepieces.append(sentencepiece)
+    Splits a sentence into smaller chunks of fewer than 500 tokens each.
+    Claude added a depth parameter to prevent infinite recursion.
+    '''
     
-    for sentencepiece in sentencepieces:
-        if not sentencepiece.strip():
-            continue
-        roberta_tokens, processed_r = count_tokens([sentencepiece], roberta_tokenizer)
-        gpt2_tokens, processed_g = count_tokens([sentencepiece], gpt2_tokenizer)
-        if len(processed_r) != 1 or len(processed_g) != 1:
-            print('Error: Sentence not processed correctly.')
-            continue
+    # Safety check - limit recursion depth
+    if depth > 10:  # Arbitrary limit - adjust if needed
+        print(f"Warning: Maximum recursion depth reached. Sentence may be too complex to split properly.")
+        return []
+
+    listofrows = []
+    sentence = row['sentence']
+    
+    # If the sentence is already small enough, return it
+    if max(row['#tokensRoberta'], row['#tokensGPT2']) < max_length:
+        return [row]
+
+    # Calculate how many pieces we need based on the larger token count
+    maxtokens = max(row['#tokensRoberta'], row['#tokensGPT2'])
+    num_chunks = (maxtokens + max_length - 1) // max_length
+    
+    # Split into approximately equal chunks by characters rather than words
+    # This provides better correlation with token counts than word-based splitting
+    char_length = len(sentence)
+    chunk_size = char_length // num_chunks
+    
+    # Create chunks by finding the nearest space to our target positions
+    start = 0
+    while start < char_length:
+        if start + chunk_size >= char_length:
+            end = char_length
         else:
+            # Find the nearest space after our target position
+            end = sentence.find(' ', start + chunk_size)
+            if end == -1:  # If no space found, take the whole rest
+                end = char_length
+            # If the space is too far after our target, find the nearest space before
+            elif end > start + chunk_size * 1.5:
+                last_space = sentence.rfind(' ', start, start + chunk_size)
+                if last_space != -1:
+                    end = last_space
+
+        chunk = sentence[start:end].strip()
+        if chunk:
+            roberta_tokens, processed_r = count_tokens([chunk], roberta_tokenizer)
+            gpt2_tokens, processed_g = count_tokens([chunk], gpt2_tokenizer)
+            
+            if len(processed_r) != 1 or len(processed_g) != 1:
+                print('Error: Sentence not processed correctly.')
+                start = end + 1
+                continue
+                
             roberta_tokens = roberta_tokens[0]
             gpt2_tokens = gpt2_tokens[0]
-            potential_row = pd.Series({'#tokensRoberta': roberta_tokens,
-                            '#tokensGPT2': gpt2_tokens,
-                            'sentence': sentencepiece})
+            potential_row = pd.Series({
+                '#tokensRoberta': roberta_tokens,
+                '#tokensGPT2': gpt2_tokens,
+                'sentence': chunk
+            })
 
-        if max(roberta_tokens, gpt2_tokens) < max_length:
-            listofrows.append(potential_row)
-        else:
-            listofrows.extend(recursive_split(potential_row, roberta_tokenizer, gpt2_tokenizer, max_length))
-    
+            # If the chunk is still too large, recursively split it
+            if max(roberta_tokens, gpt2_tokens) >= max_length:
+                listofrows.extend(recursive_split(potential_row, 
+                                               roberta_tokenizer, 
+                                               gpt2_tokenizer, 
+                                               max_length, 
+                                               depth + 1))
+            else:
+                listofrows.append(potential_row)
+
+        start = end + 1
+
     return listofrows
+
+# def recursive_split(row, roberta_tokenizer, gpt2_tokenizer, max_length = 500):
+#     '''
+#     Split a sentence into smaller chunks of fewer than 500 tokens each.'''
+
+#     onelessthanmax = max_length - 1
+#     listofrows = []
+
+#     maxtokens = max(row['#tokensRoberta'], row['#tokensGPT2'])
+#     words = row['sentence'].split()
+#     num_chunks = (maxtokens + onelessthanmax) // max_length
+#     chunk_size = (len(words) + num_chunks - 1) // num_chunks
+
+#     sentencepieces = []
+#     for i in range(0, len(words), chunk_size):
+#         sentencepiece = ' '.join(words[i:i + chunk_size])
+#         sentencepieces.append(sentencepiece)
+    
+#     for sentencepiece in sentencepieces:
+#         if not sentencepiece.strip():
+#             continue
+#         roberta_tokens, processed_r = count_tokens([sentencepiece], roberta_tokenizer)
+#         gpt2_tokens, processed_g = count_tokens([sentencepiece], gpt2_tokenizer)
+#         if len(processed_r) != 1 or len(processed_g) != 1:
+#             print('Error: Sentence not processed correctly.')
+#             continue
+#         else:
+#             roberta_tokens = roberta_tokens[0]
+#             gpt2_tokens = gpt2_tokens[0]
+#             potential_row = pd.Series({'#tokensRoberta': roberta_tokens,
+#                             '#tokensGPT2': gpt2_tokens,
+#                             'sentence': sentencepiece})
+
+#         if max(roberta_tokens, gpt2_tokens) < max_length:
+#             listofrows.append(potential_row)
+#         else:
+#             listofrows.extend(recursive_split(potential_row, roberta_tokenizer, gpt2_tokenizer, max_length))
+    
+#     return listofrows
 
 def main(input_folder, output_folder, time_limit):
     # Load tokenizers
