@@ -63,7 +63,7 @@ def split_sentences(text):
 def count_tokens(sentences, tokenizer):
 
     if not sentences:
-        return []
+        return [], []
     
     valid_sentences = [sentence for sentence in sentences if sentence.strip()]
 
@@ -217,14 +217,15 @@ def main(input_folder, output_folder, time_limit):
                         num_tokens_roberta, processed_r = count_tokens(sentences, roberta_tokenizer)
                         num_tokens_gpt2, processed_g = count_tokens(sentences, gpt2_tokenizer)
                         tokenization_end_time = time.time()
+                        total_tokenization_time += tokenization_end_time - tokenization_start_time
                         if len(processed_r) != len(sentences) or len(processed_g) != len(sentences):
                             print('Error: Chunk not processed correctly.')
                             continue
-                        total_tokenization_time += tokenization_end_time - tokenization_start_time
-                        df = pd.DataFrame({'#tokensRoberta': num_tokens_roberta,
+                        else:
+                            df = pd.DataFrame({'#tokensRoberta': num_tokens_roberta,
                                            '#tokensGPT2': num_tokens_gpt2,
                                            'sentence': sentences})
-                        dfs.append(df)
+                            dfs.append(df)
                     df = pd.concat(dfs)
                 else:
                     spacy_start_time = time.time()
@@ -237,10 +238,11 @@ def main(input_folder, output_folder, time_limit):
                     num_tokens_gpt2, processed_g = count_tokens(sentences, gpt2_tokenizer)
                     tokenization_end_time = time.time()
                     total_tokenization_time += tokenization_end_time - tokenization_start_time
-                    if len(processed_r) != len(sentences) or len(processed_g) != len(sentences):
-                            print('Error: File not processed correctly.')
+                    if len(processed_r) != len(sentences) or len(processed_g) != len(sentences) or len(sentences) == 0:
+                            print('Error: File not processed correctly, length of sentences:', len(sentences))
                             continue
-                    df = pd.DataFrame({'#tokensRoberta': num_tokens_roberta,
+                    else:
+                        df = pd.DataFrame({'#tokensRoberta': num_tokens_roberta,
                                    '#tokensGPT2': num_tokens_gpt2,
                                    'sentence': sentences})
                 
@@ -272,7 +274,11 @@ def main(input_folder, output_folder, time_limit):
                     print(f'Number of tokens differ between tokenizers in {filename}.')
                     discrepancy_count += 1
 
-                df.to_csv(os.path.join(output_folder, filename.replace('.txt', '.tsv')), sep='\t', index=False)
+                # only print non-empty data frames
+                if not df.empty:
+                    df.to_csv(os.path.join(output_folder, filename.replace('.txt', '.tsv')), sep='\t', index=False)
+                else:
+                    print(f'Warning: Empty data frame for {filename}. Skipping...')
                 with open(processed_file, 'a') as f:
                     f.write(filename + '\n')
 
