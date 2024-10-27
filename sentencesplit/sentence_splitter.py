@@ -63,7 +63,7 @@ def split_sentences(text):
 def count_tokens(sentences, tokenizer):
 
     # Use batch tokenization for faster performance
-    batch_tokens = tokenizer(valid_sentences, add_special_tokens=False)
+    batch_tokens = tokenizer(sentences, add_special_tokens=False)
     num_tokens = [len(ids) for ids in batch_tokens['input_ids']]
     return num_tokens
 
@@ -103,7 +103,10 @@ def split_text_at_whitespace(text, max_length=2000000):
 
     return chunks
 
-def recursive_split(row, max_length = 400):
+def recursive_split(row, roberta_tokenizer, gpt2_tokenizer, max_length = 500):
+    '''
+    Split a sentence into smaller chunks of fewer than 500 tokens each.'''
+
     onelessthanmax = max_length - 1
     listofrows = []
 
@@ -122,14 +125,14 @@ def recursive_split(row, max_length = 400):
         gpt2_tokens = count_tokens([sentencepiece], gpt2_tokenizer)[0]
         potential_row = pd.Series({'#tokensRoberta': roberta_tokens,
                             '#tokensGPT2': gpt2_tokens,
-                            'sentence': sentencepiece}))
+                            'sentence': sentencepiece})
         
         if not sentencepiece.strip():
             continue
-        elif max(roberta_tokens, gpt2_tokens) < 510:
+        elif max(roberta_tokens, gpt2_tokens) < max_length:
             listofrows.append(potential_row)
         else:
-            listofrows.extend(recursive_split(potential_row, max_length))
+            listofrows.extend(recursive_split(potential_row, roberta_tokenizer, gpt2_tokenizer, max_length))
     
     return listofrows
 
@@ -225,7 +228,7 @@ def main(input_folder, output_folder, time_limit):
                     listofrows = []
                     for index, row in df.iterrows():
                         if row['#tokensRoberta'] > 510 or row['#tokensGPT2'] > 510:
-                            listofrows.extend(recursive_split(row))
+                            listofrows.extend(recursive_split(row, roberta_tokenizer, gpt2_tokenizer, max_length = 500))
                         else:
                             listofrows.append(row)
                 
