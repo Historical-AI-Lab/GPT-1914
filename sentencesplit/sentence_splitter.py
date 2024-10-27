@@ -44,9 +44,8 @@ def split_sentences(text):
 
     transformed_sentences = []
     for sentence in sentences:
-         if not sentence.strip():     # Skip empty sentences
+        if not sentence.strip():     # Skip empty sentences
             continue
-
         words = sentence.split()
         if len(words) > 350:
             num_chunks = (len(words) + 349) // 350  # Calculate the number of chunks needed
