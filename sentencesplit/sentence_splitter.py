@@ -13,18 +13,20 @@
 
 import os
 import sys, time
-# import nltk
+import nltk
 import torch
 import argparse
 import pandas as pd
 from transformers import RobertaTokenizer, GPT2Tokenizer
 
-import spacy
+# import spacy
 
-# Load the spaCy model (make sure to install it first with: python -m spacy download en_core_web_sm)
-nlp = spacy.load('en_core_web_sm')
-nlp = spacy.load('en_core_web_sm')
-nlp.max_length = 2100000 # Increase the maximum text length
+nltk.download('punkt_tab')
+
+# # Load the spaCy model (make sure to install it first with: python -m spacy download en_core_web_sm)
+# nlp = spacy.load('en_core_web_sm')
+# nlp = spacy.load('en_core_web_sm')
+# nlp.max_length = 2100000 # Increase the maximum text length
 
 def tabless(text):
     # Remove tabs from text
@@ -33,9 +35,9 @@ def tabless(text):
 def split_sentences(text):
     # Split text into sentences
     text = text.replace('<pb>', ' ')
-    # sentences = nltk.sent_tokenize(text)
-    doc = nlp(text)
-    sentences = [sent.text for sent in doc.sents]
+    sentences = nltk.sent_tokenize(text)
+    # doc = nlp(text)
+    # sentences = [sent.text for sent in doc.sents]
 
     # Sentences greater than 350 words are split into smaller chunks
     # of fewer than 350 words each
@@ -108,12 +110,17 @@ def main(input_folder, output_folder, time_limit):
     # Create output folder if it doesn't exist
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
+
+    # Initialize timers for benchmarking
+    total_spacy_time = 0.0
+    total_tokenization_time = 0.0
     
     # If a file exists named output_folder.processed_files.txt,
     # read it and skip the files that have already been processed.
 
     # record the start time
     start_time = time.time()
+    discrepancy_count = 0
 
     processed_files = set()
     processed_file = os.path.join(output_folder, 'processed_files.txt')
@@ -142,25 +149,87 @@ def main(input_folder, output_folder, time_limit):
                     chunks = split_text_at_whitespace(text, max_length=2000000)
                     dfs = []
                     for i, chunk in enumerate(chunks):
+                        spacy_start_time = time.time()
                         sentences = split_sentences(chunk)
+                        spacy_end_time = time.time()
+                        total_spacy_time += spacy_end_time - spacy_start_time
+
+                        tokenization_start_time = time.time()
                         num_tokens_roberta = count_tokens(sentences, roberta_tokenizer)
                         num_tokens_gpt2 = count_tokens(sentences, gpt2_tokenizer)
+                        tokenization_end_time = time.time()
+                        total_tokenization_time += tokenization_end_time - tokenization_start_time
                         df = pd.DataFrame({'#tokensRoberta': num_tokens_roberta,
                                            '#tokensGPT2': num_tokens_gpt2,
                                            'sentence': sentences})
                         dfs.append(df)
                     df = pd.concat(dfs)
                 else:
+                    spacy_start_time = time.time()
                     sentences = split_sentences(text)
+                    spacy_end_time = time.time()
+                    total_spacy_time += spacy_end_time - spacy_start_time
+
+                    tokenization_start_time = time.time()
                     num_tokens_roberta = count_tokens(sentences, roberta_tokenizer)
                     num_tokens_gpt2 = count_tokens(sentences, gpt2_tokenizer)
+                    tokenization_end_time = time.time()
+                    total_tokenization_time += tokenization_end_time - tokenization_start_time
                     df = pd.DataFrame({'#tokensRoberta': num_tokens_roberta,
                                    '#tokensGPT2': num_tokens_gpt2,
                                    'sentence': sentences})
                 
+                # We iterate through the rows of df checking if the number of tokens
+                # is greater than 510 in either of the tokenizers. If it is, we split
+                # the sentence into smaller chunks of fewer than 400 tokens each.
+                # We do this by splitting the sentence at word boundaries
+                # Since words are not tokens, we calculate the number of words (proportional
+                # to total words) needed to produce chunks of fewer than 400 tokens.
+
+                if max(df['#tokensRoberta'].max(), df['#tokensGPT2'].max()) > 510:
+                    listofrows = []
+                    for index, row in df.iterrows():
+                        if row['#tokensRoberta'] > 510 or row['#tokensGPT2'] > 510:
+                            maxtokens = max(row['#tokensRoberta'], row['#tokensGPT2'])
+                            words = row['sentence'].split()
+                            num_chunks = (maxtokens + 399) // 400
+                            chunk_size = (len(words) + num_chunks - 1) // num_chunks
+
+                            sentencepieces = []
+                            for i in range(0, len(words), chunk_size):
+                                sentencepiece = ' '.join(words[i:i + chunk_size])
+                                sentencepieces.append(sentencepiece)
+                            
+                            for sentencepiece in sentencepieces:
+                                roberta_tokens = count_tokens([sentencepiece], roberta_tokenizer)[0]
+                                gpt2_tokens = count_tokens([sentencepiece], gpt2_tokenizer)[0]
+                                listofrows.append(pd.Series({'#tokensRoberta': roberta_tokens,
+                                                    '#tokensGPT2': gpt2_tokens,
+                                                    'sentence': sentencepiece}))  
+                        else:
+                            listofrows.append(row)
+                
+                    df = pd.DataFrame(listofrows)
+                
+                if max(df['#tokensRoberta'].max(), df['#tokensGPT2'].max()) > 510:
+                    print(f'Error: Sentence still greater than 510 tokens in {filename}.')
+                
+                # If there are any discrepancies in the number of tokens between the two tokenizers,
+                # we print a warning message. This is expected behavior, but we want to know
+                # how often it occurs.
+
+                if (df['#tokensRoberta'] != df['#tokensGPT2']).any():
+                    print(f'Number of tokens differ between tokenizers in {filename}.')
+                    discrepancy_count += 1
+
                 df.to_csv(os.path.join(output_folder, filename.replace('.txt', '.tsv')), sep='\t', index=False)
                 with open(processed_file, 'a') as f:
                     f.write(filename + '\n')
+
+    print(f'Total time spent in nltk: {total_spacy_time:.2f} seconds')
+    print(f'Total time spent in tokenization: {total_tokenization_time:.2f} seconds')
+    print(f'Total number of discrepancies: {discrepancy_count}')
+    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Sentence splitter')
