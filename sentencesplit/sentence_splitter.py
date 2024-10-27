@@ -62,10 +62,25 @@ def split_sentences(text):
 
 def count_tokens(sentences, tokenizer):
 
-    # Use batch tokenization for faster performance
-    batch_tokens = tokenizer(sentences, add_special_tokens=False)
-    num_tokens = [len(ids) for ids in batch_tokens['input_ids']]
-    return num_tokens
+    if not sentences:
+        return []
+    
+    valid_sentences = [sentence for sentence in sentences if sentence.strip()]
+
+    if len(valid_sentences) == len(sentences):
+        # Use batch tokenization for faster performance
+        batch_tokens = tokenizer(valid_sentences, add_special_tokens=False)
+        num_tokens = [len(ids) for ids in batch_tokens['input_ids']]
+        return num_tokens, valid_sentences
+    else:
+        # tokenize individually and return the number of tokens for each sentence
+        sentences_we_processed = []
+        num_tokens = []
+        for sentence in valid_sentences:
+            tokens = tokenizer(sentence, add_special_tokens=False)['input_ids']
+            sentences_we_processed.append(sentence)
+            num_tokens.append(len(tokens))
+        return num_tokens, sentences_we_processed
 
 def split_text_at_whitespace(text, max_length=2000000):
     """
@@ -121,15 +136,21 @@ def recursive_split(row, roberta_tokenizer, gpt2_tokenizer, max_length = 500):
         sentencepieces.append(sentencepiece)
     
     for sentencepiece in sentencepieces:
-        roberta_tokens = count_tokens([sentencepiece], roberta_tokenizer)[0]
-        gpt2_tokens = count_tokens([sentencepiece], gpt2_tokenizer)[0]
-        potential_row = pd.Series({'#tokensRoberta': roberta_tokens,
-                            '#tokensGPT2': gpt2_tokens,
-                            'sentence': sentencepiece})
-        
         if not sentencepiece.strip():
             continue
-        elif max(roberta_tokens, gpt2_tokens) < max_length:
+        roberta_tokens, processed_r = count_tokens([sentencepiece], roberta_tokenizer)
+        gpt2_tokens, processed_g = count_tokens([sentencepiece], gpt2_tokenizer)
+        if len(processed_r) != 1 or len(processed_g) != 1:
+            print('Error: Sentence not processed correctly.')
+            continue
+        else:
+            roberta_tokens = roberta_tokens[0]
+            gpt2_tokens = gpt2_tokens[0]
+            potential_row = pd.Series({'#tokensRoberta': roberta_tokens,
+                            '#tokensGPT2': gpt2_tokens,
+                            'sentence': sentencepiece})
+
+        if max(roberta_tokens, gpt2_tokens) < max_length:
             listofrows.append(potential_row)
         else:
             listofrows.extend(recursive_split(potential_row, roberta_tokenizer, gpt2_tokenizer, max_length))
@@ -193,9 +214,12 @@ def main(input_folder, output_folder, time_limit):
                         total_spacy_time += spacy_end_time - spacy_start_time
 
                         tokenization_start_time = time.time()
-                        num_tokens_roberta = count_tokens(sentences, roberta_tokenizer)
-                        num_tokens_gpt2 = count_tokens(sentences, gpt2_tokenizer)
+                        num_tokens_roberta, processed_r = count_tokens(sentences, roberta_tokenizer)
+                        num_tokens_gpt2, processed_g = count_tokens(sentences, gpt2_tokenizer)
                         tokenization_end_time = time.time()
+                        if len(processed_r) != len(sentences) or len(processed_g) != len(sentences):
+                            print('Error: Chunk not processed correctly.')
+                            continue
                         total_tokenization_time += tokenization_end_time - tokenization_start_time
                         df = pd.DataFrame({'#tokensRoberta': num_tokens_roberta,
                                            '#tokensGPT2': num_tokens_gpt2,
@@ -209,10 +233,13 @@ def main(input_folder, output_folder, time_limit):
                     total_spacy_time += spacy_end_time - spacy_start_time
 
                     tokenization_start_time = time.time()
-                    num_tokens_roberta = count_tokens(sentences, roberta_tokenizer)
-                    num_tokens_gpt2 = count_tokens(sentences, gpt2_tokenizer)
+                    num_tokens_roberta, processed_r = count_tokens(sentences, roberta_tokenizer)
+                    num_tokens_gpt2, processed_g = count_tokens(sentences, gpt2_tokenizer)
                     tokenization_end_time = time.time()
                     total_tokenization_time += tokenization_end_time - tokenization_start_time
+                    if len(processed_r) != len(sentences) or len(processed_g) != len(sentences):
+                            print('Error: File not processed correctly.')
+                            continue
                     df = pd.DataFrame({'#tokensRoberta': num_tokens_roberta,
                                    '#tokensGPT2': num_tokens_gpt2,
                                    'sentence': sentences})
