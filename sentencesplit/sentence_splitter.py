@@ -123,10 +123,11 @@ def recursive_split(row, roberta_tokenizer, gpt2_tokenizer, max_length=500, dept
     Splits a sentence into smaller chunks of fewer than 500 tokens each.
     Claude added a depth parameter to prevent infinite recursion.
     '''
-    
+
     # Safety check - limit recursion depth
     if depth > 10:  # Arbitrary limit - adjust if needed
         print(f"Warning: Maximum recursion depth reached. Sentence may be too complex to split properly.")
+        print(f"Sentence: {row['sentence']}")
         return []
 
     listofrows = []
