@@ -44,12 +44,17 @@ def split_sentences(text):
 
     transformed_sentences = []
     for sentence in sentences:
+         if not sentence.strip():     # Skip empty sentences
+            continue
+
         words = sentence.split()
         if len(words) > 350:
             num_chunks = (len(words) + 349) // 350  # Calculate the number of chunks needed
             chunk_size = (len(words) + num_chunks - 1) // num_chunks  # Calculate the size of each chunk
             for i in range(0, len(words), chunk_size):
-                transformed_sentences.append(' '.join(words[i:i + chunk_size]))
+                chunk = ' '.join(words[i:i + chunk_size])
+                if chunk.strip():  # Only add non-empty chunks
+                    transformed_sentences.append(chunk)
         else:
             transformed_sentences.append(sentence)
     sentences = transformed_sentences
@@ -57,8 +62,9 @@ def split_sentences(text):
     return [tabless(sentence) for sentence in sentences]
 
 def count_tokens(sentences, tokenizer):
+
     # Use batch tokenization for faster performance
-    batch_tokens = tokenizer(sentences, add_special_tokens=False)
+    batch_tokens = tokenizer(valid_sentences, add_special_tokens=False)
     num_tokens = [len(ids) for ids in batch_tokens['input_ids']]
     return num_tokens
 
@@ -74,33 +80,59 @@ def split_text_at_whitespace(text, max_length=2000000):
         List[str]: A list of text chunks.
     """
     if len(text) <= max_length:
-        # If the text is already within the limit, return it as a single chunk
         return [text]
 
     chunks = []
     start = 0
     while start < len(text):
-        # Determine the endpoint for the current chunk
         end = start + max_length
-
         if end >= len(text):
-            # If the end exceeds the text length, just add the final chunk
-            chunks.append(text[start:])
+            chunk = text[start:].strip()
+            if chunk:  # Only add non-empty chunks
+                chunks.append(chunk)
             break
 
-        # Find the nearest whitespace before the end
         end = text.rfind(" ", start, end)
         if end == -1:
-            # If no whitespace is found, use the max_length as the endpoint
             end = start + max_length
 
-        # Add the chunk to the list
-        chunks.append(text[start:end])
+        chunk = text[start:end].strip()
+        if chunk:  # Only add non-empty chunks
+            chunks.append(chunk)
 
-        # Move the start to the end of the current chunk
-        start = end + 1  # Skip the space at the start of the next chunk
+        start = end + 1
 
     return chunks
+
+def recursive_split(row, max_length = 400):
+    onelessthanmax = max_length - 1
+    listofrows = []
+
+    maxtokens = max(row['#tokensRoberta'], row['#tokensGPT2'])
+    words = row['sentence'].split()
+    num_chunks = (maxtokens + onelessthanmax) // max_length
+    chunk_size = (len(words) + num_chunks - 1) // num_chunks
+
+    sentencepieces = []
+    for i in range(0, len(words), chunk_size):
+        sentencepiece = ' '.join(words[i:i + chunk_size])
+        sentencepieces.append(sentencepiece)
+    
+    for sentencepiece in sentencepieces:
+        roberta_tokens = count_tokens([sentencepiece], roberta_tokenizer)[0]
+        gpt2_tokens = count_tokens([sentencepiece], gpt2_tokenizer)[0]
+        potential_row = pd.Series({'#tokensRoberta': roberta_tokens,
+                            '#tokensGPT2': gpt2_tokens,
+                            'sentence': sentencepiece}))
+        
+        if not sentencepiece.strip():
+            continue
+        elif max(roberta_tokens, gpt2_tokens) < 510:
+            listofrows.append(potential_row)
+        else:
+            listofrows.extend(recursive_split(potential_row, max_length))
+    
+    return listofrows
 
 def main(input_folder, output_folder, time_limit):
     # Load tokenizers
@@ -145,6 +177,10 @@ def main(input_folder, output_folder, time_limit):
             print(f'Processing {filename}', flush = True)
             with open(os.path.join(input_folder, filename), 'r') as f:
                 text = f.read()
+                if not text.strip():
+                    print(f'Warning: Empty file {filename}. Skipping...')
+                    continue
+
                 if len(text) > 2000000:
                     chunks = split_text_at_whitespace(text, max_length=2000000)
                     dfs = []
@@ -190,22 +226,7 @@ def main(input_folder, output_folder, time_limit):
                     listofrows = []
                     for index, row in df.iterrows():
                         if row['#tokensRoberta'] > 510 or row['#tokensGPT2'] > 510:
-                            maxtokens = max(row['#tokensRoberta'], row['#tokensGPT2'])
-                            words = row['sentence'].split()
-                            num_chunks = (maxtokens + 399) // 400
-                            chunk_size = (len(words) + num_chunks - 1) // num_chunks
-
-                            sentencepieces = []
-                            for i in range(0, len(words), chunk_size):
-                                sentencepiece = ' '.join(words[i:i + chunk_size])
-                                sentencepieces.append(sentencepiece)
-                            
-                            for sentencepiece in sentencepieces:
-                                roberta_tokens = count_tokens([sentencepiece], roberta_tokenizer)[0]
-                                gpt2_tokens = count_tokens([sentencepiece], gpt2_tokenizer)[0]
-                                listofrows.append(pd.Series({'#tokensRoberta': roberta_tokens,
-                                                    '#tokensGPT2': gpt2_tokens,
-                                                    'sentence': sentencepiece}))  
+                            listofrows.extend(recursive_split(row))
                         else:
                             listofrows.append(row)
                 
