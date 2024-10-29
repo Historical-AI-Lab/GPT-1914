@@ -276,7 +276,7 @@ def main(input_folder, output_folder, time_limit):
     # Iterate through all files in the input folder
     for filename in os.listdir(input_folder):
         if filename in processed_files:
-            print(f'{filename} has already been processed. Skipping...')
+            # print(f'{filename} has already been processed. Skipping...')
             continue
         
         # Check if the time limit has been reached
