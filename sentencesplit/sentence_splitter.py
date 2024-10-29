@@ -18,8 +18,10 @@ import torch
 import argparse
 import pandas as pd
 from transformers import RobertaTokenizer, GPT2Tokenizer
-
+import tracemalloc
 # import spacy
+
+tracemalloc.start()
 
 nltk.download('punkt_tab')
 
@@ -387,4 +389,9 @@ if __name__ == '__main__':
         print('No output folder provided. Using default: output')
 
     main(args.input_folder, args.output_folder, args.time_limit)
+
+    # At the end, get peak memory usage and print it in gigabytes
+    peak = tracemalloc.get_traced_memory()[1]  # Get peak memory usage in bytes
+    tracemalloc.stop()
+    print(f"Peak memory usage: {peak / (1024 ** 3):.2f} GB")
 
