@@ -30,7 +30,18 @@ nltk.download('punkt_tab')
 
 def tabless(text):
     # Remove tabs from text
-    return text.replace('\t', ' ').replace('  ', ' ')
+    return text.replace('\t', ' ')
+
+    # Remove newline characters except at the very end of the sentence
+    if text.endswith('\n'):
+        ends_with_newline = True
+    else:
+        ends_with_newline = False
+    
+    text = text.replace('\n', ' ').replace('  ', ' ')
+    if ends_with_newline:
+        text += '\n'
+    return text
 
 def split_sentences(text):
     # Split text into sentences
