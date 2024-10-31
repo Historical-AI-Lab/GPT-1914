@@ -279,6 +279,7 @@ def main(input_folder, output_folder, time_limit, batch_file):
 
     # Iterate through all paths in the batch
     for filepath in filepaths:
+        filepath = filepath.strip()
         # extract the filename from the path
         filename = os.path.basename(filepath.strip())
 
