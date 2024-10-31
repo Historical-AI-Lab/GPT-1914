@@ -26,7 +26,7 @@ def main(input_folder, output_folder):
     still_to_process = input_files - processed_files
 
     # Get list of files with their full paths
-    files = [os.path.join(input_dir, f) for f in still_to_process if os.path.isfile(os.path.join(input_dir, f))]
+    files = [os.path.join(input_folder, f) for f in still_to_process if os.path.isfile(os.path.join(input_folder, f))]
     
     # Sort files by size in descending order
     files_sorted = sorted(files, key=os.path.getsize, reverse=True)
