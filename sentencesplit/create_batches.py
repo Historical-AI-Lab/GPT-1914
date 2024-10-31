@@ -21,7 +21,7 @@ def main(input_folder, output_folder):
             for line in f:
                 processed_files.add(line.strip())
 
-    input_files = set(os.listdir(input_folder)):
+    input_files = set(os.listdir(input_folder))
     
     still_to_process = input_files - processed_files
 
