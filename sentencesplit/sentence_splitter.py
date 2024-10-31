@@ -162,18 +162,23 @@ def recursive_split(row, roberta_tokenizer, gpt2_tokenizer, max_length=500, dept
     # Create chunks by finding the nearest space to our target positions
     start = 0
     while start < char_length:
-        if start + chunk_size >= char_length:
-            end = char_length
-        else:
-            # Find the nearest space after our target position
-            end = sentence.find(' ', start + chunk_size)
-            if end == -1:  # If no space found, take the whole rest
+        try:
+            if start + chunk_size >= char_length:
                 end = char_length
-            # If the space is too far after our target, find the nearest space before
-            elif end > start + chunk_size * 1.5:
-                last_space = sentence.rfind(' ', start, start + chunk_size)
-                if last_space != -1:
-                    end = last_space
+            else:
+                # Find the nearest space after our target position
+                end = sentence.find(' ', start + chunk_size)
+                if end == -1:  # If no space found, take the whole rest
+                    end = char_length
+                # If the space is too far after our target, find the nearest space before
+                elif end > start + chunk_size * 1.5:
+                    last_space = sentence.rfind(' ', start, start + chunk_size)
+                    if last_space != -1:
+                        end = last_space
+        except TypeError as e:
+            print(f"Type error in splitting: {e}")
+            print(f"Problematic values - start: {start}, chunk_size: {chunk_size}")
+            return []
 
         chunk = sentence[start:end].strip()
         if chunk:
