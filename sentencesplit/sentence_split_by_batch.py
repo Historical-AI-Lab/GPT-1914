@@ -32,7 +32,7 @@ nltk.download('punkt_tab')
 
 def tabless(text):
     # Remove tabs from text
-    return text.replace('\t', ' ')
+    text = text.replace('\t', ' ')
 
     # Remove newline characters except at the very end of the sentence
     if text.endswith('\n'):
@@ -159,7 +159,7 @@ def recursive_split(row, roberta_tokenizer, gpt2_tokenizer, max_length=500, dept
     char_length = len(sentence)
     chunk_size = char_length // num_chunks
     
-    # Create chunks by finding the nearest space to our target positions
+    # Create chunks by finding the nearest space or newline to our target positions
     start = 0
     while start < char_length:
         try:
