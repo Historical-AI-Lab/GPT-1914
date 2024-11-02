@@ -282,6 +282,9 @@ def main(input_folder, output_folder, time_limit, batch_file):
     # Read in file paths from the batch file
     with open(batch_file, 'r') as f:
         filepaths = f.readlines()
+    
+    # flag to check if done
+    time_limit_reached = False
 
     # Iterate through all paths in the batch
     for filepath in filepaths:
@@ -290,13 +293,14 @@ def main(input_folder, output_folder, time_limit, batch_file):
         filename = os.path.basename(filepath.strip())
 
         if filename in processed_files:
-            # print(f'{filename} has already been processed. Skipping...')
+            print(f'{filename} has already been processed. Skipping...')
             continue
         
         # Check if the time limit has been reached
         elapsed_time = time.time() - start_time
         if elapsed_time > time_limit * 3600:
             print(f'Time limit of {time_limit} hours reached. Exiting...')
+            time_limit_reached = True
             break
         
         if filename.endswith('.txt'):
@@ -388,6 +392,9 @@ def main(input_folder, output_folder, time_limit, batch_file):
     print(f'Total time spent in nltk: {total_spacy_time:.2f} seconds')
     print(f'Total time spent in tokenization: {total_tokenization_time:.2f} seconds')
     print(f'Total number of discrepancies: {discrepancy_count}')
+
+    if not time_limit_reached:
+        print(f'All files processed successfully. Exiting...')
     
 
 if __name__ == '__main__':
