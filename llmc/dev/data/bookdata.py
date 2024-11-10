@@ -23,9 +23,17 @@ class DocumentMetadata:
     path: str
     size_bytes: int
     
-def get_document_paths(input_dir: str, file_pattern: str = "*") -> List[DocumentMetadata]:
+def get_document_paths(input_dir: str, holdout_docs: set, file_pattern: str = "*") -> List[DocumentMetadata]:
     """Returns list of documents with their metadata"""
     paths = Path(input_dir).glob(f"**/{file_pattern}")
+
+    # Filter out holdout documents by filename:
+    # specifically, we find the filename part of the path
+    # and remove ".trim.tsv" from the end, then check if
+    # the resulting filename is in the holdout set.
+
+    paths = [p for p in paths if os.path.basename(p).replace(".trim.tsv", "") not in holdout_docs]
+
     return [
         DocumentMetadata(
             path=str(p),
@@ -72,6 +80,7 @@ def only_final_newline(s):
 def read_and_tokenize_document(args):
     """Reads and tokenizes a single document"""
     path, model_desc = args
+
     try:
         # Read document
         
@@ -136,11 +145,11 @@ def calculate_safe_memory_settings(total_memory: int, num_cores: int,
     
     return num_cores, safe_fraction_per_core
 
-def process_documents(input_dir: str, output_dir: str, 
+def process_documents(input_dir: str, output_dir: str, holdout_docs: set,
                      model_desc: str = "gpt-2",
                      shard_size: int = 10**8,
                      requested_cores: Optional[int] = None,
-                     file_pattern: str = "*"):
+                     file_pattern: str = "*") -> None:
     """
     Process documents with memory-aware batching and core-aware memory management
     """
@@ -148,7 +157,7 @@ def process_documents(input_dir: str, output_dir: str,
     os.makedirs(output_dir, exist_ok=True)
     
     # Get document information
-    docs = get_document_paths(input_dir, file_pattern)
+    docs = get_document_paths(input_dir, holdout_docs, file_pattern)
     total_docs = len(docs)
     logger.info(f"Found {total_docs} documents to process")
     
@@ -257,6 +266,18 @@ def process_documents(input_dir: str, output_dir: str,
     logger.info("Processing complete")
     print("Processing complete")
 
+def clean_pairtree(htid):
+    period = htid.find('.')
+    prefix = htid[0:period]
+    postfix = htid[(period+1): ]
+    if ':' in postfix:
+        postfix = postfix.replace(':','+')
+        postfix = postfix.replace('/','=')
+    if '.' in postfix:
+        postfix = postfix.replace('.',',')
+    cleanname = prefix + "." + postfix
+    return cleanname
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Document tokenization for large files")
     parser.add_argument("input_dir", type=str, help="Directory containing input documents")
@@ -271,9 +292,13 @@ if __name__ == "__main__":
                        help="File pattern to match (e.g., '*.txt')")
     args = parser.parse_args()
 
+    holdout = pd.read_csv('../../../metadata/HeldOutRecords1905-14.csv')
+    holdout_docs = set([clean_pairtree(x) for x in holdout['HTid']])
+
     process_documents(
         args.input_dir, 
         args.output_dir, 
+        holdout_docs,
         args.model_desc, 
         args.shard_size,
         args.cores,
