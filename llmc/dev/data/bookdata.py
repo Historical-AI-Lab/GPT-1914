@@ -280,8 +280,8 @@ def clean_pairtree(htid):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Document tokenization for large files")
-    parser.add_argument("input_dir", type=str, help="Directory containing input documents")
-    parser.add_argument("output_dir", type=str, help="Directory for output shards")
+    parser.add_argument("-i", "input_dir", type=str, help="Directory containing input documents")
+    parser.add_argument("-o", "output_dir", type=str, help="Directory for output shards")
     parser.add_argument("-m", "--model_desc", type=str, default="gpt-2",
                        help="Model descriptor, gpt-2|llama-3")
     parser.add_argument("-s", "--shard_size", type=int, default=10**8,
