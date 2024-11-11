@@ -292,7 +292,7 @@ if __name__ == "__main__":
                        help="File pattern to match (e.g., '*.txt')")
     args = parser.parse_args()
 
-    holdout = pd.read_csv('../../../metadata/HeldOutRecords1905-14.csv')
+    holdout = pd.read_csv('../../../metadata/HeldOutRecords1905-14.tsv', sep = '\t')
     holdout_docs = set([clean_pairtree(x) for x in holdout['HTid']])
 
     process_documents(
