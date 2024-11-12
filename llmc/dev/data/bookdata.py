@@ -1,4 +1,4 @@
-import os
+import os, sys
 import argparse
 import multiprocessing as mp
 from pathlib import Path
@@ -110,7 +110,7 @@ def read_and_tokenize_document(args):
             
         # Force garbage collection after processing large document
         del text
-        print(path)
+        print(path, flush = True)
         gc.collect()
         
         return tokens_np
@@ -223,6 +223,7 @@ def process_documents(input_dir: str, output_dir: str, holdout_docs: set,
                         progress_bar = tqdm(total=shard_size, unit="tokens", 
                                          desc=f"Shard {shard_index}")
                     progress_bar.update(len(tokens))
+                    sys.stderr.flush()
                 else:
                     # Write current shard and start a new one
                     split = "val" if shard_index == 0 else "train"
