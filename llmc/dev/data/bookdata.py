@@ -110,6 +110,7 @@ def read_and_tokenize_document(args):
             
         # Force garbage collection after processing large document
         del text
+        print(path)
         gc.collect()
         
         return tokens_np
@@ -164,25 +165,24 @@ def process_documents(input_dir: str, output_dir: str, holdout_docs: set,
     # Calculate safe processing settings
     available_memory = psutil.virtual_memory().available
     max_cores = os.cpu_count() - 1  # Leave one core for system
-    num_cores = min(requested_cores or max_cores, max_cores)
+    # num_cores = min(requested_cores or max_cores, max_cores)
     
-    num_cores_to_use, memory_fraction = calculate_safe_memory_settings(
-        available_memory, num_cores
-    )
-    
-    if num_cores_to_use < num_cores:
-        logger.warning(
-            f"Reduced core count from {num_cores} to {num_cores_to_use} "
-            "to ensure safe memory usage"
-        )
+    # num_cores_to_use, memory_fraction = calculate_safe_memory_settings(
+        # available_memory, num_cores
+    # )
+
+    num_cores_to_use = requested_cores
+    memory_fraction = 0.8 / num_cores_to_use
     
     # Calculate batch size based on available memory per core
-    doc_sizes = [doc.size_bytes for doc in docs]
-    batch_size = estimate_batch_size(
-        doc_sizes, 
-        available_memory * memory_fraction,
-        safety_factor=0.8  # Additional safety margin within each core's allocation
-    )
+    # doc_sizes = [doc.size_bytes for doc in docs]
+    # batch_size = estimate_batch_size(
+        # doc_sizes, 
+        # available_memory * memory_fraction,
+        # safety_factor=0.8  # Additional safety margin within each core's allocation
+    # )
+
+    batch_size = 1
     
     logger.info(f"Using {num_cores_to_use} cores with {batch_size} documents per batch")
     logger.info(f"Memory fraction per core: {memory_fraction:.3f}")
