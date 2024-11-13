@@ -14,6 +14,8 @@ import tiktoken
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
+from data_common import write_datafile
+
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -285,7 +287,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output_dir", type=str, help="Directory for output shards")
     parser.add_argument("-m", "--model_desc", type=str, default="gpt-2",
                        help="Model descriptor, gpt-2|llama-3")
-    parser.add_argument("-s", "--shard_size", type=int, default=10**8,
+    parser.add_argument("-s", "--shard_size", type=int, default=10**7,
                        help="Size of each data shard in tokens")
     parser.add_argument("-c", "--cores", type=int, default=None,
                        help="Number of CPU cores to use (default: all but one)")
