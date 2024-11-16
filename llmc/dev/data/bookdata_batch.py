@@ -200,10 +200,10 @@ def process_documents(input_dir: str, output_dir: str, holdout_docs: set,
 
     # Explicitly calculate, and log, the core count
     num_cores = os.cpu_count() - 2     # Leave two cores for system
-    logger.info(f"Using {num_cores} cores for processing")
     
     # Process documents in batches
     nprocs = min(num_cores, num_cores_to_use)
+    logger.info(f"Using {nprocs} cores for processing")
     shard_index = 0
     all_tokens_np = np.empty((shard_size,), dtype=token_dtype)
     token_count = 0
