@@ -215,7 +215,7 @@ def process_documents(input_dir: str, output_dir: str, holdout_docs: set,
             batch_docs = docs[i:i + batch_size]
             
             # Create args for each document (path and model_desc)
-            batch_args = [(doc.path, model_desc) for doc in batch_docs]
+            batch_args = [(doc, model_desc) for doc in batch_docs]
             
             # Process batch
             for tokens in pool.imap(read_and_tokenize_document, batch_args):
