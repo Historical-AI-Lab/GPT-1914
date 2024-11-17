@@ -168,7 +168,7 @@ def process_documents(input_dir: str, output_dir: str, holdout_docs: set,
     filenames = [x.strip() for x in filenames]
     newfilenames = []
     for filename in filenames:
-        if filename in holdout_docs:
+        if filename in holdout_docs or filename + '.trim.tsv' in holdout_docs:
             print('Held out:', filename)
             continue
         else:
