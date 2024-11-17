@@ -166,13 +166,15 @@ def process_documents(input_dir: str, output_dir: str, holdout_docs: set,
     with open(batch_file, 'r') as f:
         filenames = f.readlines()
     filenames = [x.strip() for x in filenames]
+    print(len(filenames), 'files in batch file', flush=True)
     newfilenames = []
     for filename in filenames:
         if filename in holdout_docs or filename + '.trim.tsv' in holdout_docs:
-            print('Held out:', filename)
+            print('Held out:', filename, flush=True)
             continue
         else:
             newfilenames.append(filename)
+    print(len(newfilenames), 'files to process', flush=True)
     filenames = newfilenames
     docs = [os.path.join(input_dir, x) for x in filenames]
     total_docs = len(docs)
@@ -312,6 +314,7 @@ if __name__ == "__main__":
 
     holdout = pd.read_csv('../../../metadata/HeldOutRecords1905-14.tsv', sep = '\t')
     holdout_docs = set([clean_pairtree(x) for x in holdout['HTid']])
+    print('Holdout:', holdout_docs, flush = True)
 
     process_documents(
         args.input_dir, 
