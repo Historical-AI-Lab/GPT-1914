@@ -166,6 +166,14 @@ def process_documents(input_dir: str, output_dir: str, holdout_docs: set,
     with open(batch_file, 'r') as f:
         filenames = f.readlines()
     filenames = [x.strip() for x in filenames]
+    newfilenames = []
+    for filename in filenames:
+        if filename in holdout_docs:
+            print('Held out:', filename)
+            continue
+        else:
+            newfilenames.append(filename)
+    filenames = newfilenames
     docs = [os.path.join(input_dir, x) for x in filenames]
     total_docs = len(docs)
     logger.info(f"Found {total_docs} documents to process")
