@@ -169,7 +169,7 @@ def process_documents(input_dir: str, output_dir: str, holdout_docs: set,
     print(len(filenames), 'files in batch file', flush=True)
     newfilenames = []
     for filename in filenames:
-        if filename in holdout_docs or filename + '.trim.tsv' in holdout_docs:
+        if filename in holdout_docs or filename.replace('.trim.tsv', '') in holdout_docs:
             print('Held out:', filename, flush=True)
             continue
         else:
