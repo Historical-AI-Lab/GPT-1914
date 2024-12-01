@@ -175,29 +175,19 @@ def process_documents(input_dir: str, output_dir: str, holdout_docs: set,
 
     num_cores_to_use = requested_cores
     memory_fraction = 0.8 / num_cores_to_use
-    
-    # Calculate batch size based on available memory per core
-    # doc_sizes = [doc.size_bytes for doc in docs]
-    # batch_size = estimate_batch_size(
-        # doc_sizes, 
-        # available_memory * memory_fraction,
-        # safety_factor=0.8  # Additional safety margin within each core's allocation
-    # )
-
     batch_size = 1
-    
-    logger.info(f"Using {num_cores_to_use} cores with {batch_size} documents per batch")
-    logger.info(f"Memory fraction per core: {memory_fraction:.3f}")
     
     # Setup for tokenization
     token_dtype = np.uint16 if model_desc == "gpt-2" else np.uint32
 
     # Explicitly calculate, and log, the core count
     num_cores = os.cpu_count() - 2     # Leave two cores for system
-    logger.info(f"Using {num_cores} cores for processing")
     
     # Process documents in batches
-    nprocs = min(batch_size, max(1, num_cores))
+    nprocs = min(num_cores, num_cores_to_use)
+    logger.info(f"Using {nprocs} cores with {batch_size} documents per batch")
+    logger.info(f"Memory fraction per core: {memory_fraction:.3f}")
+
     shard_index = 0
     all_tokens_np = np.empty((shard_size,), dtype=token_dtype)
     token_count = 0
@@ -287,7 +277,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output_dir", type=str, help="Directory for output shards")
     parser.add_argument("-m", "--model_desc", type=str, default="gpt-2",
                        help="Model descriptor, gpt-2|llama-3")
-    parser.add_argument("-s", "--shard_size", type=int, default=10**7,
+    parser.add_argument("-s", "--shard_size", type=int, default=10**8,
                        help="Size of each data shard in tokens")
     parser.add_argument("-c", "--cores", type=int, default=None,
                        help="Number of CPU cores to use (default: all but one)")
