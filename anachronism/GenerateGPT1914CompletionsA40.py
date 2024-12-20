@@ -19,11 +19,14 @@ def load_model(rank):
     
     print(f"GPU {rank} loading model and tokenizer...")
     tokenizer = AutoTokenizer.from_pretrained(model_path)
+    
+    device = f'cuda:{rank}'
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
-        torch_dtype=torch.float16,  # Using float16 for memory efficiency
-        device_map={'': rank}  # Assign to specific GPU
-    )
+        torch_dtype=torch.float16,
+        device_map=device,
+        low_cpu_mem_usage=True
+    ).to(device)
     model.eval()
     
     return model, tokenizer
