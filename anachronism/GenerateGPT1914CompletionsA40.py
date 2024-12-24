@@ -51,6 +51,7 @@ def generate_text(prompt, model, tokenizer, params):
     )
     
     generated_text = tokenizer.batch_decode(output)[0]
+    generated_text = generated_text[len(prompt):]   # Remove the prompt from the generated text
     return generated_text
 
 def process_chunk(rank, world_size):
