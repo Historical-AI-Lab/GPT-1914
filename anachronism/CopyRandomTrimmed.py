@@ -17,7 +17,7 @@ def clean_pairtree(htid):
     return cleanname
 
 files_to_avoid = open('HeldOutHTidListNoDupes.txt', encoding = 'utf-8').readlines()
-files_to_avoid = [clean_paitree(x.strip()) + '.trim.txt' for x in files_to_avoid]
+files_to_avoid = [clean_pairtree(x.strip()) + '.trim.txt' for x in files_to_avoid]
 
 sourcefolder = '../train1/outputprewar/'
 destination = 'trimmedfiles/'
