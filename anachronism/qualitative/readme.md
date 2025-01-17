@@ -12,3 +12,9 @@ If you want to add a new question file, you could either create it in the ad-hoc
 If you're actually adding directly to existing files, best to add to the json because my old questions.txt is no longer up to date.
 
 lab_notebook.md contains records of fine-tuning jobs, etc
+
+## Human labels
+
+* `anachronism-codebook.md` has notes on labeling model outputs as "plausibly 1914"
+* Matt's labels are in `questions_with_answers.xlsm`. Ted's (for a slightly different set of conditions) are in `4oBigUntunedJudged.json`
+* `interannotator.ipynb` has quick code to process the labels and calculate interannotator agreement.
