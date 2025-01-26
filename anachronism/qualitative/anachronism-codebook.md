@@ -12,22 +12,22 @@ Anachronism labeling notes and guide. Begun by Matt on 1/11/25.
 
 ## General
 
-**[Below info is to be superseded by our new working files. Up dates TK.]**
+Quoth Ted:
 
-Labels are kept in the file `questions_with_answers.xlsm`.
+> The calibration datasets contain 20 rows that we all have in common. We can do these first and then compare notes.
 
-There are three columns for labels, matching the three column headings for generations:
+> The test datasets contain 80 rows for each of us, adding up to 120 total, with each row appearing in two and exactly two raters' lists. I excluded a few rows that we had already discussed together earlier this week.
 
-* `4omini-raw-ok`
-* `4omini-ft-ok`
-* `4obig-ok`
+> In each file, you'll see the model outputs identified only as `column_0`, `column_1`, and `column_2`. I've saved a mapping file that maps these to the original model names — the mapping is different for each row (but each row's ordering is the same for all raters).
 
-Label values are `true` or `false`. No other values are used, except that there are blanks where I have not yet provided a label. 
+> There are three response columns, with names like `plausible_ln_0`. That's whether Laura thought `column_0` was plausibly in-period, according to the criteria above.
 
-`true` means the generated response is OK, i.e., *does not* contain factual anachronism. 
+> There's also a `comments` column.
 
-`false` means that the response does contain one or more anachronisms. 
+Label values are `true` or `false`. No other values are used. 
 
-This labeling polarity matches Ted's use in `4oBigUntunedJudged.json`.
+`true` means the generated response is OK, i.e., that it is *plausibly 1914*. 
+
+`false` means that the response is not OK, i.e., that it contains one or more anachronisms. 
 
 ## Specific notes
