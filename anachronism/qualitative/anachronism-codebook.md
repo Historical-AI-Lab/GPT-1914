@@ -15,6 +15,7 @@ Some agreed guidelines:
 * The text in the "Assistant" field is not law. It's a strong guide, but the model outputs *may* diverge in style and/or details, up to the point of plausibility.
 * In general, we do not penalize a model (just) for being wrong, provided it's wrong in a way that is period-appropriate. For example, minor mistakes in birth and death dates for historical figures are usually OK. Even mistaking the identity of a person entirely may be OK, provided the error is not an anachronism.
 * Westernizations of non-Roman scripts can be anachronistic. Pay attention to these; Pinyin wasn't developed until the 1950s, for example.
+* Don't trust the "trap" field as a criterion; I created those predictions quickly; they don't represent a consistent boundary, aren't based on much research, and are superseded by our codebook.
 
 ## General
 
