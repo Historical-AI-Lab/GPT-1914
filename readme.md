@@ -7,6 +7,10 @@ Data and big metadata files are located in a GPT-1914 Box folder that you need t
 
 Organization at the moment
 
+anachronism
+-----------
+Contains code to support Ted Underwood, Laura K. Nelson, and Matthew Wilkens, ["Can language models represent the past without anachronism?"](https://arxiv.org/abs/2505.00030)
+
 metadata
 --------
 Metadata files for the corpus; right now it only has the subset we're using to train macrophage.
