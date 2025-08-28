@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 """
+make_training_data_causality.py
+
+Co-written by Ted Underwood and Claude Sonnet
+
+Version 1.1 — now with improved JSON parsing and error handling,
+also allows limiting number of chunks processed for testing
+
 Two-stage pipeline for detecting causal relationships in text:
 1. Chunk text into manageable pieces
 2. Use LLM to identify causal relationships
@@ -99,7 +106,10 @@ def call_ollama(prompt: str, model: str = "qwen2.5:7b-instruct") -> Dict[str, An
         "model": model,
         "prompt": prompt,
         "stream": False,
-        "format": "json"  # Request JSON output
+        "options": {
+            "temperature": 0.1,  # Lower temperature for more consistent output
+            "top_p": 0.9
+        }
     }
     
     try:
@@ -114,25 +124,55 @@ def create_causal_prompt(passage: str) -> str:
     """
     Create prompt for causal relationship detection
     """
+    # Escape quotes in the passage to prevent JSON issues
+    escaped_passage = passage.replace('"', '\\"').replace('\n', ' ').replace('\r', ' ')
+    
     prompt = f"""You are analyzing text for explicit causal relationships. A causal relationship is present when:
 1. Both a cause and an effect are clearly described
 2. The causal connection between them is explicitly stated (not just implied)
 3. The causality is thematized - it's a key part of what the passage is communicating
 
-Analyze this passage and return a JSON response with these fields:
-- "passage": the original passage
-- "causal_yn": "y" if explicit causal relationship present, "n" if not
-- "cause": the text describing the cause (empty string if causal_yn is "n")
-- "effect": the text describing the effect (empty string if causal_yn is "n")
+Analyze this passage and respond with ONLY a valid JSON object in exactly this format:
 
-Passage to analyze:
-{passage}
+{{"causal_yn": "y", "cause": "text of the cause", "effect": "text of the effect"}}
 
-Return only valid JSON:"""
+OR if no causal relationship:
+
+{{"causal_yn": "n", "cause": "", "effect": ""}}
+
+Passage to analyze: {escaped_passage}
+
+JSON response:"""
     
     return prompt
 
-def stage2_analyze_causality(chunks_file: str) -> str:
+def clean_and_parse_json(response_text: str) -> Dict[str, Any]:
+    """
+    Attempt to clean and parse JSON response, with fallbacks
+    """
+    # Remove any text before the first {
+    start_idx = response_text.find('{')
+    if start_idx == -1:
+        raise ValueError("No JSON object found in response")
+    
+    # Remove any text after the last }
+    end_idx = response_text.rfind('}')
+    if end_idx == -1:
+        raise ValueError("No complete JSON object found in response")
+    
+    json_str = response_text[start_idx:end_idx + 1]
+    
+    # Try to parse
+    try:
+        return json.loads(json_str)
+    except json.JSONDecodeError:
+        # Try some basic cleaning
+        json_str = json_str.replace('\n', ' ').replace('\r', ' ')
+        # Fix common issues with quotes
+        json_str = json_str.replace('\\"', '"').replace('""', '"')
+        return json.loads(json_str)
+
+def stage2_analyze_causality(chunks_file: str, max_chunks: int) -> str:
     """
     Stage 2: Analyze chunks for causal relationships
     Returns the output filename
@@ -146,7 +186,7 @@ def stage2_analyze_causality(chunks_file: str) -> str:
     
     print(f"Analyzing {total_chunks} chunks for causal relationships...")
     
-    for i, chunk_info in enumerate(chunk_data["chunks"]):
+    for i, chunk_info in enumerate(chunk_data["chunks"][0: max_chunks] if max_chunks else chunk_data["chunks"]):
         chunk_id = chunk_info["id"]
         passage = chunk_info["text"]
         
@@ -169,24 +209,34 @@ def stage2_analyze_causality(chunks_file: str) -> str:
             }
         else:
             try:
-                # Parse the JSON response
-                llm_output = json.loads(response["response"])
+                # Parse the JSON response with cleaning
+                llm_output = clean_and_parse_json(response["response"])
                 result = {
                     "chunk_id": chunk_id,
                     "passage": passage,
-                    "causal_yn": llm_output.get("causal_yn", "n"),
+                    "causal_yn": llm_output.get("causal_yn", "n").lower(),
                     "cause": llm_output.get("cause", ""),
                     "effect": llm_output.get("effect", ""),
                 }
-            except json.JSONDecodeError as e:
+                # Validate causal_yn field
+                if result["causal_yn"] not in ["y", "n"]:
+                    result["causal_yn"] = "n"
+                    
+            except (json.JSONDecodeError, ValueError) as e:
+                # Try a fallback approach - look for key indicators in raw text
+                raw_response = response.get("response", "").lower()
+                fallback_causal = "y" if any(indicator in raw_response for indicator in [
+                    '"causal_yn": "y"', '"causal_yn":"y"', 'causal relationship present', 'explicit causal'
+                ]) else "n"
+                
                 result = {
                     "chunk_id": chunk_id,
                     "passage": passage,
-                    "causal_yn": "error",
+                    "causal_yn": fallback_causal,
                     "cause": "",
                     "effect": "",
-                    "error": f"JSON parse error: {e}",
-                    "raw_response": response.get("response", "")
+                    "error": f"JSON parse error, used fallback: {e}",
+                    "raw_response": response.get("response", "")[:500]  # First 500 chars
                 }
         
         results.append(result)
@@ -218,8 +268,14 @@ def main():
     parser.add_argument("command", choices=["chunk", "analyze", "full"], 
                        help="Stage to run: chunk, analyze, or full pipeline")
     parser.add_argument("input_file", help="Input file (text for chunk/full, chunks.json for analyze)")
+
+    # add an optional argument for how many chunks to process (for testing)
+    parser.add_argument("--max_chunks", type=int, default=None, 
+                        help="Maximum number of chunks to process (for testing)")
     
     args = parser.parse_args()
+
+    max_chunks = args.max_chunks
     
     if args.command == "chunk":
         stage1_create_chunks(args.input_file)
@@ -227,12 +283,12 @@ def main():
     elif args.command == "analyze":
         if not args.input_file.endswith("-chunks.json"):
             print("Warning: analyze command expects a -chunks.json file")
-        stage2_analyze_causality(args.input_file)
+        stage2_analyze_causality(args.input_file, max_chunks)
     
     elif args.command == "full":
         print("Running full pipeline...")
         chunks_file = stage1_create_chunks(args.input_file)
-        stage2_analyze_causality(chunks_file)
+        stage2_analyze_causality(chunks_file, max_chunks)
 
 if __name__ == "__main__":
     main()
