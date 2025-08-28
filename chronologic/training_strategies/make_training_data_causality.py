@@ -183,7 +183,11 @@ def stage2_analyze_causality(chunks_file: str, max_chunks: int) -> str:
     
     results = []
     total_chunks = len(chunk_data["chunks"])
-    
+    if max_chunks:
+        total_chunks = min(total_chunks, max_chunks)
+    else:
+        max_chunks = total_chunks
+        
     print(f"Analyzing {total_chunks} chunks for causal relationships...")
     
     for i, chunk_info in enumerate(chunk_data["chunks"][0: max_chunks] if max_chunks else chunk_data["chunks"]):
