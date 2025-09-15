@@ -285,7 +285,7 @@ def main():
         logging_steps=config['logging_steps'],
         save_steps=config['save_steps'],
         eval_steps=config['eval_steps'],
-        evaluation_strategy=eval_strategy,
+        eval_strategy=eval_strategy,
         save_strategy="steps",
         save_total_limit=3,
         load_best_model_at_end=True,
