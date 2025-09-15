@@ -27,7 +27,7 @@ import logging
 from pathlib import Path
 import random
 import Levenshtein
-from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
+import sacrebleu
 
 # ---------- Logging ----------
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -94,43 +94,32 @@ class OCRDataset(Dataset):
         }
 
 # ---------- Metrics (CER/BLEU) ----------
+# remove: import nltk ... SmoothingFunction, punkt download, etc.
+import sacrebleu
+
 def compute_metrics_factory(tokenizer):
     def compute_metrics(eval_preds):
-        predictions, labels = eval_preds
-        # Seq2SeqTrainer returns logits or generated ids depending on predict_with_generate
-        if isinstance(predictions, tuple):
-            predictions = predictions[0]
-        decoded_preds = tokenizer.batch_decode(predictions, skip_special_tokens=True)
-
+        preds, labels = eval_preds
+        if isinstance(preds, tuple): preds = preds[0]
+        decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
         labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
         decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
-        total_distance = 0
-        total_distance_no_newlines = 0
-        total_chars = 0
+        # CER
+        total_dist = total_dist_norm = total_chars = 0
+        for p, g in zip(decoded_preds, decoded_labels):
+            total_dist += Levenshtein.distance(g, p)
+            total_dist_norm += Levenshtein.distance(' '.join(g.split()), ' '.join(p.split()))
+            total_chars += len(g)
+        cer = (total_dist / total_chars) if total_chars else 0.0
+        cer_no_newlines = (total_dist_norm / total_chars) if total_chars else 0.0
 
-        for pred, label in zip(decoded_preds, decoded_labels):
-            total_distance += Levenshtein.distance(label, pred)
-            label_norm = ' '.join(label.split())
-            pred_norm = ' '.join(pred.split())
-            total_distance_no_newlines += Levenshtein.distance(label_norm, pred_norm)
-            total_chars += len(label)
+        # BLEU via sacrebleu (corpus BLEU)
+        bleu = sacrebleu.corpus_bleu(decoded_preds, [decoded_labels]).score / 100.0
 
-        cer = total_distance / total_chars if total_chars > 0 else 0.0
-        cer_no_newlines = total_distance_no_newlines / total_chars if total_chars > 0 else 0.0
-
-        smoothing = SmoothingFunction().method1
-        bleu_scores = []
-        for pred, label in zip(decoded_preds, decoded_labels):
-            ptok, ltok = pred.split(), label.split()
-            if ptok and ltok:
-                bleu_scores.append(
-                    sentence_bleu([ltok], ptok, smoothing_function=smoothing, weights=(0.5, 0.5))
-                )
-        avg_bleu = float(np.mean(bleu_scores)) if bleu_scores else 0.0
-
-        return {'cer': cer, 'cer_no_newlines': cer_no_newlines, 'accuracy': 1 - cer, 'bleu': avg_bleu}
+        return {"cer": cer, "cer_no_newlines": cer_no_newlines, "accuracy": 1 - cer, "bleu": bleu}
     return compute_metrics
+
 
 # ---------- Quick test ----------
 def test_ocr_correction(trainer, tokenizer, device):
@@ -154,11 +143,6 @@ def test_ocr_correction(trainer, tokenizer, device):
         print(f"Corrected: {repr(corrected)}")
 
 def main():
-    import nltk
-    try:
-        nltk.data.find('tokenizers/punkt')
-    except LookupError:
-        nltk.download('punkt', quiet=True)
 
     # ---------- Config ----------
     config = {
