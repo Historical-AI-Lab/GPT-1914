@@ -10,6 +10,7 @@
 
 import os
 import json
+from xml.parsers.expat import model
 import torch
 from torch.utils.data import Dataset
 from transformers import (
@@ -32,6 +33,8 @@ import sacrebleu
 # ---------- Logging ----------
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+logger.info(f"Transformers {transformers.__version__} | Torch {torch.__version__}")
 
 # ---------- Dataset ----------
 class OCRDataset(Dataset):
@@ -185,6 +188,9 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(config['model_name'])
     tokenizer.model_max_length = config['max_length']
     model = T5ForConditionalGeneration.from_pretrained(config['model_name'])
+    
+    # Required to avoid the warning when using gradient checkpointing
+    model.config.use_cache = False
 
     # enable grad checkpointing to fit 1024 tokens comfortably
     model.gradient_checkpointing_enable()
@@ -230,8 +236,7 @@ def main():
     data_collator = DataCollatorForSeq2Seq(
         tokenizer=tokenizer,
         model=model,
-        padding=True,
-        max_length=config['max_length']
+        padding=False  # already padded to max_length in dataset
     )
 
     # ---------- Batch size heuristics ----------
@@ -294,7 +299,7 @@ def main():
         predict_with_generate=predict_with_generate,
         report_to="none",
         push_to_hub=False,
-        dataloader_num_workers=8,
+        dataloader_num_workers=4,
         remove_unused_columns=False,
         optim=optim_arg,
         adafactor=adafactor_flag,
@@ -314,7 +319,7 @@ def main():
         train_dataset=train_hf_dataset,
         eval_dataset=val_hf_dataset,
         data_collator=data_collator,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         compute_metrics=compute_metrics,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=3)]
     )
