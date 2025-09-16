@@ -113,9 +113,12 @@ def call_ollama(prompt: str, model: str = "gpt-oss:20b") -> Dict[str, Any]:
     }
     
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=300)  # 5 minute timeout
         response.raise_for_status()
         return response.json()
+    except requests.exceptions.Timeout:
+        print(f"Request timed out after 5 minutes")
+        return {"response": "ERROR"}
     except requests.exceptions.RequestException as e:
         print(f"Error calling ollama: {e}")
         return {"response": "ERROR"}
@@ -128,22 +131,32 @@ def create_motive_prompt(passage: str) -> str:
     escaped_passage = passage.replace('"', '\\"').replace('\n', ' ').replace('\r', ' ')
     
     prompt = f"""You are sifting text to find passages that draw very clear connections between motives and behavior. A connection is only present if:
-
-1. A specific motive or emotion is explicitly attributed to a chararacter in the text. It has to be explicitly described, not just implied. 
+ 
+1. A specific motive or emotion is explicitly attributed to a character in the text. It has to be explicitly described, not just implied.
+ 
 2. The character's resulting behavior (speech or action) is described in a different part of the text, separate from the motive. It should clearly result from the motive.
+ 
 3. The passage describing motive is not just an incident that causes the character's action, but directly describes the character's internal state.
+ 
+Analyze the following passage to decide whether all three of those descriptions unambiguously apply to it. If the answer is no, you will respond ONLY with a json object in exactly this format:
 
-Analyze this passage to decide whether all three of those descriptions unambiguously apply to it. \
-If you are not certain that the motive-behavior connection is clear enough, answer ONLY with a JSON object in exactly this format:
+{{“motive_yn”: “n”, “character”: “”, “motive”: “”, “behavior”: “”, “difficulty”: “”, “motive_passage”: “”, “behavior_passage”: “”}}
 
-{{"motive_yn": "n", "character": "", "motive": "", "behavior": ""}}
+If the answer is yes, you’ll respond with a JSON object that provides this information:
+ 
+"motive_yn": whether a clear motive-behavior connection exists
+"character": character's name or other designation (e.g. 'butler')
+"motive": a paraphrase of the motive
+"behavior": paraphrased description of resulting behavior
+"difficulty": difficulty of discerning the motive-behavior connection, using a scale from easy to difficult with five levels (“very easy,” “easy”, “moderate”, “difficult”, “very difficult”)
+"motive_passage": exact sentence(s) that describe the motive
+"behavior_passage": exact sentence(s) that describe the behavior
+ 
+If motive_yn is “y,” you’ll answer ONLY  with a valid JSON object in exactly this format:
 
-If you are certain that all three things unambiguously apply to this passage -- a psychological motive is explicitly provided for an action distinct from the motive -- answer with ONLY a valid JSON object in exactly this format:
-
-{{"motive_yn": "y", "character": "character's name or other designation e.g. 'butler'", "motive": "verbatim motive drawn from the passage", "behavior": "paraphrased description of resulting behavior"}}
+{{"motive_yn": "y", "character": <character>, "motive": <paraphrased motive>, "behavior": <paraphrased behavior>, "difficulty": <difficulty level>, "motive_passage": <verbatim passage from the text>, "behavior_passage": <verbatim passage from the text>}}
 
 Passage to analyze: {escaped_passage}
-
 JSON response:"""
     
     return prompt
@@ -212,6 +225,9 @@ def stage2_analyze_motivation(chunks_file: str, max_chunks: int) -> str:
                 "character:": "",
                 "motive": "",
                 "behavior": "",
+                "difficulty": "",
+                "motive_passage": "",
+                "behavior_passage": "",
                 "error": "API call failed"
             }
         else:
@@ -225,6 +241,9 @@ def stage2_analyze_motivation(chunks_file: str, max_chunks: int) -> str:
                     "motive": llm_output.get("motive", ""),
                     "character": llm_output.get("character", ""),
                     "behavior": llm_output.get("behavior", ""),
+                    "difficulty": llm_output.get("difficulty", ""),
+                    "motive_passage": llm_output.get("motive_passage", ""),
+                    "behavior_passage": llm_output.get("behavior_passage", "")
                 }
                 # Validate motive_yn field
                 if result["motive_yn"] not in ["y", "n"]:
@@ -244,6 +263,9 @@ def stage2_analyze_motivation(chunks_file: str, max_chunks: int) -> str:
                     "character": "",
                     "motive": "",
                     "behavior": "",
+                    "difficulty": "",
+                    "motive_passage": "",
+                    "behavior_passage": "",
                     "error": f"JSON parse error, used fallback: {e}",
                     "raw_response": response.get("response", "")[:500]  # First 500 chars
                 }
