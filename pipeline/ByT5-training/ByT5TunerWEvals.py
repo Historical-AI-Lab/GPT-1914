@@ -219,7 +219,7 @@ def main():
     # ---------- Config ----------
     config = {
         # 'model_name': 'yelpfeast/byt5-base-english-ocr-correction',
-        'model_name': 'google/byt5-base'
+        'model_name': 'google/byt5-base',
         'data_dir': './data',
         'output_dir': './ocr_correction_model',
         'max_length': 1024,                    # fixed instance length
