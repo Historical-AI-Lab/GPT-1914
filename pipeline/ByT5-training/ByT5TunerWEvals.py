@@ -155,7 +155,7 @@ def evaluate_on_test_set(model, tokenizer, noisy_texts, clean_texts, device, bat
         with torch.no_grad():
             outputs = model.generate(
                 **inputs, 
-                max_length=1024, 
+                max_new_tokens=1024, 
                 num_beams=4, 
                 early_stopping=False,  # Changed to False
                 do_sample=False,
@@ -209,7 +209,7 @@ def test_ocr_correction(trainer, tokenizer, device):
         inputs = tokenizer(sample, return_tensors="pt", max_length=1024, truncation=True, padding='max_length')
         inputs = {k: v.to(device) for k, v in inputs.items()}
         with torch.no_grad():
-            outputs = model.generate(**inputs, max_length=1024, num_beams=4, early_stopping=True)
+            outputs = model.generate(**inputs, max_new_tokens=1024, num_beams=4, early_stopping=False)
         corrected = tokenizer.decode(outputs[0], skip_special_tokens=True)
         print(f"\nOriginal: {repr(sample)}")
         print(f"Corrected: {repr(corrected)}")
@@ -364,7 +364,7 @@ def main():
         compute_metrics = compute_metrics_factory(tokenizer)
         predict_with_generate = True
         metric_for_best = "eval_cer"   # Trainer prefixes "eval_"
-        gen_kwargs = dict(generation_max_length=config['max_length'], generation_num_beams=1)
+        gen_kwargs = dict(generation_max_new_tokens=config['max_length'], generation_num_beams=1)
 
     training_args = Seq2SeqTrainingArguments(
         output_dir=config['output_dir'],
