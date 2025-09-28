@@ -157,7 +157,10 @@ def evaluate_on_test_set(model, tokenizer, noisy_texts, clean_texts, device, bat
                 **inputs, 
                 max_length=1024, 
                 num_beams=4, 
-                early_stopping=True
+                early_stopping=False,  # Changed to False
+                do_sample=False,
+                pad_token_id=tokenizer.pad_token_id,
+                eos_token_id=tokenizer.eos_token_id
             )
         
         # Decode predictions
@@ -169,13 +172,15 @@ def evaluate_on_test_set(model, tokenizer, noisy_texts, clean_texts, device, bat
             logger.info("=== DEBUG: First few predictions ===")
             for j in range(min(debug_samples, len(batch_noisy))):
                 logger.info(f"Example {j+1}:")
-                logger.info(f"  Input (first 100 chars): {repr(batch_noisy[j][:100])}")
-                logger.info(f"  Expected (first 100 chars): {repr(clean_texts[j][:100])}")
-                logger.info(f"  Model output (first 100 chars): {repr(batch_preds[j][:100])}")
-                
+                logger.info(f"  Input length: {len(batch_noisy[j])}, Expected length: {len(clean_texts[j])}, Output length: {len(batch_preds[j])}")
+                logger.info(f"  Input (first 200 chars): {repr(batch_noisy[j][:200])}")
+                logger.info(f"  Expected (first 200 chars): {repr(clean_texts[j][:200])}")
+                logger.info(f"  Model output (FULL): {repr(batch_preds[j])}")
+
                 # Calculate CER for this single example
                 single_cer = Levenshtein.distance(clean_texts[j], batch_preds[j]) / len(clean_texts[j])
                 logger.info(f"  Single example CER: {single_cer:.4f}")
+                logger.info(f"  Edit distance: {Levenshtein.distance(clean_texts[j], batch_preds[j])}")
                 logger.info("-" * 40)
     
     # Calculate metrics
