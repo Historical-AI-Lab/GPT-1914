@@ -415,7 +415,7 @@ def main():
     logger.info("=" * 50)
     logger.info("Evaluating INITIAL model on test set...")
     initial_metrics, initial_predictions = evaluate_on_test_set(
-        model, tokenizer, noisyevaltexts, cleanevaltexts, device
+        model, tokenizer, noisyevaltexts, cleanevaltexts, device, batch_size=per_device_bs
     )
 
     logger.info(f'Initial CER: {initial_metrics["cer"]:.4f}, CER (no newlines): {initial_metrics["cer_no_newlines"]:.4f}')
@@ -432,7 +432,7 @@ def main():
     logger.info("=" * 50)
     logger.info("Evaluating FINE-TUNED model on test set...")
     final_metrics, final_predictions = evaluate_on_test_set(
-        trainer.model, tokenizer, noisyevaltexts, cleanevaltexts, trainer.args.device
+        trainer.model, tokenizer, noisyevaltexts, cleanevaltexts, trainer.args.device, batch_size=per_device_bs
     )
     
     # Compare results
@@ -465,8 +465,8 @@ def main():
     logger.info(f"Evaluation results saved to {results_path}")
     logger.info("Training completed!")
 
-    # ---------- Quick test ----------
-    test_ocr_correction(trainer, tokenizer, trainer.args.device)
+    # ---------- Quick test not needed ----------
+    # test_ocr_correction(trainer, tokenizer, trainer.args.device)
 
 if __name__ == "__main__":
     main()
