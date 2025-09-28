@@ -130,7 +130,7 @@ def compute_metrics_factory(tokenizer):
         return calculate_cer_metrics(decoded_preds, decoded_labels)
     return compute_metrics
 
-def evaluate_on_test_set(model, tokenizer, noisy_texts, clean_texts, device, batch_size=8):
+def evaluate_on_test_set(model, tokenizer, noisy_texts, clean_texts, device, batch_size=8, debug_samples=3):
     """Evaluate model on test set and return metrics"""
     model.eval()
     predictions = []
@@ -163,6 +163,20 @@ def evaluate_on_test_set(model, tokenizer, noisy_texts, clean_texts, device, bat
         # Decode predictions
         batch_preds = tokenizer.batch_decode(outputs, skip_special_tokens=True)
         predictions.extend(batch_preds)
+        
+        # Debug: Show first few examples
+        if i == 0 and debug_samples > 0:
+            logger.info("=== DEBUG: First few predictions ===")
+            for j in range(min(debug_samples, len(batch_noisy))):
+                logger.info(f"Example {j+1}:")
+                logger.info(f"  Input (first 100 chars): {repr(batch_noisy[j][:100])}")
+                logger.info(f"  Expected (first 100 chars): {repr(clean_texts[j][:100])}")
+                logger.info(f"  Model output (first 100 chars): {repr(batch_preds[j][:100])}")
+                
+                # Calculate CER for this single example
+                single_cer = Levenshtein.distance(clean_texts[j], batch_preds[j]) / len(clean_texts[j])
+                logger.info(f"  Single example CER: {single_cer:.4f}")
+                logger.info("-" * 40)
     
     # Calculate metrics
     metrics = calculate_cer_metrics(predictions, clean_texts)
