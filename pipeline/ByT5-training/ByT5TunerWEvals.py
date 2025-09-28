@@ -218,21 +218,21 @@ def main():
 
     # ---------- Config ----------
     config = {
-        # 'model_name': 'yelpfeast/byt5-base-english-ocr-correction',
-        'model_name': 'google/byt5-base',
+        'model_name': 'yelpfeast/byt5-base-english-ocr-correction',
+        # 'model_name': 'google/byt5-base',
         'data_dir': './data',
-        'output_dir': './ocr_correction_model',
+        'output_dir': './ocr_correction_0.3_2e4',
         'max_length': 1024,                    # fixed instance length
         'target_effective_batch': 32,          # sequences per optimizer step
         'adamw_lr': 2e-4,                      # safer for ByT5 at 1024 tokens
-        'num_epochs': 2,
+        'num_epochs': 1.5,
         'warmup_steps': 1000,
         'save_steps': 1000,
         'eval_steps': 500,
         'logging_steps': 100,
         'use_cer': False,                      # default to eval loss; set True to use CER
         'use_adafactor': False,                # set True if you want Adafactor for T5 family
-        'sample_rate': 0.05,
+        'sample_rate': 0.3,
         'validation_split': 0.05,
         'seed': 42
     }
