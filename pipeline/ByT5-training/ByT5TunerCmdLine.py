@@ -103,12 +103,14 @@ def calculate_cer_metrics(predictions, references):
     """Calculate CER metrics between predictions and references"""
     total_dist = total_dist_norm = total_chars = 0
     max_cer = 0.0
+    list_of_cers = []
 
     for pred, ref in zip(predictions, references):
         this_distance = Levenshtein.distance(ref, pred)
         total_dist += this_distance
         if len(ref) > 0:
             max_cer = max(max_cer, this_distance / len(ref))
+            list_of_cers.append(this_distance / len(ref))
         total_dist_norm += Levenshtein.distance(' '.join(ref.split()), ' '.join(pred.split()))
         total_chars += len(ref)
         
@@ -123,7 +125,8 @@ def calculate_cer_metrics(predictions, references):
         "accuracy": accuracy,
         "total_chars": total_chars,
         "total_examples": len(predictions),
-        "max_cer": max_cer
+        "max_cer": max_cer,
+        "list_of_cers": list_of_cers
     }
 
 # ---------- Metrics (CER/BLEU) ----------
@@ -527,6 +530,37 @@ def main():
     logger.info(f"CER (no newlines) improvement: {avginitcer_no_newlines - final_metrics['cer_no_newlines']:.4f}")
     logger.info(f"Initial Max CER: {maxinitcer:.4f} -> Final Max CER: {final_metrics['max_cer']:.4f}")
     logger.info(f"Max CER improvement: {maxinitcer - final_metrics['max_cer']:.4f}")
+
+    # --------- Save predictions to JSONL file ----------
+    json_objects = []
+    all_cers = final_metrics.get('list_of_cers', [])
+    writefile = True
+    if len(all_cers) != len(noisyevaltexts):
+        logger.warning("Length of list_of_cers does not match number of evaluation texts.")
+        writefile = False
+    if len(all_cers) != len(final_predictions):
+        logger.warning("Length of list_of_cers does not match number of final predictions.")
+        writefile = False
+    if writefile:
+        for i in range(len(noisyevaltexts)):
+            json_obj = {
+                'index': i,
+                'clean': cleanevaltexts[i],
+                'dirty': noisyevaltexts[i],
+                'corrected': final_predictions[i],
+                'cer': all_cers[i]
+            }
+            json_objects.append(json_obj)
+
+        # the output file should be located in the output directory
+        output_file = f"{config['output_dir']}/final_ocr_corrections.jsonl"
+        try:
+            with open(output_file, 'w', encoding='utf-8') as f:
+                for json_obj in json_objects:
+                    f.write(json.dumps(json_obj, ensure_ascii=False) + '\n')
+            logger.info(f"Successfully wrote {len(json_objects)} JSON objects to {output_file}")
+        except Exception as e:
+            logger.error(f"Error writing to output file: {e}")
 
     # ---------- Save ----------
     final_dir = f"{config['output_dir']}/final"
