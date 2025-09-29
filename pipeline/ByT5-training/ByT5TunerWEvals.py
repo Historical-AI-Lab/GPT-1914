@@ -101,10 +101,16 @@ class OCRDataset(Dataset):
 def calculate_cer_metrics(predictions, references):
     """Calculate CER metrics between predictions and references"""
     total_dist = total_dist_norm = total_chars = 0
+    max_cer = 0.0
+
     for pred, ref in zip(predictions, references):
-        total_dist += Levenshtein.distance(ref, pred)
+        this_distance = Levenshtein.distance(ref, pred)
+        total_dist += this_distance
+        if len(ref) > 0:
+            max_cer = max(max_cer, this_distance / len(ref))
         total_dist_norm += Levenshtein.distance(' '.join(ref.split()), ' '.join(pred.split()))
         total_chars += len(ref)
+        
     
     cer = (total_dist / total_chars) if total_chars else 0.0
     cer_no_newlines = (total_dist_norm / total_chars) if total_chars else 0.0
@@ -115,7 +121,8 @@ def calculate_cer_metrics(predictions, references):
         "cer_no_newlines": cer_no_newlines, 
         "accuracy": accuracy,
         "total_chars": total_chars,
-        "total_examples": len(predictions)
+        "total_examples": len(predictions),
+        "max_cer": max_cer
     }
 
 # ---------- Metrics (CER/BLEU) ----------
@@ -221,12 +228,12 @@ def main():
         'model_name': 'yelpfeast/byt5-base-english-ocr-correction',
         # 'model_name': 'google/byt5-base',
         'data_dir': './data',
-        'output_dir': './ocr_correction_0.3_2e4',
+        'output_dir': './ocr_correction_0.3_3e4',
         'max_length': 1024,                    # fixed instance length
         'target_effective_batch': 32,          # sequences per optimizer step
-        'adamw_lr': 2e-4,                      # safer for ByT5 at 1024 tokens
+        'adamw_lr': 3e-4,                      # safer for ByT5 at 1024 tokens
         'num_epochs': 1.5,
-        'warmup_steps': 1000,
+        'warmup_steps': 700,
         'save_steps': 1000,
         'eval_steps': 500,
         'logging_steps': 100,
@@ -258,6 +265,9 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(config['model_name'])
     tokenizer.model_max_length = config['max_length']
     model = T5ForConditionalGeneration.from_pretrained(config['model_name'])
+
+    if hasattr(model.config, 'max_length'):
+        delattr(model.config, 'max_length')
     
     # Required to avoid the warning when using gradient checkpointing
     model.config.use_cache = False
@@ -278,10 +288,14 @@ def main():
             noisyevaltexts.append(data['dirty'])
             cer.append(data['cer'])
             cer_no_newlines.append(data['cer_no_newlines'])
+    avginitcer = sum(cer) / len(cer) if cer else 0.0
+    avginitcer_no_newlines = sum(cer_no_newlines) / len(cer_no_newlines) if cer_no_newlines else 0.0
+    maxinitcer = max(cer) if cer else 0.0
+    maxinitcer_no_newlines = max(cer_no_newlines) if cer_no_newlines else 0.0
 
     logger.info(f"Loaded {len(cleanevaltexts)} evaluation examples from ocrevaldata.jsonl")
-    logger.info(f"  Average CER: {sum(cer)/len(cer):.4f}, Max CER: {max(cer):.4f}")
-    logger.info(f"  Average CER (no newlines): {sum(cer_no_newlines)/len(cer_no_newlines):.4f}, Max CER (no newlines): {max(cer_no_newlines):.4f}")
+    logger.info(f"  Average CER: {avginitcer:.4f}, Max CER: {maxinitcer:.4f}")
+    logger.info(f"  Average CER (no newlines): {avginitcer_no_newlines:.4f}, Max CER (no newlines): {maxinitcer_no_newlines:.4f}")
 
     # ---------- Data ----------
     logger.info("Loading dataset...")
@@ -439,10 +453,12 @@ def main():
     # Compare results
     logger.info("=" * 50)
     logger.info("COMPARISON:")
-    logger.info(f"Initial CER: {initial_metrics['cer']:.4f} -> Final CER: {final_metrics['cer']:.4f}")
-    logger.info(f"CER improvement: {initial_metrics['cer'] - final_metrics['cer']:.4f}")
-    logger.info(f"Initial CER (no newlines): {initial_metrics['cer_no_newlines']:.4f} -> Final CER (no newlines): {final_metrics['cer_no_newlines']:.4f}")
-    logger.info(f"CER (no newlines) improvement: {initial_metrics['cer_no_newlines'] - final_metrics['cer_no_newlines']:.4f}") 
+    logger.info(f"Initial CER: {avginitcer:.4f} -> Final CER: {final_metrics['cer']:.4f}")
+    logger.info(f"CER improvement: {avginitcer - final_metrics['cer']:.4f}")
+    logger.info(f"Initial CER (no newlines): {avginitcer_no_newlines:.4f} -> Final CER (no newlines): {final_metrics['cer_no_newlines']:.4f}")
+    logger.info(f"CER (no newlines) improvement: {avginitcer_no_newlines - final_metrics['cer_no_newlines']:.4f}")
+    logger.info(f"Initial Max CER: {maxinitcer:.4f} -> Final Max CER: {final_metrics['max_cer']:.4f}")
+    logger.info(f"Max CER improvement: {maxinitcer - final_metrics['max_cer']:.4f}")
 
     # ---------- Save ----------
     final_dir = f"{config['output_dir']}/final"
