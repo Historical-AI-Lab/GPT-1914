@@ -294,7 +294,7 @@ def main():
         'adamw_lr': args.learning_rate,        # safer for ByT5 at 1024 tokens
         'num_epochs': args.num_epochs,
         'warmup_steps': args.warmup_steps,
-        'save_steps': 1000,
+        'save_steps': 3000,
         'eval_steps': 500,
         'logging_steps': 100,
         'use_cer': False,                      # default to eval loss; set True to use CER
