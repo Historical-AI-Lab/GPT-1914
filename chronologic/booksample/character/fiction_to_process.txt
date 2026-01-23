@@ -1,0 +1,12 @@
+# List of barcodes to process (one per line, without .txt extension)
+# Filter from primary_metadata.csv: include_yn=y AND "number in genre" contains "fiction"
+HNNWY1
+HXDI7Y
+HN1NUJ
+32044082646845
+HNPEIJ
+HN31P1
+HNP3VU
+HWE9T3
+HW2BQ6
+HNQPHE
