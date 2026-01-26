@@ -5,6 +5,16 @@ This directory holds metadata and code for the initial (1875-1924) section of th
 
 The documentation below explores corpus development, reviews the general strategy of the benchmark, and briefly describes the function of subdirectories. (Consult documentation in the subdirectories for more detail.) It also outlines the structure of the JSON objects that represent questions in the benchmark.
 
+general strategy
+-----------------
+
+The approach we’ve taken tries to balance two conflicting observations.
+
+1. Contemporary expertise is not a sufficient foundation for historical benchmarks. People who have spent decades studying nineteenth-century Britain still cannot reliably express themselves like a member of parliament in 1820 or a Methodist clergyman in 1885. Mode of expression matters; it’s a big part of what we’re aiming to achieve. So the ground truth for at least some of our questions must be drawn from period texts.
+2. On the other hand, benchmarks are only necessary because the distribution of user input to a language model diverges from the distribution of the training corpus. If the two were the same, after all, we could just evaluate the model with perplexity on held-out texts. But users are different from training data in lots of ways. Benchmarks have to test a model’s ability to handle those differences. In the case of a historical language model, one key difference is that users are living in the 21st century! Strict historical purity is thus basically the wrong goal: we want some questions to incorporate 21c concepts and 21c language, in order to test the model’s ability to translate between contexts.
+
+We can resolve this tension by designing multiple types of questions, and keeping track of the sources for both our questions and our answers. Ground truth answers will usually be drawn from period documents, but questions often include a mix of 21c language and period prose. We will track that mix. Distractors (wrong answers) are produced in a variety of ways to test different failure modes.
+
 corpus
 -------
 
