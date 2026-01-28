@@ -100,3 +100,72 @@ At one moment in the book, John passionately debates Ireland with Frank, Nan, an
 | same_character | You'd be thinkin a power, Frank, o' the poetry o' Pope, I'm thinkin? | 0.0 |
 | same_book | Well, I'm for there too, if you don't mind taking me. | 0.0 |
 | anachronistic_gpt-oss:20b | Listen, ye lads, Irelands not a dream but a fight, a breath that must be kept in our throats! We can't let the English take our soil and our hearts, we must stand up and make them hear the roar of the green! If we don't, the next generation will be born with no tongue to speak of the Emerald. | 0.0 |
+
+### logical connection questions
+
+**Source HTID:** hvd.hwwjnq
+
+**Source Title:** Argentina
+
+**Question Category:** cloze_contrastclause
+
+**Context:** The following passage comes from Argentina, a work of history and social description published in 1910 by W. A. Hirst, an American writer.
+
+**Question:** France makes steady progress, and Italy shows a large increase, as is only to be expected, because the emigration from Italy has long been very large. It may be added that French goods make their way by sheer merit, for France has in her own land ample scope for her scanty population. Some advantage may be obtained by her as the head of the Latin race, [masked clause revising an implied expectation]. It is very interesting to see how Argentina has passed from small to great things in matters of trade.
+
+Write a clause appropriate for this book that could stand in the position marked by [masked clause revising an implied expectation]:
+
+**Answers:**
+
+| Type | Answer | Prob |
+|:-----|:-------|-----:|
+| ground_truth | but wherever there are women and luxury there will French trade flourish, and further, in machinery of many kinds France, if equalled by any other nation for excellence, is equalled by England alone | 1.0 |
+| negation | but wherever there are scarcity and simplicity, French trade will wither, and further, in machinery of many kinds, France, if surpassed by any other nation for excellence, is surpassed by England alone | 0.0 |
+| same_book | but it is a peculiarity about Argentina that the people hurry to institute a great export trade long before they think of supplying themselves adequately with an article | 0.0 |
+| same_book | but the third view is naturally that of Argentina, which is every year receiving an abundant stream of white colonists to develop the industries which cry aloud for labour | 0.0 |
+| anachronistic_mistral-small:24b | but her influence is tempered by the fierce competition from other nations within Latin America. | 0.0 |
+| anachronistic_metadataless_gpt-oss:20b | even as its resources are comparatively scarce | 0.0 |
+
+### manual attribution questions
+
+**Source HTID:** attribution
+
+**Source Title:** Cheltenham Chronicle
+
+**Question Category:** attribution
+
+**Context:** 
+
+**Question:** The text that follows comes from a newspaper article in The Cheltenham Chronicle. "There was an exciting scene in the First Volksraad on Thursday, when the State Secretary read a communication from Sir A. Milner in reply to the Transvaal Government’s request for an explanation of the mobilisation of British troops on the frontier of the South African Republic. The High Commissioner’s reply was to the effect that the troops were to safeguard British interests, and in preparation against contingencies. President Kruger urged the members of the Raad to moderate the tone of their remarks. In the discussion several members warned the Government to be prepared, as war seemed inevitable. Mr. Tœbs said he considered the explanation of Sir A. Milner was equivalent to a declaration of war by Great Britain." This article was likely published in
+
+**Answers:**
+
+| Type | Answer | Prob |
+|:-----|:-------|-----:|
+| ground_truth | the 1890s | 1.0 |
+| manual | the 1880s | 0.5 |
+| manual | 1900-09 | 0.5 |
+| manual | the 1870s | 0.0 |
+| manual | the nineteen-teens | 0.2 |
+| manual | the 1920s | 0.0 |
+
+### other hand-crafted questions
+
+**Source HTID:** hvd.hc16zc
+
+**Source Title:** Gould and Pyle's Cyclopedia of Practical Medicine and Surgery, With Particular Reference to Diagnosis and Treatment
+
+**Question Category:** handcrafted
+
+**Context:** This question is about Gould and Pyle's Cyclopedia of Practical Medicine and Surgery, With Particular Reference to Diagnosis and Treatment, a reference work published in 1912 by George M. Gould, an American physician.
+
+**Question:** In 1912, what would a physician call the chemic basis of the nucleus, consisting of a complex proteid base and an acid?
+
+**Answers:**
+
+| Type | Answer | Prob |
+|:-----|:-------|-----:|
+| ground_truth | nuclein | 1.0 |
+| anachronistic_manual | DNA | 0.0 |
+| anachronistic_manual | deoxyribonucleic acid | 0.0 |
+| manual | protoplasm | 0.0 |
