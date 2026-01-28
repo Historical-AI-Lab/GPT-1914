@@ -48,6 +48,10 @@ I expect to produce two or three hundred more questions in ```manual/```, distri
 
 The number of questions in ```connectors/``` could grow much larger, because it's a flexible and widely applicable process. It would be relatively easy to get ~800 questions here. I also think there is a good rationale for having a lot of questions in this category. They are semi-cloze questions, and the way I understand model assessment right now is that cloze is the foundation on which we must build. We want to go beyond it! But capacity to do cloze has to be there: it implicitly captures a wide range of knowledges and skills that we could never aspire to enumerate explicitly.
 
+I also think we can get perhaps 100 or 200 summary questions using the workflow we developed last semester, which identifies "topic sentences" in paragraphs and uses them as period-authentic summaries.
+
+So the total number of questions for EN_1875-1924 will be between 1500 and 2000. Is that enough? I think so but a literature review of other benchmarks might help us decide. Keep in mind that 1875-1924 will not be the only part of ChronoLogic_EN.
+
 Our treatment of categories will be flexible: we can macro-average them as units as well as micro-averaging across individual questions. So the number of questions in a category does not necessarily determine its weight in evaluation.
 
 ### knowledge questions
