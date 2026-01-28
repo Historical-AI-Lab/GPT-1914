@@ -15,7 +15,7 @@ For instance, the ```connectors/``` module identifies "sentences describing an e
 
 In using those rules we will get some false positives. Those can be filtered manually; in some cases there's also an initial LLM pass to filter ambiguous words like "so" or "since" or "while" (which have a temporal as well as a causal sense). False positives are important to exclude.
 
-We will also get some false negatives: we will miss some cases where a cause-effect or premise-inference relation between two sentences is implicit and unstated. But the false negatives don't particularly matter. We're not writing a paper on causal rhetoric in 19th-century English prose, where it's vital to catch subtle edge cases. In framing a benchmark, we simply need a category of sentences where logical relations are clear so we can tell a model "the missing sentence describes an effect or inference" and give it a chance to go beyond simple cloze by taking advantage of multiple kinds of evidence. We want to challenge the model, not mainly by giving it especially subtle edge cases of causation, but by giving it some sentences where the right answer requires knowledge about 1884.
+We will also get some false negatives: we will miss some cases where a cause-effect or premise-inference relation between two sentences is implicit and unstated. But the false negatives don't particularly matter. We're not writing a paper on causal rhetoric in 19th-century English prose, where it's vital to catch subtle edge cases. In framing a benchmark, we simply need a category of sentences where logical relations are clear so we can tell a model "the missing sentence describes an effect or inference" and give it a chance to go beyond simple cloze by taking advantage of multiple kinds of evidence. We want to challenge the model, not mainly by giving it especially subtle edge cases of causation, but by giving it some sentences where the right answer requires *an ability to produce 19c/20c prose in response to specifications that may be expressed in 21c terms.* That's the mission.
 
 So this version of the English pipeline often relies on simple NLP strategies (SpaCy or the like) to identify entities, clauses, or sentences in a period text that could function as a ground truth answer. It may then use language models to do some filtering or summary, or to write the final question.
 
@@ -58,15 +58,11 @@ Our treatment of categories will be flexible: we can macro-average them as units
 
 **Question Category:** knowledge
 
-## Context
+**Context:** In answering the following question, assume that it has been posed in 1897: 
 
-In answering the following question, assume that it has been posed in 1897: 
+**Question:** In what year did the New York Magazine begin publication?
 
-## Question
-
-In what year did the New York Magazine begin publication?
-
-## Answers
+**Answers:**
 
 | Type | Answer | Prob |
 |:-----|:-------|-----:|
