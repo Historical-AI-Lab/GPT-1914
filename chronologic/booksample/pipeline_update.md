@@ -149,6 +149,25 @@ Write a clause appropriate for this book that could stand in the position marked
 | manual | the nineteen-teens | 0.2 |
 | manual | the 1920s | 0.0 |
 
+**Source HTID:** attribution
+
+**Source Title:** Paradise Lost
+
+**Question Category:** attribution
+
+**Context:** 
+
+**Question:** Who wrote the epic poem that begins "OF Mans First Disobedience, and the Fruit / Of that Forbidden Tree, whose mortal tast / Brought Death into the World, and all our woe, / With loss of Eden, till one greater Man / Restore us, and regain the blissful Seat, /Sing Heav'nly Muse"?
+
+**Answers:**
+
+| Type | Answer | Prob |
+|:-----|:-------|-----:|
+| ground_truth | John Milton | 1.0 |
+| manual | Paradise Lost | 0.0 |
+| manual | John Stuart Mill | 0.0 |
+| anachronistic_manual | Stanley Fish | 0.0 |
+
 ### other hand-crafted questions
 
 **Source HTID:** hvd.hc16zc
