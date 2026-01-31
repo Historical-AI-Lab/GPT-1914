@@ -45,8 +45,13 @@ def get_output_path(source_htid: str) -> Path:
     process_dir = script_dir / "process_files"
     process_dir.mkdir(exist_ok=True)
 
-    # Normalize htid for filename
-    htid_clean = source_htid.replace('.', '_').replace('/', '_')
+    # Normalize htid for filename:
+    # Strip 'hvd.' prefix if present and uppercase alphabetic characters
+    htid_clean = source_htid
+    if htid_clean.lower().startswith('hvd.'):
+        htid_clean = htid_clean[4:]  # Remove 'hvd.' prefix
+    htid_clean = htid_clean.upper()
+    htid_clean = htid_clean.replace('.', '_').replace('/', '_')
     return process_dir / f"{htid_clean}_manualquestions.jsonl"
 
 
@@ -134,16 +139,24 @@ def prompt_for_category(source_htid: str, current_category: str = "textbook") ->
         print("\nCategory options:")
         for i, cat in enumerate(CATEGORY_OPTIONS, 1):
             print(f"  {i}. {cat}")
+        print(f"  {len(CATEGORY_OPTIONS) + 1}. [enter manually]")
 
         while True:
-            cat_choice = input("Select category (1-4): ").strip()
+            cat_choice = input(f"Select category (1-{len(CATEGORY_OPTIONS) + 1}): ").strip()
             try:
                 idx = int(cat_choice) - 1
                 if 0 <= idx < len(CATEGORY_OPTIONS):
                     return CATEGORY_OPTIONS[idx]
+                elif idx == len(CATEGORY_OPTIONS):
+                    # Manual entry option
+                    manual_cat = input("Enter category: ").strip()
+                    if manual_cat:
+                        return manual_cat
+                    print("  Category cannot be blank")
+                    continue
             except ValueError:
                 pass
-            print("  Please enter a number 1-4")
+            print(f"  Please enter a number 1-{len(CATEGORY_OPTIONS) + 1}")
     else:
         return current_category
 
@@ -206,6 +219,48 @@ def prompt_for_answers() -> Tuple[List[str], List[str], List[float]]:
         answer_num += 1
 
     return answer_strings, answer_types, answer_probabilities
+
+
+def prompt_for_period_words(main_question: str) -> int:
+    """
+    Prompt user for count of words from the original source in the question.
+
+    Args:
+        main_question: The main question text
+
+    Returns:
+        Integer count of period words
+    """
+    word_count = len(main_question.split())
+
+    while True:
+        choice = input("\nWords from original source: [a]ll, [n]one, or integer: ").strip().lower()
+
+        if choice in ['n', 'none']:
+            return 0
+        elif choice in ['a', 'all']:
+            return word_count
+        else:
+            try:
+                value = int(choice)
+                if value < 0:
+                    print("  Value cannot be negative")
+                elif value > word_count:
+                    print(f"  Value cannot exceed word count ({word_count})")
+                else:
+                    return value
+            except ValueError:
+                print("  Please enter 'a', 'n', or an integer")
+
+
+def prompt_for_manual_comment() -> str:
+    """
+    Prompt user for an optional comment on rationale.
+
+    Returns:
+        The comment string (may be empty)
+    """
+    return input("Comment on rationale (enter to leave blank): ").strip()
 
 
 def prompt_for_answer_type_and_prob() -> Tuple[str, float]:
@@ -279,7 +334,13 @@ def create_question(metadata: Dict) -> Dict:
     # C. Question category
     question_category = prompt_for_category(metadata['source_htid'])
 
-    # D. Answers
+    # D. Period words in main question
+    period_words = prompt_for_period_words(main_question)
+
+    # E. Manual comment
+    manual_comment = prompt_for_manual_comment()
+
+    # F. Answers
     answer_strings, answer_types, answer_probabilities = prompt_for_answers()
 
     # Build output record
@@ -290,6 +351,8 @@ def create_question(metadata: Dict) -> Dict:
         "answer_types": answer_types,
         "answer_probabilities": answer_probabilities,
         "question_category": question_category,
+        "period_words_in_main_question": period_words,
+        "manual_comment": manual_comment,
         "question_process": "manual",
         "source_title": metadata.get('source_title', ''),
         "source_author": metadata.get('source_author', ''),
@@ -315,8 +378,8 @@ def confirm_htid(current_htid: str, metadata_file: str) -> Tuple[str, Optional[D
     Returns:
         Tuple of (htid, metadata_dict or None if needs elicitation)
     """
-    print(f"\nSource htid is: {current_htid}")
-    choice = input("New id, [a] for attribution, [h] for handcrafted, or enter to confirm: ").strip()
+    print(f"\nCurrent id is: {current_htid}")
+    choice = input("New id, [a]ttribution, [h]andcrafted, or enter to confirm current id: ").strip()
 
     if not choice:
         # Confirm current

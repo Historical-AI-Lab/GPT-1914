@@ -284,7 +284,7 @@ def build_metadata_frame(metadata: Dict) -> str:
     # Check for anonymous/missing author
     if not author or author.strip().lower() in ('', 'anonymous', 'unknown', 'various', 'n/a'):
         return (
-            f"The following passage comes from {metadata['source_title']}, "
+            f"The following questions is based on {metadata['source_title']}, "
             f"{a_or_an(metadata.get('source_genre', 'book'))} {metadata.get('source_genre', 'book')} "
             f"published in {metadata['source_date']}."
         )
@@ -293,7 +293,7 @@ def build_metadata_frame(metadata: Dict) -> str:
         profession = metadata.get('author_profession', 'writer')
 
         return (
-            f"The following passage comes from {metadata['source_title']}, "
+            f"The following question is drawn from {metadata['source_title']}, "
             f"{a_or_an(metadata.get('source_genre', 'book'))} {metadata.get('source_genre', 'book')} "
             f"published in {metadata['source_date']} by {metadata['source_author']}, "
             f"{a_or_an(nationality)} {nationality} {profession}."
