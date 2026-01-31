@@ -146,6 +146,8 @@ In the first question below, note that the period textbook lists the answer in p
 | manual | 24 kg | 0.0 |
 | manual | 50 lbs | 0.0 |
 
+![Text-Book on Applied Mechanics, by Andrew Jamieson](TextbookOfMechanics.jpg)
+
 **Source HTID:** hvd.hx5bww
 
 **Source Title:** Code Standard English Grammar
