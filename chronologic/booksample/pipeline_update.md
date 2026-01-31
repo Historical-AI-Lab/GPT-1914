@@ -126,6 +126,45 @@ Write a clause appropriate for this book that could stand in the position marked
 | anachronistic_mistral-small:24b | but her influence is tempered by the fierce competition from other nations within Latin America. | 0.0 |
 | anachronistic_metadataless_gpt-oss:20b | even as its resources are comparatively scarce | 0.0 |
 
+### questions directly drawn from period textbooks
+
+In the first question below, note that the period textbook lists the answer in pounds, lbs, where a modern engineer (or language model) would specify lbf to show that pounds of force/weight, and not of mass, are at issue. The unit cwt (hundredweight, 112 lbs) is also specific to nineteenth-century British engineering.
+
+**Question Category:** textbook
+
+**Context:** The following question is drawn from A Text-book on Applied Mechanics : Specially Arranged for the use of Science and Art, City and Guilds of London Institute and Other Engineering Students, a textbook published in 1895 by Andrew Jamieson, a Scottish professor of electrical engineering.
+
+**Question:** The saddle of a lathe weighs 5 cwts., and it is moved along the bed of the lathe by a rack and pinion arrangement. What force, applied at the end of a handle 10 inches in length, will be just capable of moving the saddle, supposing the pinion to have 12 teeth of 1 1/4-inch pitch, and the coefficient of friction between the saddle and lathe-bed to be 0.1, other friction being neglected?
+
+**Answers:**
+
+| Type | Answer | Prob |
+|:-----|:-------|-----:|
+| ground_truth | 13.36 lbs | 1.0 |
+| anachronistic_manual | 13.4 lbf | 0.5 |
+| manual | 50 cwts | 0.0 |
+| manual | 24 kg | 0.0 |
+| manual | 50 lbs | 0.0 |
+
+**Source HTID:** hvd.hx5bww
+
+**Source Title:** Code Standard English Grammar
+
+**Question Category:** textbook
+
+**Context:** The following question is drawn from Code Standard English Grammar, a textbook published in 1883 by C. P. Mason, a British writer.
+
+**Question:** Make a single sentence out of the following pair of sentences by using a relative pronoun. 1. I heard some news. 2. The news astonished me.
+
+**Answers:**
+
+| Type | Answer | Prob |
+|:-----|:-------|-----:|
+| ground_truth | I heard some news that astonished me. | 1.0 |
+| manual | I heard some news, and the news astonished me. | 0.0 |
+| manual | The news these days is astonishing. | 0.0 |
+| manual | I was astonished by the news. | 0.0 |
+
 ### manual attribution questions
 
 **Source HTID:** attribution
