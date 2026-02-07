@@ -103,6 +103,8 @@ All questions across the benchmark share a common JSON structure, though some fi
 | Field | Type | Description |
 |-------|------|-------------|
 | `passage` | string | The relevant passage from the source text. Present in most automatic questions; absent in some manual questions where no specific passage applies. |
+| `period_words_in_main_question` | int | Count of words in the main question drawn verbatim from the original source text. 0 means entirely paraphrased; equal to word count means entirely quoted. Present in manual questions. |
+| `manual_comment` | string | Optional comment explaining the rationale for this question's design or any notable considerations. Present in manual questions. |
 
 ### question_category values
 
