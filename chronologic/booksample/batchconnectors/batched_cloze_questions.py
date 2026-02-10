@@ -28,7 +28,7 @@ import traceback
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Add connectors directory to path for imports
+# Add connectors directory to path for shared imports (make_cloze_questions, etc.)
 CONNECTORS_DIR = str(Path(__file__).parent.parent / "connectors")
 if CONNECTORS_DIR not in sys.path:
     sys.path.insert(0, CONNECTORS_DIR)
@@ -54,7 +54,7 @@ from make_cloze_questions import (
     DEFAULT_DISTRACTOR_TYPES,
 )
 
-from distractor_generator import generate_distractors
+from distractor_generator_wcats import generate_distractors
 
 # Default paths
 DEFAULT_PRIMARY_METADATA = Path(__file__).parent.parent / "primary_metadata.csv"

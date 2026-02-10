@@ -9,7 +9,7 @@ Supports three distractor types:
 - anachronistic: LLM generates without historical context
 
 Usage:
-    from distractor_generator import generate_distractors
+    from distractor_generator_wcats import generate_distractors
 
     answer_strings, answer_types, answer_probabilities = generate_distractors(
         metadata_prefix="...",

@@ -13,7 +13,7 @@ from pathlib import Path
 # Add parent directory to path so we can import batchconnectors modules
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from distractor_generator import (
+from distractor_generator_wcats import (
     format_length_spec,
     get_term_spec,
     ANACHRONISTIC_PROMPT,
