@@ -224,6 +224,7 @@ def generate_distractors_for_candidate(passage_data: Dict, tagged: List[Dict],
         mask_string=passage_data['mask_string'],
         distractor_types=DEFAULT_DISTRACTOR_TYPES,
         is_clause=passage_data['is_clause'],
+        category=passage_data['category'],
         verbose_bert=verbose_bert,
         debug=debug
     )
