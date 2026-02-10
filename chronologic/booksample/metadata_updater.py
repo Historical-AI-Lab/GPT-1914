@@ -52,7 +52,7 @@ for idx, row in history.iterrows():
 history['author_profession'] = author_professions
 history['genre'] = genres
 
-directories_to_count = ['character', 'connectors', 'manual']
+directories_to_count = ['character', 'connectors', 'manual', 'batchconnectors']
 
 # we iterate through each of those directories, list files in
 # its process_files/ subdirectory, and then iterate through
@@ -69,7 +69,7 @@ for directory in directories_to_count:
     process_files_path = os.path.join(directory, 'process_files')
     if os.path.exists(process_files_path):
         for filename in os.listdir(process_files_path):
-            if filename.endswith('questions.jsonl'):
+            if filename.endswith('questions.jsonl') and not filename.endswith('potentialquestions.jsonl'):
                 barcode_part = filename.split('_')[0]
                 # lowercase the barcode part, since filenames are uppercased
                 barcode_part = barcode_part.lower()
