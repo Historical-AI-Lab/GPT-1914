@@ -3,18 +3,18 @@
 Approve Batched Questions
 
 Interactive approval of batch-generated cloze questions.
-Loads *_potentialquestions.jsonl files, lets the user review and approve
-candidates, and saves approved questions to *_clozequestions.jsonl.
+Loads a single *_potentialquestions.jsonl file, lets the user review and
+approve candidates, and saves approved questions to *_clozequestions.jsonl.
 
 Usage:
-    python approve_batched_questions.py [OPTIONS]
+    python approve_batched_questions.py INPUT_FILE [OPTIONS]
+
+    Arguments:
+        INPUT_FILE                 Path to a *_potentialquestions.jsonl file
 
     Options:
-        --process-dir DIR          Directory with potential question files
-                                   (default: process_files/)
         --primary-metadata FILE    Path to primary_metadata.csv
                                    (default: ../primary_metadata.csv)
-        --barcode BARCODE          Process only this barcode
         --debug                    Enable debug output
 """
 
@@ -22,7 +22,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 # Add connectors directory to path for imports
 CONNECTORS_DIR = str(Path(__file__).parent.parent / "connectors")
@@ -45,39 +45,6 @@ from metadata_elicitation import elicit_metadata
 # Extra batch fields that get stripped from final output
 BATCH_FIELDS = {'is_clause', 'mask_string', 'full_sentence', 'target_idx',
                 'masked_passage', 'ground_truth'}
-
-
-def find_potential_question_files(process_dir: str) -> List[Tuple[str, Path]]:
-    """
-    Find *_potentialquestions.jsonl files, excluding barcodes that already
-    have *_clozequestions.jsonl.
-
-    Args:
-        process_dir: Directory to search
-
-    Returns:
-        List of (barcode, filepath) tuples
-    """
-    pdir = Path(process_dir)
-    if not pdir.exists():
-        return []
-
-    # Find all potential question files
-    potential_files = sorted(pdir.glob("*_potentialquestions.jsonl"))
-
-    # Find existing approved files
-    approved_barcodes = set()
-    for f in pdir.glob("*_clozequestions.jsonl"):
-        barcode = f.name.replace("_clozequestions.jsonl", "")
-        approved_barcodes.add(barcode)
-
-    results = []
-    for f in potential_files:
-        barcode = f.name.replace("_potentialquestions.jsonl", "")
-        if barcode not in approved_barcodes:
-            results.append((barcode, f))
-
-    return results
 
 
 def load_potential_questions(filepath: Path) -> List[Dict]:
@@ -212,6 +179,55 @@ def review_batch_distractors(question: Dict) -> Optional[Dict]:
     return question
 
 
+def final_review(question: Dict, metadata_prefix: str) -> bool:
+    """
+    Show the complete question with all answers for final approval
+    before writing to file.
+
+    Args:
+        question: Question dict after distractor approval
+        metadata_prefix: Metadata frame string
+
+    Returns:
+        True if user confirms, False to reject
+    """
+    answer_type = "clause" if question.get('is_clause', False) else "sentence"
+    mask_string = question.get('mask_string', '')
+    masked_passage = question.get('masked_passage', '')
+    prompt = (f"Write a {answer_type} appropriate for this book that could "
+              f"stand in the position marked by {mask_string}:")
+
+    print("\n" + "=" * 70)
+    print("FINAL REVIEW")
+    print("=" * 70)
+    print()
+    print(f"  {metadata_prefix}")
+    print()
+    print(f"  {masked_passage}")
+    print()
+    print(f"  {prompt}")
+    print()
+    print("-" * 40)
+
+    for text, dtype in zip(question['answer_strings'],
+                           question['answer_types']):
+        marker = " *" if dtype == "ground_truth" else "  "
+        print(f"{marker} [{dtype:20s}]  {text}")
+
+    print("-" * 40)
+    print("  (* = correct answer)")
+    print()
+
+    while True:
+        response = input("Save this question? (y/n): ").strip().lower()
+        if response in ['y', 'yes']:
+            return True
+        elif response in ['n', 'no', '']:
+            return False
+        else:
+            print("Please enter 'y' or 'n'")
+
+
 def apply_metadata_to_question(question: Dict, metadata: Dict,
                                metadata_prefix: str) -> Dict:
     """
@@ -332,6 +348,11 @@ def process_single_file(barcode: str, questions: List[Dict],
 
             question = result
 
+            # Final review before saving
+            if not final_review(question, metadata_prefix):
+                print("  Rejected at final review.")
+                continue
+
             # Apply confirmed metadata and strip batch fields
             question = apply_metadata_to_question(
                 question, metadata, metadata_prefix
@@ -354,73 +375,32 @@ def main():
         description="Interactive approval of batch-generated cloze questions"
     )
 
-    parser.add_argument("--process-dir",
-                        default="process_files",
-                        help="Directory with potential question files "
-                             "(default: process_files)")
+    parser.add_argument("input_file",
+                        help="Path to a *_potentialquestions.jsonl file")
     parser.add_argument("--primary-metadata",
                         help="Path to primary_metadata.csv "
                              "(default: ../primary_metadata.csv)")
-    parser.add_argument("--barcode",
-                        help="Process only this barcode")
     parser.add_argument("--debug", action="store_true",
                         help="Enable debug output")
 
     args = parser.parse_args()
 
-    # Resolve process dir relative to script
-    script_dir = Path(__file__).parent
-    process_dir = Path(args.process_dir)
-    if not process_dir.is_absolute():
-        process_dir = script_dir / process_dir
+    filepath = Path(args.input_file)
+    if not filepath.exists():
+        print(f"Error: File not found: {filepath}")
+        sys.exit(1)
+
+    # Extract barcode from filename (e.g. "HXDN6E_potentialquestions.jsonl" -> "HXDN6E")
+    barcode = filepath.name.replace("_potentialquestions.jsonl", "")
+    output_path = filepath.parent / f"{barcode}_clozequestions.jsonl"
 
     primary_metadata = args.primary_metadata or str(
         Path(__file__).parent.parent / "primary_metadata.csv"
     )
 
-    if args.barcode:
-        # Process single barcode
-        barcode = args.barcode.upper()
-        filepath = process_dir / f"{barcode}_potentialquestions.jsonl"
-
-        if not filepath.exists():
-            print(f"Error: File not found: {filepath}")
-            sys.exit(1)
-
-        questions = load_potential_questions(filepath)
-        output_path = process_dir / f"{barcode}_clozequestions.jsonl"
-
-        process_single_file(barcode, questions, output_path,
-                           primary_metadata, args.debug)
-    else:
-        # Find all unprocessed files
-        files = find_potential_question_files(str(process_dir))
-
-        if not files:
-            print("No unprocessed potential question files found.")
-            print(f"  Searched: {process_dir}")
-            sys.exit(0)
-
-        print(f"Found {len(files)} books to review:")
-        for barcode, filepath in files:
-            print(f"  {barcode}: {filepath.name}")
-
-        for barcode, filepath in files:
-            questions = load_potential_questions(filepath)
-            output_path = process_dir / f"{barcode}_clozequestions.jsonl"
-
-            process_single_file(barcode, questions, output_path,
-                               primary_metadata, args.debug)
-
-            # Ask to continue
-            try:
-                response = input("\nContinue to next book? (y/n) [y]: ").strip().lower()
-                if response in ['n', 'no']:
-                    print("Stopping.")
-                    break
-            except KeyboardInterrupt:
-                print("\nStopping.")
-                break
+    questions = load_potential_questions(filepath)
+    process_single_file(barcode, questions, output_path,
+                       primary_metadata, args.debug)
 
     print("\nDone.")
 
