@@ -1,0 +1,9 @@
+This script provides an interactive CLI for manually composing benchmark questions and saving them as JSONL. It requires Python 3.10+ and no external packages beyond the standard library (metadata lookup uses only csv and json). It does not call a local LLM. The script imports metadata_elicitation.py from the batchconnectors directory, so both manual/ and batchconnectors/ should be present in the booksample directory.
+
+Run it from the manual/ directory:
+
+    python manual_question_writer.py
+
+By default it looks for ../primary_metadata.csv; use --metadata to point elsewhere. Output is written to manual/process_files/, with one JSONL file per source htid (e.g., HXDN6E_manualquestions.jsonl). You can also use the special htids "attribution", "handcrafted", or "refusal" for questions that are not tied to a specific book.
+
+The script loops, creating one question per iteration. It first asks for a source htid and then walks you through metadata confirmation (you can approve the auto-generated metadata frame, blank it, or type a custom one). Next it prompts for the question text, category (defaulting to "textbook"), count of words drawn from the original source, and an optional rationale comment. Finally you enter answers: the first is always ground_truth; subsequent answers can be typed as ground_truth, manual, manual_same_book, or anachronistic_manual, each with an optional probability. After a JSON preview you confirm or discard, and the script loops back for the next question. Type "quit" or press Ctrl+C at any prompt to exit.

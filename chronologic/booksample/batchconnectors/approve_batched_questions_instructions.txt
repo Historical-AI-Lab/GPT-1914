@@ -1,0 +1,9 @@
+This script interactively reviews cloze questions that were generated in batch by batched_cloze_questions.py. It requires Python 3.10+ and the "requests" package (pip install requests). No local LLM is needed for the approval step itself, but the input files must have been produced by an earlier batch run that used Ollama.
+
+To run the script, point it at one of the *_potentialquestions.jsonl files in process_files/. For example, from the batchconnectors directory:
+
+    python approve_batched_questions.py process_files/HXDN6E_potentialquestions.jsonl
+
+The script will look up metadata in ../primary_metadata.csv by default; use --primary-metadata to specify a different path. Approved questions are written to a corresponding *_clozequestions.jsonl file in the same directory.
+
+The interaction flow proceeds book by book, category by category. For each category the script presents candidate passages one at a time, showing the passage with its masked span and the correct answer. You can accept or reject each candidate. If you accept, you are given the option to edit the passage boundaries, then asked to approve or reject each distractor individually. Finally the script shows a complete summary of the question with all approved distractors and asks for a final yes/no confirmation before saving. Once a question is approved for a category, the script moves on to the next category. Enter "stop" or press Ctrl+C at any prompt to end the session early; all previously saved questions are preserved.
