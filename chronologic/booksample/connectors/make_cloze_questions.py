@@ -1068,6 +1068,75 @@ def present_question_for_approval(passage_data: Dict, metadata_prefix: str) -> s
             print("Please enter 'y', 'n', 'p', or 'stop'")
 
 
+def edit_passage(passage_data: Dict) -> Dict:
+    """
+    Optionally edit the passage to fix noise like running page headers.
+
+    Offers two modes:
+    - Delete: remove a substring (e.g., an intruding running header)
+    - Edit: enter a fully revised passage (multi-line, terminated by ===)
+
+    Loops to allow multiple edits. Applies changes to passage, full_passage,
+    full_sentence, and ground_truth as appropriate.
+
+    Args:
+        passage_data: Dict with passage, full_passage, ground_truth, mask_string, etc.
+
+    Returns:
+        Updated passage_data dict (modified in place)
+    """
+    while True:
+        response = input("\nEdit passage? (y or enter for no): ").strip().lower()
+
+        if response in ['', 'n', 'no']:
+            return passage_data
+
+        if response not in ['y', 'yes']:
+            continue
+
+        print("  (d) Delete a string from the passage")
+        print("  (e) Enter edited passage (end with a line containing only ===)")
+
+        mode = input("  Choice: ").strip().lower()
+
+        if mode == 'd':
+            to_delete = input("  String to delete: ")
+            if to_delete:
+                for key in ['passage', 'full_passage', 'full_sentence', 'ground_truth']:
+                    passage_data[key] = passage_data[key].replace(to_delete, '')
+                    # Clean up double spaces left by deletion
+                    while '  ' in passage_data[key]:
+                        passage_data[key] = passage_data[key].replace('  ', ' ')
+                    passage_data[key] = passage_data[key].strip()
+                print(f"\n  Updated passage: \"{passage_data['passage']}\"")
+
+        elif mode == 'e':
+            print("  Enter the edited passage (end with a line containing only ===):")
+            lines = []
+            while True:
+                line = input()
+                if line.strip() == '===':
+                    break
+                lines.append(line)
+            new_passage = ' '.join(lines)
+            while '  ' in new_passage:
+                new_passage = new_passage.replace('  ', ' ')
+            new_passage = new_passage.strip()
+
+            passage_data['passage'] = new_passage
+            # Reconstruct full_passage by replacing mask with ground truth
+            passage_data['full_passage'] = new_passage.replace(
+                passage_data['mask_string'], passage_data['ground_truth']
+            )
+            print(f"\n  Updated passage: \"{passage_data['passage']}\"")
+
+        else:
+            print("  Please enter 'd' or 'e'")
+            continue
+
+        # Loop back to allow further edits
+
+
 def present_distractors_for_approval(distractors: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
     """
     Present distractors for individual approval.
@@ -1251,6 +1320,9 @@ def process_questions(tagged: List[Dict], metadata: Dict, output_path: str,
             used_indices.add(target_idx)
             print("Question rejected.")
             continue
+
+        # Offer chance to edit the passage before generating distractors
+        passage_data = edit_passage(passage_data)
 
         # Question accepted - generate distractors
         print("\nGenerating distractors...")
