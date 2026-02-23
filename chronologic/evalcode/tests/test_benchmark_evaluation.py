@@ -25,6 +25,7 @@ from benchmark_evaluation import (
     _build_question_text,
     _build_mcq_prompt,
     _parse_mcq_response,
+    _parse_mcq_response_openai,
     calculate_brier_score,
     calculate_mcq_skill_score,
     get_answer_lls,
@@ -261,6 +262,36 @@ class TestParseMcqResponse:
 
     def test_returns_first_letter_if_multiple(self):
         assert _parse_mcq_response("A or B") == "A"
+
+
+class TestParseMcqResponseOpenai:
+    """Tests for _parse_mcq_response_openai() — no LLM required."""
+
+    def test_parses_json_choice(self):
+        assert _parse_mcq_response_openai('{"choice":"C"}') == "C"
+
+    def test_parses_json_choice_with_whitespace(self):
+        assert _parse_mcq_response_openai('{ "choice": "B" }') == "B"
+
+    def test_falls_back_to_regex_for_plain_text(self):
+        assert _parse_mcq_response_openai("The answer is D.") == "D"
+
+    def test_falls_back_to_regex_for_bare_letter(self):
+        assert _parse_mcq_response_openai("A") == "A"
+
+    def test_returns_none_for_empty_string(self):
+        assert _parse_mcq_response_openai("") is None
+
+    def test_returns_none_for_invalid_json_and_no_letter(self):
+        assert _parse_mcq_response_openai("{bad json}") is None
+
+    def test_ignores_json_with_wrong_key(self):
+        # Falls back to regex; no uppercase letter in the string → None
+        assert _parse_mcq_response_openai('{"answer":"c"}') is None
+
+    def test_ignores_json_lowercase_choice(self):
+        # "c" is lowercase — falls back to regex, which also finds no \b[A-Z]\b
+        assert _parse_mcq_response_openai('{"choice":"c"}') is None
 
 
 class TestIsOpenaiModel:

@@ -826,7 +826,7 @@ def is_openai_model(model_id):
 
 
 def _call_openai_with_retry(client, model_id, messages, max_completion_tokens,
-                             max_retries=3):
+                             response_format=None, max_retries=3):
     """Call client.chat.completions.create() with exponential-backoff retries.
 
     Retries specifically on openai.RateLimitError (HTTP 429).  Other
@@ -842,6 +842,8 @@ def _call_openai_with_retry(client, model_id, messages, max_completion_tokens,
         model_id:              model identifier string.
         messages:              list of message dicts (role/content).
         max_completion_tokens: maximum tokens to generate.
+        response_format:       optional dict passed as response_format to the API
+                               (e.g. a JSON schema for structured outputs).
         max_retries:           number of retry attempts after the first failure.
 
     Returns:
@@ -861,14 +863,18 @@ def _call_openai_with_retry(client, model_id, messages, max_completion_tokens,
             "Install it with: pip install openai"
         ) from exc
 
+    kwargs = dict(
+        model=model_id,
+        messages=messages,
+        max_completion_tokens=max_completion_tokens,
+    )
+    if response_format is not None:
+        kwargs["response_format"] = response_format
+
     last_exc = None
     for attempt in range(max_retries + 1):
         try:
-            return client.chat.completions.create(
-                model=model_id,
-                messages=messages,
-                max_completion_tokens=max_completion_tokens,
-            )
+            return client.chat.completions.create(**kwargs)
         except RateLimitError as exc:
             last_exc = exc
             if attempt < max_retries:
@@ -882,21 +888,61 @@ def _call_openai_with_retry(client, model_id, messages, max_completion_tokens,
                 ) from last_exc
 
 
-def _generate_openai(prompt, model_id, client, max_completion_tokens=10):
+def _parse_mcq_response_openai(response_text):
+    """Parse a model response that may be JSON (structured output) or plain text.
+
+    Tries to decode the response as a JSON object with a "choice" key first
+    (the format returned by structured-output requests).  Falls back to the
+    plain-text regex parser _parse_mcq_response() if JSON decoding fails or
+    the expected key is absent.
+
+    Args:
+        response_text: string returned by the model.
+
+    Returns:
+        str or None: a single uppercase letter, or None if no letter was found.
+    """
+    try:
+        data = json.loads(response_text)
+        if isinstance(data, dict) and "choice" in data:
+            val = data["choice"]
+            if isinstance(val, str) and len(val) == 1 and val.isupper():
+                return val
+    except (json.JSONDecodeError, TypeError, ValueError):
+        pass
+    return _parse_mcq_response(response_text)
+
+
+def _generate_openai(prompt, model_id, client, valid_letters=None,
+                     max_completion_tokens=1500):
     """Generate a chat completion response for an MCQ prompt.
 
     Sends a two-message conversation:
         system: instructs the model to respond with only a single letter.
         user:   the MCQ prompt (metadata frame + question + lettered choices).
 
+    Uses Structured Outputs (JSON schema with an enum of valid_letters) so the
+    model is forced to emit exactly one of the presented choice letters.  This
+    eliminates the "no response" failure mode caused by reasoning-capable models
+    (GPT-5 family) consuming their entire max_completion_tokens budget on
+    internal chain-of-thought before producing visible output.
+
+    max_completion_tokens is kept generous (1500) to give the reasoning engine
+    sufficient headroom without an open-ended budget.
+
     Args:
         prompt:                the full MCQ prompt string (from _build_mcq_prompt).
         model_id:              OpenAI model identifier string.
         client:                an openai.OpenAI instance.
-        max_completion_tokens: maximum tokens to generate (default 10 — enough for one letter).
+        valid_letters:         list of uppercase letter strings that are valid
+                               answers for this question (e.g. ['A','B','C','D']).
+                               Used to build the structured-output enum.  If None,
+                               no response_format is applied.
+        max_completion_tokens: maximum tokens to generate (default 1500).
 
     Returns:
-        str: the model's text response (may contain the answer letter plus prose).
+        str: the model's raw response text (JSON string when structured outputs
+             are active, e.g. '{"choice":"C"}'; plain text otherwise).
     """
     messages = [
         {
@@ -908,14 +954,35 @@ def _generate_openai(prompt, model_id, client, max_completion_tokens=10):
         },
         {"role": "user", "content": prompt},
     ]
+
+    response_format = None
+    if valid_letters:
+        response_format = {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "mcq_answer",
+                "strict": True,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "choice": {"type": "string", "enum": list(valid_letters)},
+                    },
+                    "required": ["choice"],
+                    "additionalProperties": False,
+                },
+            },
+        }
+
     response = _call_openai_with_retry(
-        client, model_id, messages, max_completion_tokens=max_completion_tokens,
+        client, model_id, messages,
+        max_completion_tokens=max_completion_tokens,
+        response_format=response_format,
     )
     return response.choices[0].message.content or ""
 
 
 def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
-                    include_negation=False):
+                    include_negation=False, trace=False):
     """Evaluate an OpenAI-hosted model on multiple-choice questions.
 
     Uses the Chat Completions API.  For each question the function builds a
@@ -930,6 +997,10 @@ def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
         credentials_path:  path to credentials file; None uses the default
                            evalcode/credentials.txt.
         include_negation:  if True, include negation-type answers as distractors.
+        trace:             if True, sample 5 random questions and print the full
+                           prompt, raw API response, parsed letter, and correct
+                           letter to stdout for each — useful for debugging
+                           response-parsing failures.
 
     Returns:
         str: absolute path to the written markdown report.
@@ -957,22 +1028,51 @@ def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
             if line:
                 questions.append(json.loads(line))
 
+    if trace:
+        questions = random.sample(questions, min(5, len(questions)))
+
     model_safe = model_id.replace(":", "_").replace("/", "_")
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     report_path = path.parent / f"eval_report_mcq_{model_safe}_{timestamp}.md"
 
     correct_total = 0
-    category_results = {}   # category → [correct_count, total_count]
+    no_response_total = 0
+    category_results = {}    # category → [correct_count, total_count]
+    category_no_response = {}  # category → no-response count
     all_skill_scores = []
-    category_skill = {}     # category → list of per-question skill scores
+    category_skill = {}      # category → list of per-question skill scores
     per_question_blocks = []
 
     for i, question in enumerate(questions, 1):
         prompt_text, answer_order, correct_letter = _build_mcq_prompt(
             question, use_metadata=True, include_negation=include_negation
         )
-        response_text = _generate_openai(prompt_text, model_id, client)
-        chosen_letter = _parse_mcq_response(response_text)
+        valid_letters = [letter for letter, _, _ in answer_order]
+        response_text = _generate_openai(
+            prompt_text, model_id, client, valid_letters=valid_letters
+        )
+        chosen_letter = _parse_mcq_response_openai(response_text)
+
+        if chosen_letter is None:
+            no_response_total += 1
+            print(f"  WARNING: no parseable letter in response for question {i} "
+                  f"(category: {question.get('question_category', 'unknown')}) — "
+                  f"raw response: {repr(response_text)}")
+
+        if trace:
+            sep = "=" * 72
+            print(f"\n{sep}")
+            print(f"QUESTION {i}  (category: {question.get('question_category', '')})")
+            print(sep)
+            print("── PROMPT ──────────────────────────────────────────────────────────")
+            print(prompt_text)
+            print("── RAW RESPONSE ────────────────────────────────────────────────────")
+            print(repr(response_text))
+            print("── PARSE RESULT ────────────────────────────────────────────────────")
+            print(f"  chosen_letter : {chosen_letter!r}")
+            print(f"  correct_letter: {correct_letter!r}")
+            print(f"  correct       : {chosen_letter == correct_letter}")
+            print(sep)
 
         is_correct = chosen_letter == correct_letter
         if is_correct:
@@ -984,6 +1084,8 @@ def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
         if is_correct:
             category_results[category][0] += 1
         category_results[category][1] += 1
+        if chosen_letter is None:
+            category_no_response[category] = category_no_response.get(category, 0) + 1
 
         k = len(answer_order)
         r = sum(1 for _, _, p in answer_order if p == 1.0)
@@ -992,6 +1094,7 @@ def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
         category_skill.setdefault(category, []).append(skill)
 
         result_str = "TRUE" if is_correct else "FALSE"
+        no_resp_str = "  ⚠ NO RESPONSE" if chosen_letter is None else ""
 
         block = []
         block.append(f"## Question {i}\n")
@@ -1010,13 +1113,14 @@ def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
         block.append(f"\n**Model response:** `{response_text.strip()}`")
         block.append(
             f"**Chosen:** {chosen_letter}  **Correct:** {correct_letter}  "
-            f"**Result:** {result_str}"
+            f"**Result:** {result_str}{no_resp_str}"
         )
         block.append(f"**Skill Score:** {skill:.4f}\n")
         per_question_blocks.append("\n".join(block))
 
     total = len(questions)
     overall_accuracy = correct_total / total if total > 0 else 0.0
+    no_response_rate = no_response_total / total if total > 0 else 0.0
     by_category = {
         cat: counts[0] / counts[1] if counts[1] > 0 else 0.0
         for cat, counts in category_results.items()
@@ -1029,14 +1133,21 @@ def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
     summary_lines = [
         f"# MCQ Eval — {model_id}\n",
         "## Summary\n",
-        "| Metric | Accuracy | Skill Score |",
-        "|--------|----------|-------------|",
-        f"| **Overall** | {overall_accuracy:.1%} | {overall_mean_skill:.4f} |",
+        f"**No-response rate:** {no_response_rate:.1%} "
+        f"({no_response_total} of {total} questions returned no parseable letter)\n",
+        "| Metric | Accuracy | Skill Score | No Response |",
+        "|--------|----------|-------------|-------------|",
+        f"| **Overall** | {overall_accuracy:.1%} | {overall_mean_skill:.4f} "
+        f"| {no_response_total} / {total} |",
     ]
     for cat in sorted(by_category.keys()):
         acc = by_category[cat]
         skill_avg = by_category_skill.get(cat, 0.0)
-        summary_lines.append(f"| {cat} | {acc:.1%} | {skill_avg:.4f} |")
+        cat_total = category_results[cat][1]
+        cat_no_resp = category_no_response.get(cat, 0)
+        summary_lines.append(
+            f"| {cat} | {acc:.1%} | {skill_avg:.4f} | {cat_no_resp} / {cat_total} |"
+        )
     summary_lines.append("")
 
     report_text = "\n".join(summary_lines) + "\n" + "\n\n".join(per_question_blocks)
@@ -1046,6 +1157,8 @@ def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
 
     print(f"Overall MCQ accuracy: {overall_accuracy:.1%}")
     print(f"Overall MCQ skill score: {overall_mean_skill:.4f}")
+    print(f"No-response rate: {no_response_rate:.1%} "
+          f"({no_response_total} of {total} questions returned no parseable letter)")
     return str(report_path)
 
 
@@ -1084,6 +1197,9 @@ if __name__ == "__main__":
 
     parser.add_argument("--include-negation", action="store_true",
                         help="Include negation-type answers in MCQ distractors (--mcq only)")
+    parser.add_argument("--trace", action="store_true",
+                        help="Sample 5 questions, print full prompt + raw response to stdout "
+                             "(OpenAI --mcq only; useful for debugging parse failures)")
 
     args = parser.parse_args()
 
@@ -1107,6 +1223,7 @@ if __name__ == "__main__":
                 args.model_id, args.path_to_jsonl,
                 credentials_path=args.credentials,
                 include_negation=args.include_negation,
+                trace=args.trace,
             )
         else:
             report = mcq_eval_hf(
