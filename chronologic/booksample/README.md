@@ -45,18 +45,21 @@ We will report a top-line number. But the real interest of this benchmark will b
 overview of question types
 --------------------------
 
-So far, I've written code that creates questions in four subdirectories:
+So far, I've written code that creates questions in five subdirectories:
 
 1. character/
 2. connectors/
 3. knowledge/
 4. manual/
+5. poetry/
 
 These are each a separate software pipeline, but there can be multiple question categories in each directory. For instance, the questions in ```connectors``` can have question_category "cloze_concessiveclause" or "cloze_effectsentence," among a total of seven types of rhetorical connection associated with different logical moves. 
 
 In ```manual,``` we have "textbook" questions that were actually formulated in period textbooks of arithmetic &c, "refusal" questions where the model should say it cannot answer, "attribution" questions where the model is asked to identify period, genre, or author, and a generic category of "handcrafted" questions we can thoughtfully design with a variety of explicit aims. This will include handcrafted knowledge questions, multi-hop reasoning questions, and poetry generation tasks.
 
 The ```character``` and ```knowledge``` directories are more unified. ```character``` is based on works of fiction, and asks the model to invent dialogue appropriate to a character, genre, and dramatic situation provided. ```knowledge``` is based on reference works, especially encyclopedias, and asks the model for knowledge not provided in the question.
+
+The ```poetry``` directory is a branch of ```manual``` that allows easier entry of questions and answers that contain linebreaks. Categories here include "poetry_generation"", where the answer is a poem, but also "poetic_form", which asks for knowledge of meter and stanza form. "Attribution" questions here may ask for biographical or historical knowledge about famous texts we know were reprinted and discussed in our period.
 
 In all cases except for "refusal," "attribution," and some "handcrafted," the right answer is drawn from a period text. But the importance of style varies greatly. In "knowledge" questions the right answer is typically a named entity, and wrong answers are different named entities; expression is not a major factor. The same is largely true of "textbook" questions. 
 
