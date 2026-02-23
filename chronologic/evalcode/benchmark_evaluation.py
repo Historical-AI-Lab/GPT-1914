@@ -948,8 +948,9 @@ def _generate_openai(prompt, model_id, client, valid_letters=None,
         {
             "role": "system",
             "content": (
-                "You are an evaluator. "
-                "Respond only with the single uppercase letter of the correct answer."
+                "Choose the best answer quickly. "
+                "Do not reason step by step. "
+                "Select the option that seems most plausible and return only the JSON."
             ),
         },
         {"role": "user", "content": prompt},
