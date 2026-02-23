@@ -568,6 +568,12 @@ def full_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False):
     calculate_brier_score(). Reports mean Brier score overall and broken down
     by question_category. Prints overall score to stdout.
 
+    Scoring failures — questions where every log-likelihood score is 0.0
+    (the sentinel returned by _score_answer_ll_hf when tokenisation produces
+    no answer tokens) — are counted, warned about during the run, flagged in
+    the per-question report blocks, and summarised in the report header and
+    final stdout output.
+
     Args:
         model_id:           HF model ID or local path.
         path_to_jsonl:      path to a JSONL file of benchmark questions.
@@ -592,20 +598,44 @@ def full_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False):
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     report_path = path.parent / f"eval_report_full_{model_safe}_{timestamp}.md"
 
+    total = len(questions)
+    try:
+        from tqdm import tqdm
+        question_iter = tqdm(enumerate(questions, 1), total=total, desc=model_id)
+        _tqdm_active = True
+    except ImportError:
+        question_iter = enumerate(questions, 1)
+        _tqdm_active = False
+
     all_brier_scores = []
-    category_scores = {}  # category → list of brier scores
+    category_scores = {}    # category → list of brier scores
+    scoring_fail_total = 0
+    category_scoring_fail = {}  # category → count of scoring failures
     per_question_blocks = []
 
-    for i, question in enumerate(questions, 1):
+    for i, question in question_iter:
+        if not _tqdm_active and i % 50 == 0:
+            print(f"  Processed {i} of {total} questions...")
+
         lls = get_answer_lls_hf(question, model, tokenizer, use_metadata=True)
+
+        scoring_failed = all(ll == 0.0 for ll in lls)
+        category = question.get("question_category", "unknown")
+        if scoring_failed:
+            scoring_fail_total += 1
+            print(f"  WARNING: all log-likelihoods are 0.0 for question {i} "
+                  f"(category: {category}) — scoring may have failed "
+                  f"(empty answer tokens?)")
         model_probs = lls_to_probabilities(lls)
         gt_probs = question["answer_probabilities"]
         brier = calculate_brier_score(gt_probs, model_probs)
 
         all_brier_scores.append(brier)
-        category = question.get("question_category", "unknown")
         category_scores.setdefault(category, []).append(brier)
+        if scoring_failed:
+            category_scoring_fail[category] = category_scoring_fail.get(category, 0) + 1
 
+        fail_note = "  ⚠ SCORING FAILURE (all LLs = 0.0)" if scoring_failed else ""
         block = []
         block.append(f"## Question {i}\n")
         block.append(f"**Metadata:** {question.get('metadata_frame', '')}\n")
@@ -620,22 +650,27 @@ def full_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False):
             model_probs,
         ):
             block.append(f"| {ans} | {atype} | {gtp:.3f} | {mp:.3f} |")
-        block.append(f"\n**Brier Score:** {brier:.4f}\n")
+        block.append(f"\n**Brier Score:** {brier:.4f}{fail_note}\n")
         per_question_blocks.append("\n".join(block))
 
     overall_mean = sum(all_brier_scores) / len(all_brier_scores) if all_brier_scores else 0.0
     by_category = {cat: sum(scores) / len(scores) for cat, scores in category_scores.items()}
+    scoring_fail_rate = scoring_fail_total / total if total > 0 else 0.0
 
     # Build summary table
     summary_lines = [
         f"# Full Eval — {model_id}\n",
         "## Summary\n",
-        "| Metric | Mean Brier Score |",
-        "|--------|-----------------|",
-        f"| **Overall** | {overall_mean:.4f} |",
+        f"**Scoring failure rate:** {scoring_fail_rate:.1%} "
+        f"({scoring_fail_total} of {total} questions had all-zero log-likelihoods)\n",
+        "| Metric | Mean Brier Score | Scoring Failures |",
+        "|--------|-----------------|-----------------|",
+        f"| **Overall** | {overall_mean:.4f} | {scoring_fail_total} / {total} |",
     ]
     for cat, mean_brier in sorted(by_category.items()):
-        summary_lines.append(f"| {cat} | {mean_brier:.4f} |")
+        cat_total = len(category_scores[cat])
+        cat_fails = category_scoring_fail.get(cat, 0)
+        summary_lines.append(f"| {cat} | {mean_brier:.4f} | {cat_fails} / {cat_total} |")
     summary_lines.append("")
 
     report_text = "\n".join(summary_lines) + "\n" + "\n\n".join(per_question_blocks)
@@ -644,6 +679,8 @@ def full_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False):
         f.write(report_text)
 
     print(f"Overall Brier score: {overall_mean:.4f}")
+    print(f"Scoring failure rate: {scoring_fail_rate:.1%} "
+          f"({scoring_fail_total} of {total} questions had all-zero log-likelihoods)")
     return str(report_path)
 
 
@@ -654,6 +691,11 @@ def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
     For each question: build a lettered MCQ prompt, generate a response, parse
     the chosen letter, check against the correct letter. Reports top-1 accuracy
     overall and by question_category. Prints overall accuracy to stdout.
+
+    Questions where _parse_mcq_response() returns None (no uppercase letter
+    found in the model's output) are counted as no-responses, warned about
+    during the run, flagged in the per-question report blocks, and summarised
+    in the report header and final stdout output.
 
     Args:
         model_id:           HF model ID or local path.
@@ -680,18 +722,39 @@ def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     report_path = path.parent / f"eval_report_mcq_{model_safe}_{timestamp}.md"
 
+    total = len(questions)
+    try:
+        from tqdm import tqdm
+        question_iter = tqdm(enumerate(questions, 1), total=total, desc=model_id)
+        _tqdm_active = True
+    except ImportError:
+        question_iter = enumerate(questions, 1)
+        _tqdm_active = False
+
     correct_total = 0
-    category_results = {}  # category → [correct_count, total_count]
+    no_response_total = 0
+    category_results = {}    # category → [correct_count, total_count]
+    category_no_response = {}  # category → no-response count
     all_skill_scores = []
-    category_skill = {}   # category → list of per-question skill scores
+    category_skill = {}      # category → list of per-question skill scores
     per_question_blocks = []
 
-    for i, question in enumerate(questions, 1):
+    for i, question in question_iter:
+        if not _tqdm_active and i % 50 == 0:
+            print(f"  Processed {i} of {total} questions...")
+
         prompt_text, answer_order, correct_letter = _build_mcq_prompt(
             question, use_metadata=True, include_negation=include_negation
         )
         response_text = _generate_hf(prompt_text, model, tokenizer, max_new_tokens=10)
         chosen_letter = _parse_mcq_response(response_text)
+
+        if chosen_letter is None:
+            no_response_total += 1
+            category = question.get("question_category", "unknown")
+            print(f"  WARNING: no parseable letter in response for question {i} "
+                  f"(category: {category}) — "
+                  f"raw response: {repr(response_text)}")
 
         is_correct = chosen_letter == correct_letter
         if is_correct:
@@ -703,6 +766,8 @@ def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
         if is_correct:
             category_results[category][0] += 1
         category_results[category][1] += 1
+        if chosen_letter is None:
+            category_no_response[category] = category_no_response.get(category, 0) + 1
 
         k = len(answer_order)
         r = sum(1 for _, _, p in answer_order if p == 1.0)
@@ -711,6 +776,7 @@ def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
         category_skill.setdefault(category, []).append(skill)
 
         result_str = "TRUE" if is_correct else "FALSE"
+        no_resp_str = "  ⚠ NO RESPONSE" if chosen_letter is None else ""
 
         block = []
         block.append(f"## Question {i}\n")
@@ -727,12 +793,15 @@ def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
             marker_str = " ".join(markers)
             block.append(f"- {letter}) {ans_str} {marker_str}".strip())
         block.append(f"\n**Model response:** `{response_text.strip()}`")
-        block.append(f"**Chosen:** {chosen_letter}  **Correct:** {correct_letter}  **Result:** {result_str}")
+        block.append(
+            f"**Chosen:** {chosen_letter}  **Correct:** {correct_letter}  "
+            f"**Result:** {result_str}{no_resp_str}"
+        )
         block.append(f"**Skill Score:** {skill:.4f}\n")
         per_question_blocks.append("\n".join(block))
 
-    total = len(questions)
     overall_accuracy = correct_total / total if total > 0 else 0.0
+    no_response_rate = no_response_total / total if total > 0 else 0.0
     by_category = {
         cat: counts[0] / counts[1] if counts[1] > 0 else 0.0
         for cat, counts in category_results.items()
@@ -743,14 +812,21 @@ def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
     summary_lines = [
         f"# MCQ Eval — {model_id}\n",
         "## Summary\n",
-        "| Metric | Accuracy | Skill Score |",
-        "|--------|----------|-------------|",
-        f"| **Overall** | {overall_accuracy:.1%} | {overall_mean_skill:.4f} |",
+        f"**No-response rate:** {no_response_rate:.1%} "
+        f"({no_response_total} of {total} questions returned no parseable letter)\n",
+        "| Metric | Accuracy | Skill Score | No Response |",
+        "|--------|----------|-------------|-------------|",
+        f"| **Overall** | {overall_accuracy:.1%} | {overall_mean_skill:.4f} "
+        f"| {no_response_total} / {total} |",
     ]
     for cat in sorted(by_category.keys()):
         acc = by_category[cat]
         skill_avg = by_category_skill.get(cat, 0.0)
-        summary_lines.append(f"| {cat} | {acc:.1%} | {skill_avg:.4f} |")
+        cat_total = category_results[cat][1]
+        cat_no_resp = category_no_response.get(cat, 0)
+        summary_lines.append(
+            f"| {cat} | {acc:.1%} | {skill_avg:.4f} | {cat_no_resp} / {cat_total} |"
+        )
     summary_lines.append("")
 
     report_text = "\n".join(summary_lines) + "\n" + "\n\n".join(per_question_blocks)
@@ -760,6 +836,8 @@ def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
 
     print(f"Overall MCQ accuracy: {overall_accuracy:.1%}")
     print(f"Overall MCQ skill score: {overall_mean_skill:.4f}")
+    print(f"No-response rate: {no_response_rate:.1%} "
+          f"({no_response_total} of {total} questions returned no parseable letter)")
     return str(report_path)
 
 
@@ -1036,6 +1114,15 @@ def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     report_path = path.parent / f"eval_report_mcq_{model_safe}_{timestamp}.md"
 
+    total = len(questions)
+    try:
+        from tqdm import tqdm
+        question_iter = tqdm(enumerate(questions, 1), total=total, desc=model_id)
+        _tqdm_active = True
+    except ImportError:
+        question_iter = enumerate(questions, 1)
+        _tqdm_active = False
+
     correct_total = 0
     no_response_total = 0
     category_results = {}    # category → [correct_count, total_count]
@@ -1044,7 +1131,10 @@ def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
     category_skill = {}      # category → list of per-question skill scores
     per_question_blocks = []
 
-    for i, question in enumerate(questions, 1):
+    for i, question in question_iter:
+        if not _tqdm_active and not trace and i % 50 == 0:
+            print(f"  Processed {i} of {total} questions...")
+
         prompt_text, answer_order, correct_letter = _build_mcq_prompt(
             question, use_metadata=True, include_negation=include_negation
         )
@@ -1119,7 +1209,6 @@ def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
         block.append(f"**Skill Score:** {skill:.4f}\n")
         per_question_blocks.append("\n".join(block))
 
-    total = len(questions)
     overall_accuracy = correct_total / total if total > 0 else 0.0
     no_response_rate = no_response_total / total if total > 0 else 0.0
     by_category = {
