@@ -5,11 +5,16 @@ Primary path: HuggingFace AutoModelForCausalLM (works on Apple Silicon, CUDA, CP
   - Five-question sampling mode (default)
   - Full eval mode (--full-eval): scores every question, reports mean Brier score
   - MCQ mode (--mcq): presents lettered multiple-choice prompts, scores top-1 accuracy
+OpenAI API path: Chat Completions API for GPT-4.1, GPT-5, and fine-tuned variants.
+  - MCQ mode only (--mcq): auto-detected when model name matches a known OpenAI pattern
+  - Credentials loaded from evalcode/credentials.txt (org ID line 1, API key line 2)
+  - Retry logic with exponential backoff for rate-limit errors
 Legacy path:  vLLM's OpenAI-compatible endpoint with echo=True (requires a running
               vLLM server; unavailable on Apple Silicon MPS).
 
 Requires (HF path):  pip install torch transformers
 Requires (vLLM path): pip install openai  +  a running vLLM server
+Requires (OpenAI path): pip install openai  +  evalcode/credentials.txt
 """
 
 import json
@@ -25,6 +30,22 @@ HF_DEFAULT_DEVICE = None  # None → auto-detect at runtime
 # vLLM path (legacy)
 VLLM_BASE_URL = "http://localhost:9011/v1"
 MODEL = "gpt-oss:20b"
+
+# OpenAI API path
+# Model ID prefixes that indicate an OpenAI-hosted model (including fine-tunes).
+# is_openai_model() uses startswith() against this tuple.
+OPENAI_MODEL_PREFIXES = (
+    "gpt-4.1-",
+    "gpt-4.1",   # exact match covered by startswith too
+    "gpt-5.",
+    "gpt-5-",
+    "gpt-5",     # covers "gpt-5" exactly and any gpt-5* without a separator
+    "ft:gpt-4.1-",
+    "ft:gpt-4.1",
+    "ft:gpt-5.",
+    "ft:gpt-5-",
+    "ft:gpt-5",
+)
 
 
 # ---------------------------------------------------------------------------
@@ -742,13 +763,306 @@ def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
     return str(report_path)
 
 
+# ---------------------------------------------------------------------------
+# OpenAI API path
+# ---------------------------------------------------------------------------
+
+def load_openai_credentials(cred_path=None):
+    """Load OpenAI credentials from a two-line text file.
+
+    The file must contain exactly two non-empty lines:
+        Line 1 — organisation ID  (e.g. org-xxxxxxxxxxxxxxxx)
+        Line 2 — API key          (e.g. sk-xxxxxxxxxxxxxxxx)
+
+    Args:
+        cred_path: path to credentials file, or None to use the default
+                   (evalcode/credentials.txt, resolved relative to this
+                   script so it works regardless of the working directory).
+
+    Returns:
+        tuple: (org_id, api_key) — both strings, stripped of whitespace.
+
+    Raises:
+        FileNotFoundError: if the credentials file does not exist.
+        ValueError: if the file does not contain two non-empty lines.
+    """
+    if cred_path is None:
+        cred_path = Path(__file__).parent / "credentials.txt"
+    else:
+        cred_path = Path(cred_path)
+
+    if not cred_path.exists():
+        raise FileNotFoundError(
+            f"OpenAI credentials file not found: {cred_path}\n"
+            "Create it with the organisation ID on line 1 and the API key on line 2."
+        )
+
+    lines = [ln.strip() for ln in cred_path.read_text(encoding="utf-8").splitlines()
+             if ln.strip()]
+    if len(lines) < 2:
+        raise ValueError(
+            f"credentials.txt must contain two non-empty lines "
+            f"(org ID then API key); found {len(lines)} line(s)."
+        )
+
+    return lines[0], lines[1]
+
+
+def is_openai_model(model_id):
+    """Return True if model_id looks like an OpenAI-hosted model.
+
+    Matches against OPENAI_MODEL_PREFIXES using str.startswith(), which
+    covers exact names (e.g. 'gpt-4.1') and versioned variants
+    (e.g. 'gpt-4.1-2025-04-14') as well as fine-tuned IDs
+    (e.g. 'ft:gpt-4.1-2025-04-14:org:name:id').
+
+    Args:
+        model_id: model identifier string.
+
+    Returns:
+        bool
+    """
+    return model_id.startswith(OPENAI_MODEL_PREFIXES)
+
+
+def _call_openai_with_retry(client, model_id, messages, max_completion_tokens,
+                             max_retries=3):
+    """Call client.chat.completions.create() with exponential-backoff retries.
+
+    Retries specifically on openai.RateLimitError (HTTP 429).  Other
+    exceptions propagate immediately.
+
+    Uses max_completion_tokens (required by GPT-4.1+ and GPT-5 series;
+    the older max_tokens parameter is not accepted by these models).
+    Temperature is not passed — GPT-5 series only accepts the API default,
+    and the system prompt already constrains output to a single letter.
+
+    Args:
+        client:                an openai.OpenAI instance.
+        model_id:              model identifier string.
+        messages:              list of message dicts (role/content).
+        max_completion_tokens: maximum tokens to generate.
+        max_retries:           number of retry attempts after the first failure.
+
+    Returns:
+        openai.types.chat.ChatCompletion: the API response object.
+
+    Raises:
+        openai.RateLimitError: if all retries are exhausted.
+        Any other openai exception: propagated immediately.
+    """
+    import time
+
+    try:
+        from openai import RateLimitError
+    except ImportError as exc:
+        raise ImportError(
+            "The 'openai' package is required for OpenAI API evaluation. "
+            "Install it with: pip install openai"
+        ) from exc
+
+    last_exc = None
+    for attempt in range(max_retries + 1):
+        try:
+            return client.chat.completions.create(
+                model=model_id,
+                messages=messages,
+                max_completion_tokens=max_completion_tokens,
+            )
+        except RateLimitError as exc:
+            last_exc = exc
+            if attempt < max_retries:
+                wait = 2 ** attempt
+                print(f"  Rate limit hit; retrying in {wait}s "
+                      f"(attempt {attempt + 1}/{max_retries})...")
+                time.sleep(wait)
+            else:
+                raise RateLimitError(
+                    f"OpenAI rate limit exceeded after {max_retries} retries."
+                ) from last_exc
+
+
+def _generate_openai(prompt, model_id, client, max_completion_tokens=10):
+    """Generate a chat completion response for an MCQ prompt.
+
+    Sends a two-message conversation:
+        system: instructs the model to respond with only a single letter.
+        user:   the MCQ prompt (metadata frame + question + lettered choices).
+
+    Args:
+        prompt:                the full MCQ prompt string (from _build_mcq_prompt).
+        model_id:              OpenAI model identifier string.
+        client:                an openai.OpenAI instance.
+        max_completion_tokens: maximum tokens to generate (default 10 — enough for one letter).
+
+    Returns:
+        str: the model's text response (may contain the answer letter plus prose).
+    """
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are an evaluator. "
+                "Respond only with the single uppercase letter of the correct answer."
+            ),
+        },
+        {"role": "user", "content": prompt},
+    ]
+    response = _call_openai_with_retry(
+        client, model_id, messages, max_completion_tokens=max_completion_tokens,
+    )
+    return response.choices[0].message.content or ""
+
+
+def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
+                    include_negation=False):
+    """Evaluate an OpenAI-hosted model on multiple-choice questions.
+
+    Uses the Chat Completions API.  For each question the function builds a
+    lettered MCQ prompt, sends it to the model, parses the chosen letter, and
+    checks it against the correct answer.  Reports top-1 accuracy and skill
+    score overall and broken down by question_category — identical format to
+    mcq_eval_hf().
+
+    Args:
+        model_id:          OpenAI model identifier (e.g. 'gpt-4.1-2025-04-14').
+        path_to_jsonl:     path to a JSONL file of benchmark questions.
+        credentials_path:  path to credentials file; None uses the default
+                           evalcode/credentials.txt.
+        include_negation:  if True, include negation-type answers as distractors.
+
+    Returns:
+        str: absolute path to the written markdown report.
+
+    Raises:
+        FileNotFoundError: if credentials file is missing.
+        ImportError: if the 'openai' package is not installed.
+    """
+    try:
+        from openai import OpenAI
+    except ImportError as exc:
+        raise ImportError(
+            "The 'openai' package is required for OpenAI API evaluation. "
+            "Install it with: pip install openai"
+        ) from exc
+
+    org_id, api_key = load_openai_credentials(credentials_path)
+    client = OpenAI(api_key=api_key, organization=org_id)
+
+    path = Path(path_to_jsonl)
+    questions = []
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                questions.append(json.loads(line))
+
+    model_safe = model_id.replace(":", "_").replace("/", "_")
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_path = path.parent / f"eval_report_mcq_{model_safe}_{timestamp}.md"
+
+    correct_total = 0
+    category_results = {}   # category → [correct_count, total_count]
+    all_skill_scores = []
+    category_skill = {}     # category → list of per-question skill scores
+    per_question_blocks = []
+
+    for i, question in enumerate(questions, 1):
+        prompt_text, answer_order, correct_letter = _build_mcq_prompt(
+            question, use_metadata=True, include_negation=include_negation
+        )
+        response_text = _generate_openai(prompt_text, model_id, client)
+        chosen_letter = _parse_mcq_response(response_text)
+
+        is_correct = chosen_letter == correct_letter
+        if is_correct:
+            correct_total += 1
+
+        category = question.get("question_category", "unknown")
+        if category not in category_results:
+            category_results[category] = [0, 0]
+        if is_correct:
+            category_results[category][0] += 1
+        category_results[category][1] += 1
+
+        k = len(answer_order)
+        r = sum(1 for _, _, p in answer_order if p == 1.0)
+        skill = calculate_mcq_skill_score(is_correct, k, r)
+        all_skill_scores.append(skill)
+        category_skill.setdefault(category, []).append(skill)
+
+        result_str = "TRUE" if is_correct else "FALSE"
+
+        block = []
+        block.append(f"## Question {i}\n")
+        block.append(f"**Metadata:** {question.get('metadata_frame', '')}\n")
+        block.append(f"**Question:** {question.get('main_question', '')}\n")
+        block.append(f"**Category:** {category}\n")
+        block.append("**Choices:**")
+        for letter, ans_str, prob in answer_order:
+            markers = []
+            if letter == chosen_letter:
+                markers.append("←")
+            if prob == 1.0:
+                markers.append("(ground truth)")
+            marker_str = " ".join(markers)
+            block.append(f"- {letter}) {ans_str} {marker_str}".strip())
+        block.append(f"\n**Model response:** `{response_text.strip()}`")
+        block.append(
+            f"**Chosen:** {chosen_letter}  **Correct:** {correct_letter}  "
+            f"**Result:** {result_str}"
+        )
+        block.append(f"**Skill Score:** {skill:.4f}\n")
+        per_question_blocks.append("\n".join(block))
+
+    total = len(questions)
+    overall_accuracy = correct_total / total if total > 0 else 0.0
+    by_category = {
+        cat: counts[0] / counts[1] if counts[1] > 0 else 0.0
+        for cat, counts in category_results.items()
+    }
+    overall_mean_skill = (
+        sum(all_skill_scores) / len(all_skill_scores) if all_skill_scores else 0.0
+    )
+    by_category_skill = {cat: sum(s) / len(s) for cat, s in category_skill.items()}
+
+    summary_lines = [
+        f"# MCQ Eval — {model_id}\n",
+        "## Summary\n",
+        "| Metric | Accuracy | Skill Score |",
+        "|--------|----------|-------------|",
+        f"| **Overall** | {overall_accuracy:.1%} | {overall_mean_skill:.4f} |",
+    ]
+    for cat in sorted(by_category.keys()):
+        acc = by_category[cat]
+        skill_avg = by_category_skill.get(cat, 0.0)
+        summary_lines.append(f"| {cat} | {acc:.1%} | {skill_avg:.4f} |")
+    summary_lines.append("")
+
+    report_text = "\n".join(summary_lines) + "\n" + "\n\n".join(per_question_blocks)
+
+    with open(report_path, "w", encoding="utf-8") as f:
+        f.write(report_text)
+
+    print(f"Overall MCQ accuracy: {overall_accuracy:.1%}")
+    print(f"Overall MCQ skill score: {overall_mean_skill:.4f}")
+    return str(report_path)
+
+
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Evaluate a model on benchmark questions (Brier score or MCQ accuracy)."
+        description=(
+            "Evaluate a model on benchmark questions (Brier score or MCQ accuracy).\n\n"
+            "OpenAI models (gpt-4.1-*, gpt-5*, ft:gpt-4.1-*, ft:gpt-5*) are detected\n"
+            "automatically when --mcq is set and routed to the Chat Completions API.\n"
+            "Credentials are read from evalcode/credentials.txt (or --credentials)."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("model_id",      help="HF model ID or local path (HF mode); "
+                                              "OpenAI model name (OpenAI mode); "
                                               "vLLM model name (--vllm mode)")
     parser.add_argument("path_to_jsonl", help="Path to benchmark questions JSONL")
     parser.add_argument("--vllm",        action="store_true",
@@ -757,12 +1071,16 @@ if __name__ == "__main__":
                         help="Device override: mps | cuda | cpu (HF mode only)")
     parser.add_argument("--trust-remote-code", action="store_true",
                         help="Pass trust_remote_code=True to HF (HF mode only)")
+    parser.add_argument("--credentials", default=None, metavar="PATH",
+                        help="Path to OpenAI credentials file "
+                             "(default: evalcode/credentials.txt)")
 
     mode_group = parser.add_mutually_exclusive_group()
     mode_group.add_argument("--full-eval", action="store_true",
                             help="Score every question; report mean Brier score (HF mode only)")
     mode_group.add_argument("--mcq",       action="store_true",
-                            help="Present MCQ prompts; report top-1 accuracy (HF mode only)")
+                            help="Present MCQ prompts; report top-1 accuracy. "
+                                 "Auto-routes to OpenAI API for GPT-4.1/5 model IDs.")
 
     parser.add_argument("--include-negation", action="store_true",
                         help="Include negation-type answers in MCQ distractors (--mcq only)")
@@ -772,18 +1090,31 @@ if __name__ == "__main__":
     if args.vllm:
         report = test_five_questions(args.model_id, args.path_to_jsonl)
     elif args.full_eval:
+        if is_openai_model(args.model_id):
+            parser.error(
+                f"'{args.model_id}' is an OpenAI API model. "
+                "Log-likelihood scoring (--full-eval) is not supported for the Chat "
+                "Completions API. Use --mcq instead."
+            )
         report = full_eval_hf(
             args.model_id, args.path_to_jsonl,
             device=args.device,
             trust_remote_code=args.trust_remote_code,
         )
     elif args.mcq:
-        report = mcq_eval_hf(
-            args.model_id, args.path_to_jsonl,
-            device=args.device,
-            trust_remote_code=args.trust_remote_code,
-            include_negation=args.include_negation,
-        )
+        if is_openai_model(args.model_id):
+            report = mcq_eval_openai(
+                args.model_id, args.path_to_jsonl,
+                credentials_path=args.credentials,
+                include_negation=args.include_negation,
+            )
+        else:
+            report = mcq_eval_hf(
+                args.model_id, args.path_to_jsonl,
+                device=args.device,
+                trust_remote_code=args.trust_remote_code,
+                include_negation=args.include_negation,
+            )
     else:
         report = test_five_questions_hf(
             args.model_id, args.path_to_jsonl,
