@@ -52,7 +52,7 @@ for idx, row in history.iterrows():
 history['author_profession'] = author_professions
 history['genre'] = genres
 
-directories_to_count = ['character', 'connectors', 'manual', 'batchconnectors']
+directories_to_count = ['character', 'connectors', 'knowledge', 'manual', 'batchconnectors', 'summary', 'poetry']
 
 # we iterate through each of those directories, list files in
 # its process_files/ subdirectory, and then iterate through
@@ -65,6 +65,7 @@ directories_to_count = ['character', 'connectors', 'manual', 'batchconnectors']
 # Results are stored in a dictionary mapping barcodes to dicts,
 # within which keys are directory names and values are counts.
 question_counts = dict()
+aggregation_file = open('all_benchmark_questions.jsonl', 'w')
 for directory in directories_to_count:
     process_files_path = os.path.join(directory, 'process_files')
     if os.path.exists(process_files_path):
@@ -76,10 +77,16 @@ for directory in directories_to_count:
                 barcode = f"hvd.{barcode_part}"
                 file_path = os.path.join(process_files_path, filename)
                 with open(file_path, 'r') as f:
-                    line_count = sum(1 for line in f)
+                    lines = f.readlines()
+                    line_count = len(lines)
                     if barcode not in question_counts:
                         question_counts[barcode] = dict()
                     question_counts[barcode][directory] = line_count
+                    for line in lines:
+                        line = line.rstrip('\n')
+                        if line:
+                            aggregation_file.write(line + '\n')
+aggregation_file.close()
 
 # Now we add columns to history for each directory's question counts
 added_columns = []

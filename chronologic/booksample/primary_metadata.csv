@@ -1,99 +1,101 @@
-barcode_src,title_src,author_src,firstpub,reason,pubplace,authgender,authnationality,authordates,page_count_src,token_count_o200k_base_gen,author_profession,genre,character_question_count,connectors_question_count,manual_question_count,batchconnectors_question_count,total_question_count
-hvd.hn1imp,"Narcotic drug addiction, the modern scourge,","Hinckley, Livingston Spraker",1918.0,,US,m,US,1855- ,48.0,9308.0,doctor,short medical treatise,0,3,0,0,3
-hvd.32044103069654,Journal of the American Chemical Society.,American Chemical Society.,1918.0,,US,u,US,-1864,1032.0,707538.0,,,0,0,0,0,0
-hvd.32044097027296,The school garden book,"Weed, Clarence Moores",1909.0,not actually written for kids,US,m,US,,360.0,100572.0,naturalist,educational guide,0,8,0,0,8
-hvd.hn6gxm,"Powers, duties and work of game wardens : a handbook of practical information for officers and others interested in the enforcement of fish and game laws","Chase, Harry.",1910.0,,US,m,US,,152.0,43018.0,writer,handbook,0,7,0,0,7
-hvd.hxqc3g,"In the wilderness, with a biographical sketch.","Warner, Charles Dudley",1878.0,biographical sketches,US,m,US,1829-1900,148.0,58778.0,essayist,book of travel and natural description,0,7,0,0,7
-hvd.hwwjnq,Argentina.,"Hirst, W. A.",1910.0,social description,US,m,US,1870-1948,460.0,148623.0,writer,work of history and social description,0,7,0,0,7
-hvd.32044058307810,The construction of chemical laboratories,"Chandler, William Henry",1893.0,"based on information from the exposition of 1889, but not pub in this form until 1893",US,m,US,1841-1906,260.0,28814.0,chemist,book,0,5,0,0,5
-hvd.hxdnai,The poet's poet and other essays.,"Quayle, William A.",1897.0,,US,m,US,1860-1925,360.0,102598.0,bishop of the Methodist church,book of essays,0,7,0,0,7
-hvd.32044073486045,The temple of Solomon : a review of the various theories respecting its form and style of architecture : The ethics of art : two lectures,"Robins, Edward Cookworthy.",1887.0,read in 1886 but not a prob,UK,m,UK (England),1831-1918,134.0,55127.0,architect and author,collection of lectures about art,0,7,0,0,7
-hvd.32044086783313,"Robert Burns, an address delivered in Tremont Temple","Hoar, George Frisbie",1901.0,,US,m,US,1826-1904,32.0,7820.0,,,0,0,0,0,0
-hvd.hw1vlh,Beneath blue skies and gray : poems,"Crockett, Ingram",1898.0,,US,m,US,1856-1936,120.0,18177.0,,,0,0,0,0,0
-hvd.hnnwy1,The Barrys,"Bullock, Shan F.",1898.0,,UK,m,"UK (Irish writer, pub London)",1865-1935,438.0,163936.0,writer,novel,35,6,0,0,41
-hvd.32044038429635,"Counsels by the way,","Van Dyke, Henry",1897.0,"collection of essays prev pub 1897, 1900, 1903",US,m,US,1852-1933,176.0,37856.0,diplomat and Presbyterian clergyman,book of essays,0,8,0,0,8
-hvd.32044106370034,Some American medical botanists,"Kelly, Howard A.",1911.0,,US,m,US,1858-1943,32.0,11374.0,naturalist and physician,work of biography,0,5,0,0,5
-hvd.hnqe3f,Cases on constitutional law,,1897.0,,US,m,US,1845-1933,334.0,365072.0,,,0,0,0,0,0
-hvd.hxdi7y,"The spy of Yorktown; a story of Arnold and Washington in the last year of the war ofindependence,","Stoddard, William Osborn",1903.0,,US,m,US,1835-1925,264.0,72950.0,,historical novel,4,0,0,0,4
-hvd.32044011551280,Thucydides Mythistoricus,"Cornford, Francis Macdonald",1907.0,,UK,m,UK (England),1874-1943,298.0,154615.0,,,0,0,0,0,0
-hvd.hx2nlf,"Federal government and the states; address delivered at Norfolk, Va., on June 29, 1907, at the celebration of the adoption of the first Virginia constitution,","Storey, Moorfield",1907.0,,US,m,US,1845-1929,154.0,56001.0,lawyer and civil rights activist,public address,0,8,0,0,8
-hvd.hn1nuj,The Chautauqua girls at home,Pansy,1873.0,Pansy = Isabella Macdonald Alden,US,f,US,1841-1930,496.0,128873.0,,story for children,10,0,0,0,10
-hvd.32044087970612,"A brief history of Europe from 1789-1815,","Holt, Lucius Hudson",1919.0,"coauthored with Chilton, Alexander Wheeler",US,m,US,"1881 - , 1886 -",450.0,186485.0,,,0,0,0,0,0
-hvd.32044103073128,Journal of nervous and mental disease.,,1916.0,,US,m,US,,616.0,397206.0,,,0,0,0,0,0
-hvd.hx524h,"Charles E. Bolton; a memorial sketch,","Bolton, Sarah Knowles",1907.0,"not a famous person, but a typical life",US,f,US,1841-1901,152.0,31578.0,,,0,0,0,0,0
-hvd.32044019616119,"Aztlan : the history, resources, and attractions of New Mexico","Ritch, W. G.",1885.0,,US,m,US,1830-1904,276.0,153954.0,,,0,0,0,0,0
-hvd.hnuyze,The theosophical forum.,,1903.0,,US,u,US,,246.0,115748.0,,,0,0,0,0,0
-hvd.32044102772175,"Composition, rhetoric, literature : a four year's course for secondary schools","Shackford, Martha Hale",,"super useful, needs manual attention?",,m,,,662.0,228139.0,,,0,0,0,0,0
-hvd.32044082646845,A vendetta of the desert,"Scully, W. C.",,,US,m,South Africa,1855-1943,264.0,100258.0,,,8,0,0,0,8
-hvd.32044102796562,Catholic educational review.,,1911.0,,US,u,US,,506.0,212118.0,,serial,0,8,0,0,8
-hvd.32044112467667,Treaty of peace.,Allied and Associated Powers (1914-1920).,1920.0,"weird performative document, but",UK,u,multiple,,130.0,89543.0,,,0,0,0,0,0
-hvd.hwysul,Minnesota state health laws and regulations ...,Minnesota.,1924.0,"performative, but",US,u,US,,118.0,65755.0,,,0,0,0,0,0
-hvd.hwh178,Acts of the privy council of England.,Great Britain.,1897.0,,UK,u,UK,,532.0,299845.0,,,0,0,0,0,0
-hvd.32044097049241,School civics : an outline study of the origin and development of government and the development of political institutions in the United States,"Boynton, Frank David",1904.0,,US,m,US,1863-1930,532.0,208746.0,,,0,0,0,0,0
-hvd.32044011227808,"The cellar-house of Pervyse : a tale of uncommon things, from the journals and letters of the Baroness T'Serclaes and Mairi Chisholm.",,,"multiple authors, all women",UK,f,UK,,326.0,84445.0,,,0,0,0,0,0
-hvd.32044081227969,Notes on Shotwick in the county of Chester,"Beazley, F. C.",1915.0,,UK,m,UK,1856- ,258.0,108478.0,,,0,0,0,0,0
-hvd.ah44ng,"The development of doctrine in the Epistles,","Henderson, Charles Richmond",1896.0,,US,m,US,1848-1914,136.0,56298.0,,,0,0,0,0,0
-hvd.hn1ls2,"The system of calculating diameter, circumference, area, and squaring the circle : together with interest and miscellaneous tables, and other information","Morton, James.",1881.0,,US,m,US,,240.0,109657.0,,,0,0,0,0,0
-hvd.32044061875233,Guide to the study of political economy.,"Cossa, Luigi",1880.0,"although translated, seems naturalized, and we have no other pol econ",UK,m,Italian,1831-1896,306.0,124225.0,,,0,0,0,0,0
-hvd.32044097002158,Robinson's new rudiments of arithmetic,"Robinson, Horatio N.",1866.0,"predates period, but very nice exercises",US,m,US,1806-1867,236.0,93789.0,,,0,0,0,0,0
-hvd.32044088989421,The doctrine of probation examined with reference to current discussions,"Emerson, George H.",1883.0,"""Universalist Publishing House""",US,m,US,1822-1898,184.0,59581.0,,,0,0,0,0,0
-hvd.hwrcdt,Figure skating,"Yglesias, H. R.",1905.0,text has lots of figures -- tricky for OCR,UK,m,UK,1867-1949,122.0,25442.0,,,0,0,0,0,0
-hvd.32044091987974,"The lighting art, its practice and possibilities,","Luckiesh, Matthew",1917.0,,US,m,US,1883-1967,248.0,101918.0,,,0,0,0,0,0
-hvd.32044106226129,The Nature-study review : devoted to all phases of nature-study in elementary schools.,,1920.0,,US,u,US,,502.0,221317.0,,,0,0,0,0,0
-hvd.32044081513434,Annals of surgery.,,1908.0,,US,u,US,,724.0,345183.0,,,0,0,0,0,0
-hvd.32044081498354,Story plays old and new.,"Varney, Alice Sumner.",1915.0,,US,f,US,?,184.0,37452.0,,,0,0,0,0,0
-hvd.32044055060529,"Report of the Special committee on outdoor alms of the town of Hartford, A.D. 1891.",Hartford (Conn.).,1891.0,,US,u,US,,188.0,102214.0,,,0,0,0,0,0
-hvd.32044086056843,"Blood and iron; origin of German empire as revealed by character of its founder, Bismarck,","Greusel, John Hubert",1915.0,,US,m,US,-1868,272.0,117156.0,,,0,0,0,0,0
-hvd.hn5bs8,Columbian cyclopedia.,,1897.0,vol 23 Paysandu-Pittston,,,,,898.0,641114.0,,,0,0,0,0,0
-hvd.hnpeij,Ten degrees backward,"Fowler, Ellen Thorneycroft",1915.0,,US,f,US,1860-1929,344.0,131851.0,,novel,8,0,0,0,8
-hvd.hn3gcw,"Stanley's adventures in the wilds of Africa : a graphic account of the several expeditions of Henry M. Stanley into the heart of the dark continent : covering Stanley's expedition to find Livingstone, his crossing the continent and exploration of the Congo from its headwaters to the ocean, his establishment of the Congo free state, and his last great achievement, the discovery and deliverance of Emin Asha [sic]","Headley, J. T.",1892.0,,US,m,US,1813-1897; 1857-1931,550.0,161853.0,,,0,0,0,0,0
-hvd.hnb12h,The spirit of modern philosophy : an essay in the form of lectures,"Royce, Josiah",1892.0,need philosophy,US,m,US,1855-1916,552.0,257725.0,,,0,0,0,0,0
-hvd.hx4lme,"The ethnogeography of the Tewa Indians,","Harrington, John Peabody.",1916.0,,US,m,US,1864-1956,824.0,530276.0,,,0,0,0,0,0
-hvd.hnrtbq,The medicolegal aspect of accidents caused by the Röntgen rays.,"Beck, Carl",1904.0,very periodized aspect of medicine; author is professor of medicine,US,m,US,1856-1911,28.0,8889.0,,,0,0,0,0,0
-hvd.32044102873361,"Elements of the theory and practice of cookery; a textbook of household science, for use in schools,","Williams, Mary E.; Fisher, Katharine Rolston",1901.0,cooking,US,f,US,1853-1916,420.0,133150.0,,,0,0,0,0,0
-hvd.hc4z9l,Practical points in the management of some of the diseases of children.,"Love, Isaac Newton.",1891.0,we have professional medicine but this is popular,US,m,US,unknown,176.0,52680.0,,,0,0,0,0,0
-hvd.32044004506143,The land of the czar.,"Wahl, O. W.",1875.0,need something early,UK,m,unknown,unknown,414.0,185100.0,,,0,0,0,0,0
-hvd.32044019036185,The American journal of psychology.,,1887.0,changed barcode to be 1887 volume,US,unknown,unknown,unknown,478.0,266805.0,,,0,0,0,0,0
-hvd.hn1neb,Our Saturday nights.,"Pomeroy, Mark M.",1879.0,early; weird; author is partisan Democratic newspaper editor,US,m,US,1833-1896,288.0,58941.0,,book of sketches,0,0,0,0,0
-hvd.32044107216350,"The roll of the Royal College of Physicians of London : comprising biographical sketches of all the eminent physicians whose names are recorded in the Annals from the foundation of the college in 1518 to its removal in 1825, from Warwick Lane to Pall Mall East","Munk, William",1878.0,early; biography,UK,m,UK,1816-1898,550.0,299133.0,,,0,0,0,0,0
-hvd.32044092001494,Sanitary construction in building.,"Hasluck, Paul N.",1906.0,we don't have much on building,UK,m,UK,1854-1931,168.0,79221.0,,,0,0,0,0,0
-hvd.32044020439832,"Heredity, health and personal beauty","Shoemaker, John V.",1890.0,heredity,US,m,unknown,1852-1910,510.0,246754.0,,,0,0,0,0,0
-hvd.32044088937081,"How to help cases of distress: a handy reference book for almoners and others,","Loch, Charles Stewart",1895.0,"philanthropy; author was ""Secretary of the Society for the Organisation of Charitable Relief and the Repression of Mendicity""",UK,m,UK,1849-1923,226.0,155750.0,,,0,0,0,0,0
-hvd.hx5bww,Code standard English grammar.,"Mason, C. P.",1883.0,has exercises that can be directly adapted into questions; author classical scholar,UK,m,UK,1820-1900,204.0,89501.0,writer,,0,0,3,0,3
-hvd.tz1ae8,Appletons' popular science monthly.,,1896.0,,US,unknown,unknown,unknown,910.0,589532.0,,,0,0,0,0,0
-hvd.hn54kd,"Cyclop√¶dia illustrations [Letter from the New Haven Palladium signed P.K., and other adverse criticisms on Johnson's New Universal cyclop√¶dia.]",,1877.0,crazy polemic; early,unknown,unknown,unknown,unknown,48.0,41826.0,,,0,0,0,0,0
-hvd.hn31p1,Rosine,"Whyte-Melville, G. J.",1875.0,early,UK,m,Scottish,1821-1878,304.0,111037.0,,historical romance,7,0,0,0,7
-hvd.hnp3vu,Green pastures and Piccadilly. A novel.,"Black, William",1877.0,early; Scottish writer,US,m,Scottish,1841-1898,396.0,213124.0,,novel,9,0,0,0,9
-hvd.32044037714573,Ancient cities from the dawn to the daylight,"Wright, William Burnet",1886.0,author is a Congregational clergyman; perspectivally interesting effect on his writing,US,,,,332.0,94739.0,,,0,0,0,0,0
-hvd.hn2wrs,"Life histories of animals, including man; or, Outlines of comparative embryology,","Packard, A. S.",1876.0,American entomologist and palaeontologist,US,m,US,1839-1905,266.0,121290.0,,,0,0,0,0,0
-hvd.hwaq3t,"Trouting on the Brul√© River, or Summer-wayfaring in the northern wilderness.","King, John Lyle.",1880.0,,US,m,US,unknown,316.0,99768.0,,,0,0,0,0,0
-hvd.hxdi9b,"Sea and bay; a poem of New England,","Stork, Charles Wharton",1916.0,,US,m,US,1881-1971,192.0,30606.0,,,0,0,0,0,0
-hvd.hw3exy,"The history of Canada under French régime. 1535-1763. With maps, plans, and illustrative notes.","Miles, Henry H.",1881.0,need 1880s; anglophone author born in England,CA,m,CA,1818-1895,572.0,276523.0,,,0,0,0,0,0
-hvd.hnqune,"Will socialism benefit the English people? : verbatim report of a debate between H. M. Hyndman and Charles Bradlaugh, held at St. James' Hall on April 17th, 1884, Professor Beesly in the chair.","Hyndman, H. M. ; Bradlaugh, Charles",1884.0,debate between two opposed pov's; important to check,UK,m,UK,1842-1921; 1833-1891,50.0,21827.0,,,0,0,0,0,0
-hvd.32044091856823,"A text-book on applied mechanics : specially arranged for the use of science and art, city and guilds of London Institute and other engineering students","Jamieson, Andrew",1895.0,has exercises that can be directly adapted into questions; author Scottish engineer,UK,m,Scottish,1849-1912,448.0,195920.0,professor of electrical engineering,,0,0,8,0,8
-hvd.32044102905502,Annals of mathematics.,,1916.0,,US,unknown,unknown,unknown,242.0,139875.0,,,0,0,0,0,0
-hvd.32044038099461,Elphinstone's Introduction to conveyancing : with an appendix dealing with registered land.,"Elphinstone, Howard Warburton",1906.0,law,UK,m,UK,1830-1917,676.0,357119.0,,,0,0,0,0,0
-hvd.hwe9t3,St. Katherine's by the tower : a novel,"Besant, Walter",1891.0,,UK,m,UK,1836-1901,336.0,81629.0,,historical novel,5,0,0,0,5
-hvd.32044044504728,The conquest of arid America,"Smythe, William Ellsworth",1900.0,irrigation,US,m,US,1861-1922,486.0,139843.0,,,0,0,0,0,0
-hvd.32044019979996,A textbook of physiology,"Foster, M.",1888.0,,UK,m,UK,1836-1907,382.0,222470.0,physician and professor,,0,0,0,8,8
-hvd.hxdn6e,"Historia amoris; a history of love, ancient and modern,","Saltus, Edgar",1906.0,,US,m,US,1855-1921,302.0,91826.0,,,0,0,0,0,0
-hvd.32044097002315,Exercises in arithmetic.,"Wentworth, G. A.",1889.0,valuable arithmetic exercises involving pecks and rods,US,m,US,1835-1906,476.0,196994.0,,,0,0,0,0,0
-hvd.hwysm9,An outline of English local government,"Jenks, Edward",1894.0,local government,UK,m,UK,1861-1939,278.0,104971.0,,,0,0,0,0,0
-hvd.hw2bq6,"Kin-da-shon's wife; an Alaskan story,","Willard, Carrie M. W.",1892.0,author listed as Mrs Eugene S White,US,f,US,1853-1915,316.0,120407.0,,novel with ethnographic elements,9,0,0,0,9
-hvd.hn5ezx,Round the world in silence,"Kent, Annabelle.",1911.0,travel while deaf,US,f,US,unknown,256.0,80464.0,,,0,0,0,0,0
-hvd.32044054092978,Traces of the plan of our being so far as revealed in the mental plan and in the preparation therein for the precepts and doctrines of Christ : the state intermediate and the agencies mediatorial,"Mansfield, L. W.",1884.0,mill worker who wrote on Christian themes,US,m,US,1816-1898,228.0,92273.0,,,0,0,0,0,0
-hvd.hc16zc,"Gould and Pyle's cyclopedia of practical medicine and surgery, with particular reference to diagnosis and treatment.","Gould, George M.",,,,,,,680.0,904015.0,physician,,0,0,0,0,0
-hvd.hnqphe,The web : a novel,"Kummer, Frederic Arnold",1919.0,wartime mystery novel,US,m,US,1873-1943,296.0,78604.0,,story of wartime espionage,5,0,0,0,5
-hvd.hwxklx,Foreign exchange : the financing mechanism of international commerce,"Furniss, Edgar S.",1922.0,,US,m,US,1890-1972,430.0,198144.0,,,0,0,0,0,0
-hvd.hn6gyz,"The book of forty puddings,","Brown, Susan Anna.",1882.0,cookbook,US,f,US,unknown,64.0,4874.0,,,0,0,0,0,0
-hvd.hn5vue,"Supplement to Encyclopedia britannica (ninth edition) : a dictionary of arts, sciences, and general literature.",,1889.0,reference,UK,unknown,unknown,unknown,800.0,1240242.0,,,0,0,0,0,0
-hvd.32044028293736,Ethics for children : a guide for teachers and parents,"Cabot, Ella Lyman.",1910.0,conduct book; woman author,US,f,US,1866-1934,296.0,111107.0,,,0,0,0,0,0
-hvd.hn23kk,The Lowell lectures on the ascent of man,"Drummond, Henry",1894.0,author is an evangelist and biologish,UK,m,Scottish,1851-1897,374.0,137526.0,,,0,0,0,0,0
-hvd.32044010592319,Spicewood.,"Reese, Lizette Woodworth",1921.0,poetry; some free verse,US,f,US,1856-1935,72.0,9368.0,,,0,0,0,0,0
-hvd.hn1eg5,"Radio up to the minute,","Irwin, John R.; Nilson, Arthur R.",1924.0,radio,US,m,US,1897-1945,408.0,105196.0,,,0,0,0,0,0
-hvd.32044080290661,Author vs. publisher,"Geddes, James",1923.0,publishing,US,m,US,1858-1948,16.0,5836.0,,,0,0,0,0,0
-hvd.32044087388245,Girls and Women,"Paine, Harriet Eliza",1890.0,conduct book,US,f,US,1845-1910,,,writer,practical guide to conduct,0,7,0,0,7
-hvd.hn52hs,The Encyclopedia Americana,,1918.0,reference work; volume B,US,unknown,unknown,unknown,,,,,0,0,0,0,0
-hvd.hn1nxy,Centennial Gleanings,"McCarthy, Kate",1876.0,need early poems,US,f,US,unknown,,,,,0,0,0,0,0
-uc1.$b257893,How to Write Letters: A Manual of Correspondence,J. Willis Westlake,1876.0,examples of correspondence can be used as models,US,m,US,1830-1912,,,,,0,0,0,0,0
-IAappleton,The American Cyclopedia of General Knowledge,"Ripley, George; Dana, Charles A.",1879.0,"Vol 5, Code - Demotica",US,unknown,unknown,unknown,,,,,0,0,0,0,0
+barcode_src,title_src,author_src,firstpub,reason,pubplace,authgender,authnationality,authordates,page_count_src,token_count_o200k_base_gen,author_profession,genre,character_question_count,connectors_question_count,knowledge_question_count,manual_question_count,batchconnectors_question_count,summary_question_count,poetry_question_count,total_question_count
+hvd.hn1imp,"Narcotic drug addiction, the modern scourge,","Hinckley, Livingston Spraker",1918.0,,US,m,US,1855- ,48.0,9308.0,doctor,short medical treatise,0,3,0,0,0,0,0,3
+hvd.32044103069654,Journal of the American Chemical Society.,American Chemical Society.,1918.0,,US,u,US,-1864,1032.0,707538.0,,,0,0,0,0,0,0,0,0
+hvd.32044097027296,The school garden book,"Weed, Clarence Moores",1909.0,not actually written for kids,US,m,US,,360.0,100572.0,naturalist,educational guide,0,8,0,0,0,0,0,8
+hvd.hn6gxm,"Powers, duties and work of game wardens : a handbook of practical information for officers and others interested in the enforcement of fish and game laws","Chase, Harry.",1910.0,,US,m,US,,152.0,43018.0,writer,handbook,0,7,0,0,0,0,0,7
+hvd.hxqc3g,"In the wilderness, with a biographical sketch.","Warner, Charles Dudley",1878.0,biographical sketches,US,m,US,1829-1900,148.0,58778.0,essayist,book of travel and natural description,0,7,0,0,0,0,0,7
+hvd.hwwjnq,Argentina.,"Hirst, W. A.",1910.0,social description,US,m,US,1870-1948,460.0,148623.0,writer,work of history and social description,0,7,0,0,0,0,0,7
+hvd.32044058307810,The construction of chemical laboratories,"Chandler, William Henry",1893.0,"based on information from the exposition of 1889, but not pub in this form until 1893",US,m,US,1841-1906,260.0,28814.0,chemist,book,0,5,0,0,0,0,0,5
+hvd.hxdnai,The poet's poet and other essays.,"Quayle, William A.",1897.0,,US,m,US,1860-1925,360.0,102598.0,bishop of the Methodist church,book of essays,0,7,0,0,0,0,0,7
+hvd.32044073486045,The temple of Solomon : a review of the various theories respecting its form and style of architecture : The ethics of art : two lectures,"Robins, Edward Cookworthy.",1887.0,read in 1886 but not a prob,UK,m,UK (England),1831-1918,134.0,55127.0,architect and author,collection of lectures about art,0,7,0,0,0,0,0,7
+hvd.32044086783313,"Robert Burns, an address delivered in Tremont Temple","Hoar, George Frisbie",1901.0,,US,m,US,1826-1904,32.0,7820.0,,,0,0,0,0,0,0,0,0
+hvd.hw1vlh,Beneath blue skies and gray : poems,"Crockett, Ingram",1898.0,,US,m,US,1856-1936,120.0,18177.0,poet and journalist,,0,0,0,0,0,0,4,4
+hvd.hnnwy1,The Barrys,"Bullock, Shan F.",1898.0,,UK,m,"UK (Irish writer, pub London)",1865-1935,438.0,163936.0,writer,novel,35,6,0,0,0,0,0,41
+hvd.32044038429635,"Counsels by the way,","Van Dyke, Henry",1897.0,"collection of essays prev pub 1897, 1900, 1903",US,m,US,1852-1933,176.0,37856.0,diplomat and Presbyterian clergyman,book of essays,0,8,0,0,0,0,0,8
+hvd.32044106370034,Some American medical botanists,"Kelly, Howard A.",1911.0,,US,m,US,1858-1943,32.0,11374.0,naturalist and physician,work of biography,0,5,0,0,0,0,0,5
+hvd.hnqe3f,Cases on constitutional law,,1897.0,,US,m,US,1845-1933,334.0,365072.0,,,0,0,0,0,0,0,0,0
+hvd.hxdi7y,"The spy of Yorktown; a story of Arnold and Washington in the last year of the war ofindependence,","Stoddard, William Osborn",1903.0,,US,m,US,1835-1925,264.0,72950.0,,historical novel,4,0,0,0,0,0,0,4
+hvd.32044011551280,Thucydides Mythistoricus,"Cornford, Francis Macdonald",1907.0,,UK,m,UK (England),1874-1943,298.0,154615.0,,,0,0,0,0,0,0,0,0
+hvd.hx2nlf,"Federal government and the states; address delivered at Norfolk, Va., on June 29, 1907, at the celebration of the adoption of the first Virginia constitution,","Storey, Moorfield",1907.0,,US,m,US,1845-1929,154.0,56001.0,lawyer and civil rights activist,public address,0,8,0,0,0,0,0,8
+hvd.hn1nuj,The Chautauqua girls at home,Pansy,1873.0,Pansy = Isabella Macdonald Alden,US,f,US,1841-1930,496.0,128873.0,,story for children,10,0,0,0,0,0,0,10
+hvd.32044087970612,"A brief history of Europe from 1789-1815,","Holt, Lucius Hudson",1919.0,"coauthored with Chilton, Alexander Wheeler",US,m,US,"1881 - , 1886 -",450.0,186485.0,literary scholar,,0,0,0,0,0,2,0,2
+hvd.32044103073128,Journal of nervous and mental disease.,,1916.0,,US,m,US,,616.0,397206.0,,,0,0,0,0,0,2,0,2
+hvd.hx524h,"Charles E. Bolton; a memorial sketch,","Bolton, Sarah Knowles",1907.0,"not a famous person, but a typical life",US,f,US,1841-1901,152.0,31578.0,,,0,0,0,0,0,0,0,0
+hvd.32044019616119,"Aztlan : the history, resources, and attractions of New Mexico","Ritch, W. G.",1885.0,,US,m,US,1830-1904,276.0,153954.0,,,0,0,0,0,0,0,0,0
+hvd.hnuyze,The theosophical forum.,,1903.0,,US,u,US,,246.0,115748.0,,,0,0,0,0,0,0,0,0
+hvd.32044102772175,"Composition, rhetoric, literature : a four year's course for secondary schools","Shackford, Martha Hale",1913.0,"super useful, needs manual attention?",US,f,US,1875-1960,662.0,228139.0,literary scholar,,0,0,0,0,0,1,0,1
+hvd.32044082646845,A vendetta of the desert,"Scully, W. C.",,,US,m,South Africa,1855-1943,264.0,100258.0,,,8,0,0,0,0,0,0,8
+hvd.32044102796562,Catholic educational review.,,1911.0,,US,u,US,,506.0,212118.0,,serial,0,8,0,0,0,0,0,8
+hvd.32044112467667,Treaty of peace.,Allied and Associated Powers (1914-1920).,1920.0,"weird performative document, but",UK,u,multiple,,130.0,89543.0,,,0,0,0,0,0,0,0,0
+hvd.hwysul,Minnesota state health laws and regulations ...,Minnesota.,1924.0,"performative, but",US,u,US,,118.0,65755.0,,,0,0,0,0,0,0,0,0
+hvd.hwh178,Acts of the privy council of England.,Great Britain.,1897.0,,UK,u,UK,,532.0,299845.0,,,0,0,0,0,0,0,0,0
+hvd.32044097049241,School civics : an outline study of the origin and development of government and the development of political institutions in the United States,"Boynton, Frank David",1904.0,,US,m,US,1863-1930,532.0,208746.0,,,0,0,0,0,0,2,0,2
+hvd.32044011227808,"The cellar-house of Pervyse : a tale of uncommon things, from the journals and letters of the Baroness T'Serclaes and Mairi Chisholm.",,,"multiple authors, all women",UK,f,UK,,326.0,84445.0,,,0,0,0,0,0,0,0,0
+hvd.32044081227969,Notes on Shotwick in the county of Chester,"Beazley, F. C.",1915.0,,UK,m,UK,1856- ,258.0,108478.0,,,0,0,0,0,0,0,0,0
+hvd.ah44ng,"The development of doctrine in the Epistles,","Henderson, Charles Richmond",1896.0,,US,m,US,1848-1914,136.0,56298.0,minister and professor,,0,0,0,0,0,1,0,1
+hvd.hn1ls2,"The system of calculating diameter, circumference, area, and squaring the circle : together with interest and miscellaneous tables, and other information","Morton, James.",1881.0,,US,m,US,,240.0,109657.0,,,0,0,0,0,0,0,0,0
+hvd.32044061875233,Guide to the study of political economy.,"Cossa, Luigi",1880.0,"although translated, seems naturalized, and we have no other pol econ",UK,m,Italian,1831-1896,306.0,124225.0,economist,,0,0,0,0,0,1,0,1
+hvd.32044097002158,Robinson's new rudiments of arithmetic,"Robinson, Horatio N.",1866.0,"predates period, but very nice exercises",US,m,US,1806-1867,236.0,93789.0,,,0,0,0,0,0,0,0,0
+hvd.32044088989421,The doctrine of probation examined with reference to current discussions,"Emerson, George H.",1883.0,"""Universalist Publishing House""",US,m,US,1822-1898,184.0,59581.0,,,0,0,0,0,0,0,0,0
+hvd.hwrcdt,Figure skating,"Yglesias, H. R.",1905.0,text has lots of figures -- tricky for OCR,UK,m,UK,1867-1949,122.0,25442.0,,,0,0,0,0,0,0,0,0
+hvd.32044091987974,"The lighting art, its practice and possibilities,","Luckiesh, Matthew",1917.0,,US,m,US,1883-1967,248.0,101918.0,,,0,0,0,0,0,1,0,1
+hvd.32044106226129,The Nature-study review : devoted to all phases of nature-study in elementary schools.,,1920.0,,US,u,US,,502.0,221317.0,,,0,0,0,0,0,2,0,2
+hvd.32044081513434,Annals of surgery.,,1908.0,,US,u,US,,724.0,345183.0,,,0,0,0,0,0,0,0,0
+hvd.32044081498354,Story plays old and new.,"Varney, Alice Sumner.",1915.0,,US,f,US,?,184.0,37452.0,,,0,0,0,0,0,0,0,0
+hvd.32044055060529,"Report of the Special committee on outdoor alms of the town of Hartford, A.D. 1891.",Hartford (Conn.).,1891.0,,US,u,US,,188.0,102214.0,,,0,0,0,0,0,0,0,0
+hvd.32044086056843,"Blood and iron; origin of German empire as revealed by character of its founder, Bismarck,","Greusel, John Hubert",1915.0,,US,m,US,-1868,272.0,117156.0,writer,,0,0,0,0,0,0,0,0
+hvd.hn5bs8,Columbian cyclopedia.,,1897.0,vol 23 Paysandu-Pittston,,,,,898.0,641114.0,,,0,0,55,0,0,0,0,55
+hvd.hnpeij,Ten degrees backward,"Fowler, Ellen Thorneycroft",1915.0,,US,f,US,1860-1929,344.0,131851.0,,novel,8,0,0,0,0,0,0,8
+hvd.hn3gcw,"Stanley's adventures in the wilds of Africa : a graphic account of the several expeditions of Henry M. Stanley into the heart of the dark continent : covering Stanley's expedition to find Livingstone, his crossing the continent and exploration of the Congo from its headwaters to the ocean, his establishment of the Congo free state, and his last great achievement, the discovery and deliverance of Emin Asha [sic]","Headley, J. T.",1892.0,,US,m,US,1813-1897; 1857-1931,550.0,161853.0,,,0,0,0,0,0,0,0,0
+hvd.hnb12h,The spirit of modern philosophy : an essay in the form of lectures,"Royce, Josiah",1892.0,need philosophy,US,m,US,1855-1916,552.0,257725.0,,,0,0,0,0,0,0,0,0
+hvd.hx4lme,"The ethnogeography of the Tewa Indians,","Harrington, John Peabody.",1916.0,,US,m,US,1864-1956,824.0,530276.0,linguist and ethnologist,,0,0,0,0,0,0,0,0
+hvd.hnrtbq,The medicolegal aspect of accidents caused by the Röntgen rays.,"Beck, Carl",1904.0,very periodized aspect of medicine; author is professor of medicine,US,m,US,1856-1911,28.0,8889.0,,,0,0,0,0,0,0,0,0
+hvd.32044102873361,"Elements of the theory and practice of cookery; a textbook of household science, for use in schools,","Williams, Mary E.; Fisher, Katharine Rolston",1901.0,cooking,US,f,US,1853-1916,420.0,133150.0,bibliographer and suffragist,,0,0,0,0,0,1,0,1
+hvd.hc4z9l,Practical points in the management of some of the diseases of children.,"Love, Isaac Newton.",1891.0,we have professional medicine but this is popular,US,m,US,unknown,176.0,52680.0,,,0,0,0,0,0,0,0,0
+hvd.32044004506143,The land of the czar.,"Wahl, O. W.",1875.0,need something early,UK,m,unknown,unknown,414.0,185100.0,,,0,0,0,0,0,0,0,0
+hvd.32044019036185,The American journal of psychology.,,1887.0,changed barcode to be 1887 volume,US,unknown,unknown,unknown,478.0,266805.0,,,0,0,0,0,0,1,0,1
+hvd.hn1neb,Our Saturday nights.,"Pomeroy, Mark M.",1879.0,early; weird; author is partisan Democratic newspaper editor,US,m,US,1833-1896,288.0,58941.0,,book of sketches,0,0,0,0,0,0,0,0
+hvd.32044107216350,"The roll of the Royal College of Physicians of London : comprising biographical sketches of all the eminent physicians whose names are recorded in the Annals from the foundation of the college in 1518 to its removal in 1825, from Warwick Lane to Pall Mall East","Munk, William",1878.0,early; biography,UK,m,UK,1816-1898,550.0,299133.0,,,0,0,0,0,0,0,0,0
+hvd.32044092001494,Sanitary construction in building.,"Hasluck, Paul N.",1906.0,we don't have much on building,UK,m,UK,1854-1931,168.0,79221.0,,,0,0,0,0,0,0,0,0
+hvd.32044020439832,"Heredity, health and personal beauty","Shoemaker, John V.",1890.0,heredity,US,m,unknown,1852-1910,510.0,246754.0,,,0,0,0,0,0,0,0,0
+hvd.32044088937081,"How to help cases of distress: a handy reference book for almoners and others,","Loch, Charles Stewart",1895.0,"philanthropy; author was ""Secretary of the Society for the Organisation of Charitable Relief and the Repression of Mendicity""",UK,m,UK,1849-1923,226.0,155750.0,,,0,0,0,0,0,0,0,0
+hvd.hx5bww,Code standard English grammar.,"Mason, C. P.",1883.0,has exercises that can be directly adapted into questions; author classical scholar,UK,m,UK,1820-1900,204.0,89501.0,writer,,0,0,0,3,0,0,0,3
+hvd.tz1ae8,Appletons' popular science monthly.,,1896.0,,US,unknown,unknown,unknown,910.0,589532.0,,,0,0,0,0,0,1,0,1
+hvd.hn54kd,"Cyclop√¶dia illustrations [Letter from the New Haven Palladium signed P.K., and other adverse criticisms on Johnson's New Universal cyclop√¶dia.]",,1877.0,crazy polemic; early,unknown,unknown,unknown,unknown,48.0,41826.0,,,0,0,0,0,0,0,0,0
+hvd.hn31p1,Rosine,"Whyte-Melville, G. J.",1875.0,early,UK,m,Scottish,1821-1878,304.0,111037.0,,historical romance,7,0,0,0,0,0,0,7
+hvd.hnp3vu,Green pastures and Piccadilly. A novel.,"Black, William",1877.0,early; Scottish writer,US,m,Scottish,1841-1898,396.0,213124.0,,novel,9,0,0,0,0,0,0,9
+hvd.32044037714573,Ancient cities from the dawn to the daylight,"Wright, William Burnet",1886.0,author is a Congregational clergyman; perspectivally interesting effect on his writing,US,,,,332.0,94739.0,,,0,0,0,0,0,0,0,0
+hvd.hn2wrs,"Life histories of animals, including man; or, Outlines of comparative embryology,","Packard, A. S.",1876.0,American entomologist and palaeontologist,US,m,US,1839-1905,266.0,121290.0,,,0,0,0,0,0,0,0,0
+hvd.hwaq3t,"Trouting on the Brul√© River, or Summer-wayfaring in the northern wilderness.","King, John Lyle.",1880.0,,US,m,US,unknown,316.0,99768.0,,,0,0,0,0,0,0,0,0
+hvd.hxdi9b,"Sea and bay; a poem of New England,","Stork, Charles Wharton",1916.0,,US,m,US,1881-1971,192.0,30606.0,poet and translator,,0,0,0,0,0,0,3,3
+hvd.hw3exy,"The history of Canada under French régime. 1535-1763. With maps, plans, and illustrative notes.","Miles, Henry H.",1881.0,need 1880s; anglophone author born in England,CA,m,CA,1818-1895,572.0,276523.0,Anglophone professor,,0,0,0,0,0,0,0,0
+hvd.hnqune,"Will socialism benefit the English people? : verbatim report of a debate between H. M. Hyndman and Charles Bradlaugh, held at St. James' Hall on April 17th, 1884, Professor Beesly in the chair.","Hyndman, H. M. ; Bradlaugh, Charles",1884.0,debate between two opposed pov's; important to check,UK,m,UK,1842-1921; 1833-1891,50.0,21827.0,,,0,0,0,0,0,0,0,0
+hvd.32044091856823,"A text-book on applied mechanics : specially arranged for the use of science and art, city and guilds of London Institute and other engineering students","Jamieson, Andrew",1895.0,has exercises that can be directly adapted into questions; author Scottish engineer,UK,m,Scottish,1849-1912,448.0,195920.0,professor of electrical engineering,,0,0,0,8,0,0,0,8
+hvd.32044102905502,Annals of mathematics.,,1916.0,,US,unknown,unknown,unknown,242.0,139875.0,,,0,0,0,0,0,0,0,0
+hvd.32044038099461,Elphinstone's Introduction to conveyancing : with an appendix dealing with registered land.,"Elphinstone, Howard Warburton",1906.0,law,UK,m,UK,1830-1917,676.0,357119.0,,,0,0,0,0,0,0,0,0
+hvd.hwe9t3,St. Katherine's by the tower : a novel,"Besant, Walter",1891.0,,UK,m,UK,1836-1901,336.0,81629.0,,historical novel,5,0,0,0,0,0,0,5
+hvd.32044044504728,The conquest of arid America,"Smythe, William Ellsworth",1900.0,irrigation,US,m,US,1861-1922,486.0,139843.0,,,0,0,0,0,0,0,0,0
+hvd.32044019979996,A textbook of physiology,"Foster, M.",1888.0,,UK,m,UK,1836-1907,382.0,222470.0,physician and professor,,0,0,0,3,8,0,0,11
+hvd.hxdn6e,"Historia amoris; a history of love, ancient and modern,","Saltus, Edgar",1906.0,,US,m,US,1855-1921,302.0,91826.0,,,0,0,0,0,0,0,0,0
+hvd.32044097002315,Exercises in arithmetic.,"Wentworth, G. A.",1889.0,valuable arithmetic exercises involving pecks and rods,US,m,US,1835-1906,476.0,196994.0,,,0,0,0,0,0,0,0,0
+hvd.hwysm9,An outline of English local government,"Jenks, Edward",1894.0,local government,UK,m,UK,1861-1939,278.0,104971.0,,,0,0,0,0,0,0,0,0
+hvd.hw2bq6,"Kin-da-shon's wife; an Alaskan story,","Willard, Carrie M. W.",1892.0,author listed as Mrs Eugene S White,US,f,US,1853-1915,316.0,120407.0,,novel with ethnographic elements,9,0,0,0,0,0,0,9
+hvd.hn5ezx,Round the world in silence,"Kent, Annabelle.",1911.0,travel while deaf,US,f,US,unknown,256.0,80464.0,,,0,0,0,0,0,0,0,0
+hvd.32044054092978,Traces of the plan of our being so far as revealed in the mental plan and in the preparation therein for the precepts and doctrines of Christ : the state intermediate and the agencies mediatorial,"Mansfield, L. W.",1884.0,mill worker who wrote on Christian themes,US,m,US,1816-1898,228.0,92273.0,,,0,0,0,0,0,0,0,0
+hvd.hc16zc,"Gould and Pyle's cyclopedia of practical medicine and surgery, with particular reference to diagnosis and treatment.","Gould, George M.",,,,,,,680.0,904015.0,physician,,0,0,0,2,0,0,0,2
+hvd.hnqphe,The web : a novel,"Kummer, Frederic Arnold",1919.0,wartime mystery novel,US,m,US,1873-1943,296.0,78604.0,,story of wartime espionage,5,0,0,0,0,0,0,5
+hvd.hwxklx,Foreign exchange : the financing mechanism of international commerce,"Furniss, Edgar S.",1922.0,,US,m,US,1890-1972,430.0,198144.0,,,0,0,0,0,0,1,0,1
+hvd.hn6gyz,"The book of forty puddings,","Brown, Susan Anna.",1882.0,cookbook,US,f,US,unknown,64.0,4874.0,,,0,0,0,0,0,0,0,0
+hvd.hn5vue,"Supplement to Encyclopedia britannica (ninth edition) : a dictionary of arts, sciences, and general literature.",,1889.0,reference,UK,unknown,unknown,unknown,800.0,1240242.0,,,0,0,0,0,0,0,0,0
+hvd.32044028293736,Ethics for children : a guide for teachers and parents,"Cabot, Ella Lyman.",1910.0,conduct book; woman author,US,f,US,1866-1934,296.0,111107.0,,,0,7,0,0,0,0,0,7
+hvd.hn23kk,The Lowell lectures on the ascent of man,"Drummond, Henry",1894.0,author is an evangelist and biologish,UK,m,Scottish,1851-1897,374.0,137526.0,,,0,0,0,0,0,0,0,0
+hvd.32044010592319,Spicewood.,"Reese, Lizette Woodworth",1921.0,poetry; some free verse,US,f,US,1856-1935,72.0,9368.0,poet and teacher,,0,0,0,0,0,0,2,2
+hvd.hn1eg5,"Radio up to the minute,","Irwin, John R.; Nilson, Arthur R.",1924.0,radio,US,m,US,1897-1945,408.0,105196.0,,,0,0,0,0,0,2,0,2
+hvd.32044080290661,Author vs. publisher,"Geddes, James",1923.0,publishing,US,m,US,1858-1948,16.0,5836.0,,,0,0,0,0,0,0,0,0
+hvd.32044087388245,Girls and Women,"Paine, Harriet Eliza",1890.0,conduct book,US,f,US,1845-1910,,,writer,practical guide to conduct,0,7,0,0,0,0,0,7
+hvd.hn52hs,The Encyclopedia Americana,,1918.0,reference work; volume B,US,unknown,unknown,unknown,,,,,0,0,0,0,0,0,0,0
+hvd.hn1nxy,Centennial Gleanings,"McCarthy, Kate",1876.0,need early poems,US,f,US,unknown,,,,,0,0,0,0,0,0,2,2
+uc1.$b257893,How to Write Letters: A Manual of Correspondence,J. Willis Westlake,1876.0,examples of correspondence can be used as models,US,m,US,1830-1912,,,author,,0,0,0,0,0,0,0,0
+IAappleton,The American Cyclopedia of General Knowledge,"Ripley, George; Dana, Charles A.",1879.0,"Vol 5, Code - Demotica",US,unknown,unknown,unknown,,,,,0,0,0,0,0,0,0,0
+hvd.hwplxh,A Handbook of Modern English Metre,"Mayor, Joseph B.",1903.0,influential guide to prosody,UK,m,UK,1828-1916,,,,,0,0,0,0,0,0,0,0
+hvd.32044102848413,A Primer of English Verse,"Corson, Hiram",1892.0,"American, earlier guide to prosody",US,m,US,1828-1911,,,,,0,0,0,0,0,0,0,0
