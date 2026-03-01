@@ -301,7 +301,7 @@ def prompt_for_answer_type_and_prob() -> Tuple[str, float]:
         Tuple of (answer_type, probability)
     """
     while True:
-        type_choice = input("  Type - (g)round_truth, (m)anual, (s)ame_book, (a)nachronistic_manual: ").strip().lower()
+        type_choice = input("  Type - (g)round_truth, (m)anual, (s)ame_book, (a)nachronistic_manual, (k)eyboard entry: ").strip().lower()
 
         if type_choice in ['g', 'ground_truth']:
             # ground_truth always has probability 1.0
@@ -315,8 +315,14 @@ def prompt_for_answer_type_and_prob() -> Tuple[str, float]:
         elif type_choice in ['a', 'anachronistic_manual', 'anachronistic']:
             prob = prompt_for_probability()
             return "anachronistic_manual", prob
+        elif type_choice in ['k', 'keyboard']:
+            custom_type = input("  Enter distractor type: ").strip()
+            if custom_type:
+                prob = prompt_for_probability()
+                return custom_type, prob
+            print("  Type cannot be blank")
         else:
-            print("  Please enter 'g', 'm', 's', or 'a'")
+            print("  Please enter 'g', 'm', 's', 'a', or 'k'")
 
 
 def prompt_for_probability() -> float:
