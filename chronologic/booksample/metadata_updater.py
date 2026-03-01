@@ -8,8 +8,9 @@
 import pandas as pd
 import os
 import json
+from collections import Counter
 
-history = pd.read_csv('metadata_history.csv')
+history = pd.read_csv('metadata_history.csv', encoding='latin-1')
 
 # limit to rows where 'include_yn' is 'y'
 history = history[history['include_yn'] == 'y']
@@ -24,7 +25,7 @@ def get_json_metadata(htid):
     barcode = htid.replace('hvd.', '')
     json_path = os.path.join('json_metadata', f"{barcode}_metadata.json")
     if os.path.exists(json_path):
-        with open(json_path, 'r') as f:
+        with open(json_path, 'r', encoding='latin-1') as f:
             data = json.load(f)
             returndict = dict()
             
@@ -65,6 +66,8 @@ directories_to_count = ['character', 'connectors', 'knowledge', 'manual', 'batch
 # Results are stored in a dictionary mapping barcodes to dicts,
 # within which keys are directory names and values are counts.
 question_counts = dict()
+category_counter = Counter()
+answer_type_counter = Counter()
 aggregation_file = open('all_benchmark_questions.jsonl', 'w')
 for directory in directories_to_count:
     process_files_path = os.path.join(directory, 'process_files')
@@ -76,7 +79,7 @@ for directory in directories_to_count:
                 barcode_part = barcode_part.lower()
                 barcode = f"hvd.{barcode_part}"
                 file_path = os.path.join(process_files_path, filename)
-                with open(file_path, 'r') as f:
+                with open(file_path, 'r', encoding='latin-1') as f:
                     lines = f.readlines()
                     line_count = len(lines)
                     if barcode not in question_counts:
@@ -86,7 +89,24 @@ for directory in directories_to_count:
                         line = line.rstrip('\n')
                         if line:
                             aggregation_file.write(line + '\n')
+                            try:
+                                record = json.loads(line)
+                                if 'question_category' in record:
+                                    category_counter[record['question_category']] += 1
+                                if 'answer_types' in record:
+                                    for answer_type in record['answer_types']:
+                                        answer_type_counter[answer_type] += 1
+                            except json.JSONDecodeError:
+                                pass
 aggregation_file.close()
+
+with open('question_category_census.txt', 'w', encoding='utf-8') as f:
+    for value, count in category_counter.most_common():
+        f.write(f"{value}\t{count}\n")
+
+with open('answer_type_census.txt', 'w', encoding='utf-8') as f:
+    for value, count in answer_type_counter.most_common():
+        f.write(f"{value}\t{count}\n")
 
 # Now we add columns to history for each directory's question counts
 added_columns = []
