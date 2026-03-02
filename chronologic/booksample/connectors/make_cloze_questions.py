@@ -829,7 +829,7 @@ def build_category_index(tagged: List[Dict]) -> Dict[str, List[int]]:
 
 # Categories where clause extraction should stop at internal punctuation
 # rather than extending to end of sentence
-CLAUSE_STOPS_AT_PUNCTUATION = {'conditionalclause'}
+CLAUSE_STOPS_AT_PUNCTUATION = {'conditionalclause', 'concessiveclause'}
 
 
 def extract_clause_to_punctuation(sentence: str, word_pos: int) -> str:
