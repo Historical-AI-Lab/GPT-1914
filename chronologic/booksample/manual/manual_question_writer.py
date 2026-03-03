@@ -17,7 +17,7 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from metadata_elicitation import (
+from manual_metadata_framing import (
     elicit_metadata,
     build_metadata_frame,
     a_or_an
@@ -28,7 +28,7 @@ from metadata_elicitation import (
 SPECIAL_HTIDS = {'attribution', 'handcrafted', 'refusal'}
 
 # Question category options
-CATEGORY_OPTIONS = ['attribution', 'handcrafted', 'refusal', 'textbook']
+CATEGORY_OPTIONS = ['attribution', 'handcrafted', 'refusal', 'textbook', 'parallax']
 
 
 def get_output_path(source_htid: str) -> Path:
@@ -68,17 +68,24 @@ def save_question(question_data: Dict, output_path: Path) -> None:
     print(f"  Question saved to: {output_path}")
 
 
-def prompt_for_frame(metadata: Dict) -> str:
+def prompt_for_frame(metadata: Dict, current_frame: Optional[str] = None) -> str:
     """
     Prompt user to approve, blank, or manually supply metadata frame.
 
+    If current_frame is provided (a previously edited frame), it is shown
+    as the default instead of the frame derived from metadata.
+
     Args:
         metadata: The metadata dict
+        current_frame: A previously entered frame to use as the default, or None
 
     Returns:
         The metadata frame string (may be empty)
     """
-    default_frame = build_metadata_frame(metadata)
+    if current_frame is not None:
+        default_frame = current_frame
+    else:
+        default_frame = build_metadata_frame(metadata)
 
     print("\nDefault metadata frame:")
     print(f'  "{default_frame}"')
@@ -317,15 +324,16 @@ def prompt_for_probability() -> float:
         return 0.0
 
 
-def create_question(metadata: Dict) -> Dict:
+def create_question(metadata: Dict, current_frame: Optional[str] = None) -> Tuple[Dict, str]:
     """
     Run the interactive question creation dialogue.
 
     Args:
         metadata: The metadata dict for this source
+        current_frame: A previously entered frame to use as the default, or None
 
     Returns:
-        Complete question record dict
+        Tuple of (complete question record dict, the frame that was used)
     """
     print("\n" + "=" * 60)
     print("CREATE NEW QUESTION")
@@ -335,7 +343,7 @@ def create_question(metadata: Dict) -> Dict:
     print("=" * 60)
 
     # A. Metadata frame
-    metadata_frame = prompt_for_frame(metadata)
+    metadata_frame = prompt_for_frame(metadata, current_frame)
 
     # B. Main question
     main_question = prompt_for_question()
@@ -373,7 +381,7 @@ def create_question(metadata: Dict) -> Dict:
         "source_htid": metadata['source_htid']
     }
 
-    return record
+    return record, metadata_frame
 
 
 def confirm_htid(current_htid: str, metadata_file: str) -> Tuple[str, Optional[Dict]]:
@@ -413,6 +421,7 @@ def main_loop(metadata_file: str) -> None:
     """
     current_htid = ""
     current_metadata: Optional[Dict] = None
+    current_frame: Optional[str] = None
 
     print("\n" + "=" * 60)
     print("MANUAL QUESTION WRITER")
@@ -451,10 +460,12 @@ def main_loop(metadata_file: str) -> None:
             if new_htid != current_htid:
                 current_htid = new_htid
                 current_metadata = None
+                current_frame = None
                 needs_elicitation = True
 
             # Elicit metadata if needed
             if needs_elicitation:
+                current_frame = None
                 if current_htid in SPECIAL_HTIDS:
                     # For special htids, create minimal metadata
                     print(f"\nCreating metadata for special htid: {current_htid}")
@@ -483,7 +494,7 @@ def main_loop(metadata_file: str) -> None:
                     )
 
             # Step 5: Create question
-            question = create_question(current_metadata)
+            question, current_frame = create_question(current_metadata, current_frame)
 
             # Preview
             print("\n" + "-" * 40)

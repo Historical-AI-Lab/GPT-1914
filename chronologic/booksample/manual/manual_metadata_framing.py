@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """
-Metadata Elicitation Module
+Manual Metadata Framing Module
 
-Collect and validate metadata for a source, using defaults from:
+Collect and validate metadata for a source, and build the metadata frame string
+for manual questions. Uses defaults from:
 1. Existing JSON metadata file in json_metadata/ (highest priority)
 2. CSV defaults from primary_metadata.csv (fallback)
 
 Elicited metadata is saved to json_metadata/{barcode}_metadata.json.
 
 Usage:
-    from metadata_elicitation import elicit_metadata
+    from manual_metadata_framing import elicit_metadata, build_metadata_frame
 
     metadata = elicit_metadata(metadata_file="../primary_metadata.csv", source_htid="")
 """
@@ -271,7 +272,8 @@ def build_metadata_frame(metadata: Dict) -> str:
     """
     Build metadata frame string from metadata dict.
 
-    Uses a simpler template if author is missing or anonymous.
+    Uses a genre-specific template for encyclopedias, a simpler template
+    if author is missing or anonymous, and the full template otherwise.
 
     Args:
         metadata: Dict with source_title, source_author, etc.
@@ -279,12 +281,22 @@ def build_metadata_frame(metadata: Dict) -> str:
     Returns:
         Formatted metadata frame string
     """
+    # Encyclopedia genre gets its own template
+    if metadata.get('source_genre', '').lower() == 'encyclopedia':
+        nationality = metadata.get('author_nationality', '')
+        publication_date = metadata.get('source_date', '')
+        return (
+            f"The following question asks for information from a {nationality} encyclopedia "
+            f"published in {publication_date}; your answer should reflect the state of "
+            f"knowledge and style of exposition current at the time."
+        )
+
     author = metadata.get('source_author', '')
 
     # Check for anonymous/missing author
     if not author or author.strip().lower() in ('', 'anonymous', 'unknown', 'various', 'n/a'):
         return (
-            f"The following questions is based on {metadata['source_title']}, "
+            f"The following question is based on {metadata['source_title']}, "
             f"{a_or_an(metadata.get('source_genre', 'book'))} {metadata.get('source_genre', 'book')} "
             f"published in {metadata['source_date']}."
         )
