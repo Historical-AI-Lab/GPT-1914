@@ -58,7 +58,7 @@ python -c "import torch; print('CUDA available:', torch.cuda.is_available()); \
 python train_qlora.py \
     --train_data   "$SCRIPT_DIR/data/train.jsonl"  \
     --val_data     "$SCRIPT_DIR/data/val.jsonl"    \
-    --output_dir   "$SCRIPT_DIR/checkpoints"       \
+    --output_dir   "$SCRIPT_DIR/checkpoints/$SLURM_JOB_ID" \
     --model_path   "$SCRIPT_DIR/Qwen2.5-7B-Instruct" \
     --max_seq_length  4096 \
     --batch_size      4    \
