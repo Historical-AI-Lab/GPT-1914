@@ -40,7 +40,7 @@ echo "GPUs: $CUDA_VISIBLE_DEVICES"
 
 module load cudatoolkit/25.3_12.8
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$SLURM_SUBMIT_DIR"
 cd "$SCRIPT_DIR"
 
 source qlora-env/bin/activate
