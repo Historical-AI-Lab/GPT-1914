@@ -132,6 +132,11 @@ def main():
     parser.add_argument("--lora_alpha",   type=int,   default=32)
     parser.add_argument("--lora_dropout", type=float, default=0.05)
 
+    parser.add_argument(
+        "--packing", action="store_true",
+        help="Enable sequence packing (fills each window with multiple examples, faster training)",
+    )
+
     # Smoke test flag
     parser.add_argument(
         "--smoke", action="store_true",
@@ -257,7 +262,7 @@ def main():
         logging_steps=10,
         bf16=(device == "cuda"),
         fp16=False,
-        packing=False,   # disabled: formatting_func handles mixed schemas
+        packing=args.packing,
         report_to="none",
         warmup_steps=50,
         lr_scheduler_type="cosine",

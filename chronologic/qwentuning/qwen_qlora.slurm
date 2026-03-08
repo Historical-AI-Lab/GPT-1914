@@ -61,14 +61,15 @@ python train_qlora.py \
     --output_dir   "$SCRIPT_DIR/checkpoints"       \
     --model_path   "$SCRIPT_DIR/Qwen2.5-7B-Instruct" \
     --max_seq_length  4096 \
-    --batch_size      2    \
-    --grad_accum      8    \
+    --batch_size      4    \
+    --grad_accum      4    \
     --learning_rate   2e-4 \
     --num_epochs      1    \
     --save_steps      500  \
     --lora_r          16   \
     --lora_alpha      32   \
-    --lora_dropout    0.05
+    --lora_dropout    0.05 \
+    --packing
 
 echo ""
 echo "Job completed at $(date)"
