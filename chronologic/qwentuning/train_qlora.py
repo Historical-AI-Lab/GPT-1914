@@ -250,6 +250,7 @@ def main():
         output_dir=args.output_dir,
         max_length=args.max_seq_length,
         per_device_train_batch_size=batch_size,
+        per_device_eval_batch_size=1,
         gradient_accumulation_steps=grad_accum,
         learning_rate=args.learning_rate,
         num_train_epochs=num_epochs,
