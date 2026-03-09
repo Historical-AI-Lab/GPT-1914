@@ -61,8 +61,8 @@ python train_qlora.py \
     --output_dir   "$SCRIPT_DIR/checkpoints/$SLURM_JOB_ID" \
     --model_path   "$SCRIPT_DIR/Qwen2.5-7B-Instruct" \
     --max_seq_length  4096 \
-    --batch_size      4    \
-    --grad_accum      4    \
+    --batch_size      2    \
+    --grad_accum      8    \
     --learning_rate   2e-4 \
     --num_epochs      1    \
     --save_steps      500  \
