@@ -136,6 +136,11 @@ def main():
         "--packing", action="store_true",
         help="Enable sequence packing (fills each window with multiple examples, faster training)",
     )
+    parser.add_argument(
+        "--resume_from_checkpoint", default=None,
+        help="Path to a checkpoint directory to resume from (e.g. checkpoints/run1/checkpoint-5000). "
+             "Pass 'true' to auto-resume from the latest checkpoint in output_dir.",
+    )
 
     # Smoke test flag
     parser.add_argument(
@@ -282,8 +287,12 @@ def main():
 
     # ---- Train ---------------------------------------------------------------
 
+    resume = args.resume_from_checkpoint
+    if resume and resume.lower() == "true":
+        resume = True  # tells Trainer to find latest checkpoint in output_dir
+
     print("\nStarting training...")
-    train_result = trainer.train()
+    train_result = trainer.train(resume_from_checkpoint=resume)
     print(f"\nTraining complete. Steps: {train_result.global_step}  "
           f"Loss: {train_result.training_loss:.4f}")
 

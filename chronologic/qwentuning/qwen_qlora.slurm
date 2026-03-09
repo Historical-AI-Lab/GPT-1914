@@ -52,7 +52,7 @@ python -c "import torch; print('CUDA available:', torch.cuda.is_available()); \
 # ---- Training ----------------------------------------------------------------
 #
 # Adjust --num_epochs and --max_steps to taste.
-# With ~80M tokens at 4096 seq len, one epoch ≈ 20k steps.
+# With ~80M tokens at 2048 seq len, one epoch ≈ 40k steps.
 # For a first proof-of-concept run, 3000–5000 steps is reasonable.
 #
 # NOTE on --packing: Do NOT enable packing on Delta unless flash_attention_2
@@ -61,16 +61,22 @@ python -c "import torch; print('CUDA available:', torch.cuda.is_available()); \
 # on long flattened sequences. flash-attn requires a separate pip install and
 # CUDA compilation step not covered in the environment setup above.
 
+# To resume from a previous job, uncomment --resume_from_checkpoint and set the
+# path to the highest-numbered checkpoint inside checkpoints/run1/, e.g.:
+#   --resume_from_checkpoint "$SCRIPT_DIR/checkpoints/run1/checkpoint-5000" \
+# Or use "true" to auto-select the latest checkpoint in output_dir.
+
 python train_qlora.py \
     --train_data   "$SCRIPT_DIR/data/train.jsonl"  \
     --val_data     "$SCRIPT_DIR/data/val.jsonl"    \
-    --output_dir   "$SCRIPT_DIR/checkpoints/$SLURM_JOB_ID" \
+    --output_dir   "$SCRIPT_DIR/checkpoints/run1"  \
     --model_path   "$SCRIPT_DIR/Qwen2.5-7B-Instruct" \
-    --max_seq_length  4096 \
+    --max_seq_length  2048 \
     --batch_size      4    \
     --grad_accum      4    \
     --learning_rate   2e-4 \
     --num_epochs      1    \
+    --max_steps       10000 \
     --save_steps      500  \
     --lora_r          16   \
     --lora_alpha      32   \
