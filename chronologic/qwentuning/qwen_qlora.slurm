@@ -54,6 +54,12 @@ python -c "import torch; print('CUDA available:', torch.cuda.is_available()); \
 # Adjust --num_epochs and --max_steps to taste.
 # With ~80M tokens at 4096 seq len, one epoch ≈ 20k steps.
 # For a first proof-of-concept run, 3000–5000 steps is reasonable.
+#
+# NOTE on --packing: Do NOT enable packing on Delta unless flash_attention_2
+# is installed. Without it, packing causes cross-sample attention contamination
+# (corrupting gradients) and is also significantly slower due to O(n²) attention
+# on long flattened sequences. flash-attn requires a separate pip install and
+# CUDA compilation step not covered in the environment setup above.
 
 python train_qlora.py \
     --train_data   "$SCRIPT_DIR/data/train.jsonl"  \
@@ -61,15 +67,14 @@ python train_qlora.py \
     --output_dir   "$SCRIPT_DIR/checkpoints/$SLURM_JOB_ID" \
     --model_path   "$SCRIPT_DIR/Qwen2.5-7B-Instruct" \
     --max_seq_length  4096 \
-    --batch_size      2    \
-    --grad_accum      8    \
+    --batch_size      4    \
+    --grad_accum      4    \
     --learning_rate   2e-4 \
     --num_epochs      1    \
     --save_steps      500  \
     --lora_r          16   \
     --lora_alpha      32   \
-    --lora_dropout    0.05 \
-    --packing
+    --lora_dropout    0.05
 
 echo ""
 echo "Job completed at $(date)"
