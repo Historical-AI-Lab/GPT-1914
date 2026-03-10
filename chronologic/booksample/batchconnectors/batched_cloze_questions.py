@@ -14,7 +14,7 @@ Usage:
                                      (default: ../primary_metadata.csv)
         --text-dir DIR               Directory containing text files
                                      (default: ../IDI_sample_1875-25)
-        --candidates-per-category N  Max candidate passages per category (default: 15)
+        --candidates-per-category N  Max candidate passages per category (default: 7)
         --verbose-bert               Print BERT ranking details
         --debug                      Enable debug output
 """
@@ -59,7 +59,7 @@ from distractor_generator_wcats import generate_distractors
 # Default paths
 DEFAULT_PRIMARY_METADATA = Path(__file__).parent.parent / "primary_metadata.csv"
 DEFAULT_TEXT_DIR = Path(__file__).parent.parent / "IDI_sample_1875-25"
-DEFAULT_CANDIDATES_PER_CATEGORY = 15
+DEFAULT_CANDIDATES_PER_CATEGORY = 7
 
 
 def read_barcode_file(filepath: str) -> List[str]:
@@ -372,7 +372,7 @@ def main():
                              f"(default: {DEFAULT_TEXT_DIR})")
     parser.add_argument("--candidates-per-category", type=int,
                         default=DEFAULT_CANDIDATES_PER_CATEGORY,
-                        help="Max candidate passages per category (default: 15)")
+                        help="Max candidate passages per category (default: 7)")
     parser.add_argument("--verbose-bert", action="store_true",
                         help="Print BERT ranking details")
     parser.add_argument("--debug", action="store_true",
