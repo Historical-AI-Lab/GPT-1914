@@ -22,9 +22,11 @@ module list
 
 # Activate the Python environment that has torch + transformers
 # (same qlora-env used for Qwen training; adjust path if different)
-source ~/chronologic/qwentuning/qlora-env/bin/activate
 
-cd ~/chronologic
+source ../qwentuning/qlora-env/bin/activate
+
+SCRIPT_DIR="$SLURM_SUBMIT_DIR"
+cd "$SCRIPT_DIR"
 
 python evalcode/benchmark_evaluation.py \
     Qwen/Qwen2.5-7B-Instruct \
