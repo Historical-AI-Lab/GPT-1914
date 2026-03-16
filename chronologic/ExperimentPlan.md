@@ -9,10 +9,10 @@ Now, I'm going to test a bunch of models on the benchmark and report results to 
 
 Fundamentally:
 
-    **H1**: We expect metadata permutation to harm performance, and
-    **H2**: Especially expect performance to be harmed in particular subsets of the benchmark: the reasoning_type "constrained_generation" and frame_type 'book_context'.
-    **H3**: We also, more weakly, expect fine-tuning a model on period text to improve performance on some parts of the benchmark. It may or may not improve performance overall, but we expect improved performance on reasoning_types 'phrase_cloze' and 'sentence_cloze' at least. We also expect that the positive effects of fine-tuning will increase with answer_length.
-    **H4**: Performance on the "inference" subset will increase with model size, and will be higher in reasoning models than in instruct models -- with base models bringing up the rear.
++ **H1**: We expect metadata permutation to harm performance, and
++ **H2**: Especially expect performance to be harmed in particular subsets of the benchmark: the reasoning_type "constrained_generation" and frame_type 'book_context'.
++ **H3**: We also, more weakly, expect fine-tuning a model on period text to improve performance on some parts of the benchmark. It may or may not improve performance overall, but we expect improved performance on reasoning_types 'phrase_cloze' and 'sentence_cloze' at least. We also expect that the positive effects of fine-tuning will increase with answer_length.
++ **H4**: Performance on the "inference" subset will increase with model size, and will be higher in reasoning models than in instruct models -- with base models bringing up the rear.
     
 But wait, what are these reasoning types and answer lengths? I've done some organizing of the benchmark questions to make a coherent experiment possible.
 
@@ -68,14 +68,14 @@ Allowable reasoning_types are:
 
 Fortunately the frame_type can be inferred from the reasoning_type.
 
-1. knowledge => world_context
-2. refusal => world_context
-3. inference => world_context
-4. character_modeling => book_context
-5. constrained_generation => book_context
-6. topic_sentence => book_context
-7. phrase_cloze => passage_context
-8. sentence_cloze => passage_context
+    knowledge => world_context
+    refusal => world_context
+    inference => world_context
+    character_modeling => book_context
+    constrained_generation => book_context
+    topic_sentence => book_context
+    phrase_cloze => passage_context
+    sentence_cloze => passage_context
 
 Here are the numbers of questions in different categories
 
