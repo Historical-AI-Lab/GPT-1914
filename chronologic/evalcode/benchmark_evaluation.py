@@ -24,6 +24,8 @@ import re
 import datetime
 from pathlib import Path
 
+import numpy as np
+
 # HF path (primary)
 HF_DEFAULT_DEVICE = None  # None → auto-detect at runtime
 
@@ -432,6 +434,305 @@ def calculate_mcq_skill_score(is_correct, k, r=1):
     return (observed - chance) / (1.0 - chance)
 
 
+# ---------------------------------------------------------------------------
+# Subset indexing, Platt scaling, and bootstrap evaluation
+# ---------------------------------------------------------------------------
+
+DEFAULT_SUBSET_FIELDS = [
+    "question_category", "answer_length", "frame_type", "reasoning_type",
+]
+
+
+def build_subset_index(questions, fields=None):
+    """Build a dictionary mapping 'field:value' keys to lists of question indices.
+
+    Args:
+        questions: list of question dicts.
+        fields:    list of field names to index (default: DEFAULT_SUBSET_FIELDS).
+
+    Returns:
+        dict: e.g. {"question_category:cloze_causalclause": [0, 3, 7], ...}
+    """
+    if fields is None:
+        fields = DEFAULT_SUBSET_FIELDS
+
+    index = {}
+    for i, q in enumerate(questions):
+        for field in fields:
+            if field not in q:
+                continue
+            key = f"{field}:{q[field]}"
+            index.setdefault(key, []).append(i)
+    return index
+
+
+def _fit_platt_params(x, y, w):
+    """Fit 2-parameter Platt scaling: p = sigmoid(a*x + b).
+
+    Uses scipy.optimize.minimize to find (a, b) that minimise weighted
+    negative log-likelihood.
+
+    Args:
+        x: 1-d array of per-option log-probabilities (unbounded).
+        y: 1-d array of ground-truth probabilities (1.0 = correct, 0.0 = incorrect,
+           intermediate values allowed).
+        w: 1-d array of sample weights (bootstrap counts).
+
+    Returns:
+        tuple: (a, b) — the fitted affine parameters.
+    """
+    from scipy.optimize import minimize
+
+    # Clip to avoid log(0)
+    eps = 1e-12
+
+    def neg_log_likelihood(params):
+        a, b = params
+        logits = a * x + b
+        # Numerically stable sigmoid
+        p = 1.0 / (1.0 + np.exp(-np.clip(logits, -500, 500)))
+        p = np.clip(p, eps, 1.0 - eps)
+        ll = w * (y * np.log(p) + (1.0 - y) * np.log(1.0 - p))
+        return -ll.sum()
+
+    result = minimize(neg_log_likelihood, x0=[1.0, 0.0], method="Nelder-Mead")
+    return result.x[0], result.x[1]
+
+
+def _raw_sigmoid_probs(logprobs):
+    """Convert log-probs to option-level probabilities via sigmoid.
+
+    This is the uncalibrated baseline: equivalent to Platt with a=1, b=0.
+
+    Args:
+        logprobs: list or array of per-option log-probabilities.
+
+    Returns:
+        list[float]: independent probabilities (may not sum to 1).
+    """
+    arr = np.array(logprobs, dtype=float)
+    return (1.0 / (1.0 + np.exp(-np.clip(arr, -500, 500)))).tolist()
+
+
+def _apply_platt(logprobs, a, b):
+    """Apply Platt calibration: p_i = sigmoid(a * x_i + b) for each option.
+
+    Each option is treated as an independent binary event, matching the
+    benchmark's semantics (multiple correct answers and fractional ground
+    truth are allowed).
+
+    Args:
+        logprobs: list or array of per-option log-probabilities.
+        a, b:     Platt affine parameters.
+
+    Returns:
+        list[float]: calibrated probabilities (independent, may not sum to 1).
+    """
+    arr = np.array(logprobs, dtype=float)
+    logits = a * arr + b
+    return (1.0 / (1.0 + np.exp(-np.clip(logits, -500, 500)))).tolist()
+
+
+def platt_scale_cv(gt_probs_list, model_logprobs_list, weights, n_folds=5):
+    """Cross-validated Platt scaling with option-level sigmoid calibration.
+
+    Both uncalibrated and calibrated Brier scores use sigmoid probabilities,
+    ensuring they're in the same probability space. Uncalibrated = sigmoid(x),
+    calibrated = sigmoid(a*x + b).
+
+    Args:
+        gt_probs_list:       list of ground-truth probability vectors.
+        model_logprobs_list: list of per-option log-probability vectors.
+        weights:             list/array of per-question weights (e.g. bootstrap counts).
+        n_folds:             number of CV folds.
+
+    Returns:
+        tuple: (calibrated_brier, uncalibrated_brier) — both lists of floats,
+               one per question.
+    """
+    n = len(gt_probs_list)
+    weights = np.array(weights, dtype=float)
+
+    # Assign folds: deterministic round-robin on indices
+    fold_ids = np.array([i % n_folds for i in range(n)])
+
+    # Pre-compute per-question uncalibrated Brier scores via sigmoid
+    uncalibrated_brier = [
+        calculate_brier_score(gt, _raw_sigmoid_probs(lp))
+        for gt, lp in zip(gt_probs_list, model_logprobs_list)
+    ]
+
+    calibrated_brier = [0.0] * n
+
+    for fold in range(n_folds):
+        test_mask = fold_ids == fold
+        train_mask = ~test_mask
+
+        # Build training data: for each training question, each answer option
+        # contributes a (log-prob, ground_truth_label) pair weighted by the
+        # question's bootstrap weight.
+        train_x = []
+        train_y = []
+        train_w = []
+        for idx in np.where(train_mask)[0]:
+            qw = weights[idx]
+            for lp_val, gt_val in zip(model_logprobs_list[idx], gt_probs_list[idx]):
+                train_x.append(lp_val)
+                train_y.append(gt_val)
+                train_w.append(qw)
+
+        train_x = np.array(train_x)
+        train_y = np.array(train_y)
+        train_w = np.array(train_w)
+
+        # Need positive-weight samples with both 0 and 1 labels to fit
+        effective_w = train_w.sum()
+        has_both = (train_y[train_w > 0].min() < 0.5 and
+                    train_y[train_w > 0].max() > 0.5) if effective_w > 0 else False
+        if effective_w < 1e-12 or train_mask.sum() < 2 or not has_both:
+            # Can't calibrate; fall back to uncalibrated
+            for i in np.where(test_mask)[0]:
+                calibrated_brier[i] = uncalibrated_brier[i]
+            continue
+
+        a, b = _fit_platt_params(train_x, train_y, train_w)
+
+        for i in np.where(test_mask)[0]:
+            cal_probs = _apply_platt(model_logprobs_list[i], a, b)
+            calibrated_brier[i] = calculate_brier_score(
+                gt_probs_list[i], cal_probs
+            )
+
+    return calibrated_brier, uncalibrated_brier
+
+
+def bootstrap_evaluate(gt_probs_list, model_results, subset_index,
+                       mode, n_bootstrap=1000, n_folds=5,
+                       model_logprobs=None, model_logodds=None):
+    """Bootstrap confidence intervals for Brier, skill, and accuracy scores.
+
+    Args:
+        gt_probs_list:  list of ground-truth probability vectors.
+        model_results:  if mode == "probabilistic", list of model probability vectors;
+                        if mode == "mcq", list of dicts {"is_correct": bool, "k": int}.
+        subset_index:   dict from build_subset_index().
+        mode:           "probabilistic" or "mcq".
+        n_bootstrap:    number of bootstrap iterations.
+        n_folds:        CV folds for Platt scaling (probabilistic mode only).
+        model_logprobs: list of per-option log-probability vectors (probabilistic mode).
+                        Required when mode == "probabilistic".
+        model_logodds:  deprecated alias for model_logprobs (backward compat).
+
+    Returns:
+        dict: {"overall_benchmark": {"brier_score": [p2.5, p50, p97.5], ...}, ...}
+    """
+    # Backward compat: accept model_logodds as alias for model_logprobs
+    if model_logprobs is None and model_logodds is not None:
+        model_logprobs = model_logodds
+
+    n = len(gt_probs_list)
+    rng = np.random.default_rng()
+
+    # Pre-compute per-question correctness and k values
+    if mode == "probabilistic":
+        per_q_correct = np.array([
+            (np.argmax(mp) == np.argmax(gt))
+            for mp, gt in zip(model_results, gt_probs_list)
+        ], dtype=float)
+        per_q_k = np.array([len(gt) for gt in gt_probs_list])
+    else:  # mcq
+        per_q_correct = np.array(
+            [r["is_correct"] for r in model_results], dtype=float
+        )
+        per_q_k = np.array([r["k"] for r in model_results])
+
+    # Per-question skill scores (static, don't depend on weights)
+    per_q_skill = np.array([
+        calculate_mcq_skill_score(bool(c), int(k))
+        for c, k in zip(per_q_correct, per_q_k)
+    ])
+
+    # All subsets we need to report on (including overall)
+    all_subsets = {"overall_benchmark": np.arange(n)}
+    for key, indices in subset_index.items():
+        all_subsets[key] = np.array(indices)
+
+    # Collectors: subset → list of (brier, skill, accuracy) per bootstrap iteration
+    collectors = {key: {"brier": [], "skill": [], "accuracy": []}
+                  for key in all_subsets}
+
+    for _ in range(n_bootstrap):
+        # Draw bootstrap sample → weight vector
+        counts = np.bincount(rng.integers(0, n, size=n), minlength=n)
+        weights = counts.astype(float)
+
+        # Get per-question Brier scores for this bootstrap
+        if mode == "probabilistic":
+            per_q_brier, _ = platt_scale_cv(
+                gt_probs_list, model_logprobs, weights,
+                n_folds=n_folds
+            )
+            per_q_brier = np.array(per_q_brier)
+        else:
+            per_q_brier = np.zeros(n)
+
+        # Compute weighted means for each subset
+        for key, indices in all_subsets.items():
+            w = weights[indices]
+            w_sum = w.sum()
+            if w_sum < 1e-12:
+                collectors[key]["brier"].append(0.0)
+                collectors[key]["skill"].append(0.0)
+                collectors[key]["accuracy"].append(0.0)
+                continue
+
+            collectors[key]["brier"].append(
+                (w * per_q_brier[indices]).sum() / w_sum
+            )
+            collectors[key]["skill"].append(
+                (w * per_q_skill[indices]).sum() / w_sum
+            )
+            collectors[key]["accuracy"].append(
+                (w * per_q_correct[indices]).sum() / w_sum
+            )
+
+    # Compute percentiles
+    result = {}
+    for key in all_subsets:
+        result[key] = {}
+        for metric in ("brier_score", "skill_score", "accuracy"):
+            short = metric.replace("_score", "").replace("brier_score", "brier")
+            # Map metric names to collector keys
+            ckey = {"brier_score": "brier", "skill_score": "skill",
+                    "accuracy": "accuracy"}[metric]
+            vals = np.array(collectors[key][ckey])
+            p2_5, p50, p97_5 = np.percentile(vals, [2.5, 50, 97.5])
+            result[key][metric] = [float(p2_5), float(p50), float(p97_5)]
+
+    return result
+
+
+def write_json_report(report_path, metadata, per_question_results,
+                      confidence_intervals, correct_vector):
+    """Write the machine-readable JSON evaluation report.
+
+    Args:
+        report_path:          Path (or str) for the output file.
+        metadata:             dict with model_id, benchmark_file, eval_mode, etc.
+        per_question_results: list of dicts (model_probs, chosen_letter, correct).
+        confidence_intervals: dict from bootstrap_evaluate().
+        correct_vector:       list of bools.
+    """
+    report = {
+        "metadata": metadata,
+        "per_question_results": per_question_results,
+        "confidence_intervals": confidence_intervals,
+        "correct_vector": correct_vector,
+    }
+    with open(report_path, "w", encoding="utf-8") as f:
+        json.dump(report, f, indent=2)
+
+
 def test_five_questions(model_name, path_to_jsonl, base_url=VLLM_BASE_URL):
     """Run probabilistic evaluation on 5 randomly sampled questions and write a markdown report.
 
@@ -496,19 +797,25 @@ def test_five_questions(model_name, path_to_jsonl, base_url=VLLM_BASE_URL):
     return str(report_path)
 
 
-def test_five_questions_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False):
-    """Run probabilistic evaluation on 5 randomly sampled questions and write a markdown report.
+def test_five_questions_hf(model_id, path_to_jsonl, device=None,
+                           trust_remote_code=False, verbose_report=True,
+                           n_bootstrap=1000):
+    """Run probabilistic evaluation on 5 randomly sampled questions.
 
     Uses the HuggingFace path. Loads the model once, then scores each question.
+    Runs bootstrap evaluation with cross-validated Platt scaling, writes a JSON
+    report, and (by default) a verbose per-question markdown report.
 
     Args:
         model_id:           HF model ID or local path.
         path_to_jsonl:      path to a JSONL file of benchmark questions.
         device:             device string ('mps', 'cuda', 'cpu') or None for auto.
         trust_remote_code:  passed through to HF from_pretrained calls.
+        verbose_report:     if True (default), also write a per-question markdown report.
+        n_bootstrap:        number of bootstrap iterations for confidence intervals.
 
     Returns:
-        str: absolute path to the written markdown report.
+        str: absolute path to the written JSON report.
     """
     path = Path(path_to_jsonl)
 
@@ -523,101 +830,24 @@ def test_five_questions_hf(model_id, path_to_jsonl, device=None, trust_remote_co
 
     model, tokenizer = load_model(model_id, device=device, trust_remote_code=trust_remote_code)
 
-    # Build a filesystem-safe model name for the report filename
     model_safe = model_id.replace(":", "_").replace("/", "_")
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    report_path = path.parent / f"eval_report_{model_safe}_{timestamp}.md"
+    json_report_path = path.parent / f"eval_results_{model_safe}_{timestamp}.json"
+    md_report_path = path.parent / f"eval_report_{model_safe}_{timestamp}.md"
 
-    lines = [f"# {model_id}\n"]
-
-    for i, question in enumerate(selected, 1):
-        lines.append(f"## Question {i}\n")
-        lines.append(f"**Metadata:** {question.get('metadata_frame', '')}\n")
-        lines.append(f"**Question:** {question.get('main_question', '')}\n")
-        lines.append(f"**Category:** {question.get('question_category', '')}\n")
-
-        lls = get_answer_lls_hf(question, model, tokenizer, use_metadata=True)
-        model_probs = lls_to_probabilities(lls)
-        gt_probs = question["answer_probabilities"]
-        brier = calculate_brier_score(gt_probs, model_probs)
-
-        lines.append("| Answer | Type | Ground Truth Prob | Model Prob |")
-        lines.append("|--------|------|-------------------|------------|")
-
-        for ans, atype, gtp, mp in zip(
-            question["answer_strings"],
-            question["answer_types"],
-            gt_probs,
-            model_probs,
-        ):
-            lines.append(f"| {ans} | {atype} | {gtp:.3f} | {mp:.3f} |")
-
-        lines.append(f"\n**Brier Score:** {brier:.4f}\n")
-
-    report_text = "\n".join(lines)
-    with open(report_path, "w", encoding="utf-8") as f:
-        f.write(report_text)
-
-    return str(report_path)
-
-
-def full_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False):
-    """Score every question in a JSONL and write a full markdown report.
-
-    For each question: get_answer_lls_hf() → lls_to_probabilities() →
-    calculate_brier_score(). Reports mean Brier score overall and broken down
-    by question_category. Prints overall score to stdout.
-
-    Scoring failures — questions where every log-likelihood score is 0.0
-    (the sentinel returned by _score_answer_ll_hf when tokenisation produces
-    no answer tokens) — are counted, warned about during the run, flagged in
-    the per-question report blocks, and summarised in the report header and
-    final stdout output.
-
-    Args:
-        model_id:           HF model ID or local path.
-        path_to_jsonl:      path to a JSONL file of benchmark questions.
-        device:             device string ('mps', 'cuda', 'cpu') or None for auto.
-        trust_remote_code:  passed through to HF from_pretrained calls.
-
-    Returns:
-        str: absolute path to the written markdown report.
-    """
-    path = Path(path_to_jsonl)
-
-    questions = []
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                questions.append(json.loads(line))
-
-    model, tokenizer = load_model(model_id, device=device, trust_remote_code=trust_remote_code)
-
-    model_safe = model_id.replace(":", "_").replace("/", "_")
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    report_path = path.parent / f"eval_report_full_{model_safe}_{timestamp}.md"
-
-    total = len(questions)
-    try:
-        from tqdm import tqdm
-        question_iter = tqdm(enumerate(questions, 1), total=total, desc=model_id)
-        _tqdm_active = True
-    except ImportError:
-        question_iter = enumerate(questions, 1)
-        _tqdm_active = False
-
+    total = len(selected)
     all_brier_scores = []
-    category_scores = {}    # category → list of brier scores
+    all_model_probs = []
+    all_model_logprobs = []
+    all_gt_probs = []
+    category_scores = {}
     scoring_fail_total = 0
-    category_scoring_fail = {}  # category → count of scoring failures
+    category_scoring_fail = {}
     per_question_blocks = []
 
-    for i, question in question_iter:
-        if not _tqdm_active and i % 50 == 0:
-            print(f"  Processed {i} of {total} questions...")
-
+    for i, question in enumerate(selected, 1):
         lls = get_answer_lls_hf(question, model, tokenizer, use_metadata=True)
+        all_model_logprobs.append(lls)
 
         scoring_failed = all(ll == 0.0 for ll in lls)
         category = question.get("question_category", "unknown")
@@ -631,6 +861,8 @@ def full_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False):
         brier = calculate_brier_score(gt_probs, model_probs)
 
         all_brier_scores.append(brier)
+        all_model_probs.append(model_probs)
+        all_gt_probs.append(gt_probs)
         category_scores.setdefault(category, []).append(brier)
         if scoring_failed:
             category_scoring_fail[category] = category_scoring_fail.get(category, 0) + 1
@@ -654,58 +886,89 @@ def full_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False):
         per_question_blocks.append("\n".join(block))
 
     overall_mean = sum(all_brier_scores) / len(all_brier_scores) if all_brier_scores else 0.0
-    by_category = {cat: sum(scores) / len(scores) for cat, scores in category_scores.items()}
     scoring_fail_rate = scoring_fail_total / total if total > 0 else 0.0
 
-    # Build summary table
-    summary_lines = [
-        f"# Full Eval — {model_id}\n",
-        "## Summary\n",
-        f"**Scoring failure rate:** {scoring_fail_rate:.1%} "
-        f"({scoring_fail_total} of {total} questions had all-zero log-likelihoods)\n",
-        "| Metric | Mean Brier Score | Scoring Failures |",
-        "|--------|-----------------|-----------------|",
-        f"| **Overall** | {overall_mean:.4f} | {scoring_fail_total} / {total} |",
+    correct_vector = [
+        bool(np.argmax(mp) == np.argmax(gt))
+        for mp, gt in zip(all_model_probs, all_gt_probs)
     ]
-    for cat, mean_brier in sorted(by_category.items()):
-        cat_total = len(category_scores[cat])
-        cat_fails = category_scoring_fail.get(cat, 0)
-        summary_lines.append(f"| {cat} | {mean_brier:.4f} | {cat_fails} / {cat_total} |")
-    summary_lines.append("")
+    per_question_results = [
+        {"model_probs": mp, "chosen_letter": None, "correct": c}
+        for mp, c in zip(all_model_probs, correct_vector)
+    ]
 
-    report_text = "\n".join(summary_lines) + "\n" + "\n\n".join(per_question_blocks)
+    subset_index = build_subset_index(selected)
+    confidence_intervals = bootstrap_evaluate(
+        all_gt_probs, all_model_probs, subset_index,
+        mode="probabilistic", n_bootstrap=n_bootstrap,
+        model_logprobs=all_model_logprobs,
+    )
 
-    with open(report_path, "w", encoding="utf-8") as f:
-        f.write(report_text)
+    meta = {
+        "model_id": model_id,
+        "benchmark_file": str(path),
+        "eval_mode": "probabilistic",
+        "timestamp": timestamp,
+        "n_questions": total,
+        "n_bootstrap": n_bootstrap,
+    }
+    write_json_report(json_report_path, meta, per_question_results,
+                      confidence_intervals, correct_vector)
+
+    if verbose_report:
+        by_category = {cat: sum(scores) / len(scores)
+                       for cat, scores in category_scores.items()}
+        summary_lines = [
+            f"# Five-Question Smoke Test — {model_id}\n",
+            "## Summary\n",
+            f"**Scoring failure rate:** {scoring_fail_rate:.1%} "
+            f"({scoring_fail_total} of {total} questions had all-zero log-likelihoods)\n",
+            "| Metric | Mean Brier Score | Scoring Failures |",
+            "|--------|-----------------|-----------------|",
+            f"| **Overall** | {overall_mean:.4f} | {scoring_fail_total} / {total} |",
+        ]
+        for cat, mean_brier in sorted(by_category.items()):
+            cat_total = len(category_scores[cat])
+            cat_fails = category_scoring_fail.get(cat, 0)
+            summary_lines.append(f"| {cat} | {mean_brier:.4f} | {cat_fails} / {cat_total} |")
+        summary_lines.append("")
+
+        report_text = "\n".join(summary_lines) + "\n" + "\n\n".join(per_question_blocks)
+        with open(md_report_path, "w", encoding="utf-8") as f:
+            f.write(report_text)
 
     print(f"Overall Brier score: {overall_mean:.4f}")
     print(f"Scoring failure rate: {scoring_fail_rate:.1%} "
           f"({scoring_fail_total} of {total} questions had all-zero log-likelihoods)")
-    return str(report_path)
+    print(f"JSON report: {json_report_path}")
+    return str(json_report_path)
 
 
-def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
-                include_negation=False):
-    """Evaluate a model on multiple-choice questions and write a markdown report.
+def full_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
+                 verbose_report=False, n_bootstrap=1000):
+    """Score every question in a JSONL; write JSON report and optional markdown.
 
-    For each question: build a lettered MCQ prompt, generate a response, parse
-    the chosen letter, check against the correct letter. Reports top-1 accuracy
-    overall and by question_category. Prints overall accuracy to stdout.
+    For each question: get_answer_lls_hf() → lls_to_probabilities() →
+    calculate_brier_score(). Runs bootstrap evaluation with cross-validated
+    Platt scaling for confidence intervals. Always writes a JSON report;
+    writes a verbose markdown report only if verbose_report is True.
 
-    Questions where _parse_mcq_response() returns None (no uppercase letter
-    found in the model's output) are counted as no-responses, warned about
-    during the run, flagged in the per-question report blocks, and summarised
-    in the report header and final stdout output.
+    Scoring failures — questions where every log-likelihood score is 0.0
+    (the sentinel returned by _score_answer_ll_hf when tokenisation produces
+    no answer tokens) — are counted, warned about during the run, flagged in
+    the per-question report blocks, and summarised in the report header and
+    final stdout output.
 
     Args:
         model_id:           HF model ID or local path.
         path_to_jsonl:      path to a JSONL file of benchmark questions.
         device:             device string ('mps', 'cuda', 'cpu') or None for auto.
         trust_remote_code:  passed through to HF from_pretrained calls.
-        include_negation:   if True, include negation-type answers as distractors.
+        verbose_report:     if True, also write the detailed markdown report.
+        n_bootstrap:        number of bootstrap iterations for confidence intervals.
 
     Returns:
-        str: absolute path to the written markdown report.
+        str: absolute path to the written JSON report.
     """
     path = Path(path_to_jsonl)
 
@@ -720,7 +983,169 @@ def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
 
     model_safe = model_id.replace(":", "_").replace("/", "_")
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    report_path = path.parent / f"eval_report_mcq_{model_safe}_{timestamp}.md"
+    json_report_path = path.parent / f"eval_results_full_{model_safe}_{timestamp}.json"
+    md_report_path = path.parent / f"eval_report_full_{model_safe}_{timestamp}.md"
+
+    total = len(questions)
+    try:
+        from tqdm import tqdm
+        question_iter = tqdm(enumerate(questions, 1), total=total, desc=model_id)
+        _tqdm_active = True
+    except ImportError:
+        question_iter = enumerate(questions, 1)
+        _tqdm_active = False
+
+    all_brier_scores = []
+    all_model_probs = []       # collected for bootstrap
+    all_model_logprobs = []     # collected for Platt scaling in log-odds space
+    all_gt_probs = []           # collected for bootstrap
+    category_scores = {}    # category → list of brier scores
+    scoring_fail_total = 0
+    category_scoring_fail = {}  # category → count of scoring failures
+    per_question_blocks = []
+
+    for i, question in question_iter:
+        if not _tqdm_active and i % 50 == 0:
+            print(f"  Processed {i} of {total} questions...")
+
+        lls = get_answer_lls_hf(question, model, tokenizer, use_metadata=True)
+        all_model_logprobs.append(lls)
+
+        scoring_failed = all(ll == 0.0 for ll in lls)
+        category = question.get("question_category", "unknown")
+        if scoring_failed:
+            scoring_fail_total += 1
+            print(f"  WARNING: all log-likelihoods are 0.0 for question {i} "
+                  f"(category: {category}) — scoring may have failed "
+                  f"(empty answer tokens?)")
+        model_probs = lls_to_probabilities(lls)
+        gt_probs = question["answer_probabilities"]
+        brier = calculate_brier_score(gt_probs, model_probs)
+
+        all_brier_scores.append(brier)
+        all_model_probs.append(model_probs)
+        all_gt_probs.append(gt_probs)
+        category_scores.setdefault(category, []).append(brier)
+        if scoring_failed:
+            category_scoring_fail[category] = category_scoring_fail.get(category, 0) + 1
+
+        fail_note = "  ⚠ SCORING FAILURE (all LLs = 0.0)" if scoring_failed else ""
+        block = []
+        block.append(f"## Question {i}\n")
+        block.append(f"**Metadata:** {question.get('metadata_frame', '')}\n")
+        block.append(f"**Question:** {question.get('main_question', '')}\n")
+        block.append(f"**Category:** {category}\n")
+        block.append("| Answer | Type | Ground Truth Prob | Model Prob |")
+        block.append("|--------|------|-------------------|------------|")
+        for ans, atype, gtp, mp in zip(
+            question["answer_strings"],
+            question["answer_types"],
+            gt_probs,
+            model_probs,
+        ):
+            block.append(f"| {ans} | {atype} | {gtp:.3f} | {mp:.3f} |")
+        block.append(f"\n**Brier Score:** {brier:.4f}{fail_note}\n")
+        per_question_blocks.append("\n".join(block))
+
+    overall_mean = sum(all_brier_scores) / len(all_brier_scores) if all_brier_scores else 0.0
+    scoring_fail_rate = scoring_fail_total / total if total > 0 else 0.0
+
+    # Build correct_vector and per_question_results for JSON
+    correct_vector = [
+        bool(np.argmax(mp) == np.argmax(gt))
+        for mp, gt in zip(all_model_probs, all_gt_probs)
+    ]
+    per_question_results = [
+        {"model_probs": mp, "chosen_letter": None, "correct": c}
+        for mp, c in zip(all_model_probs, correct_vector)
+    ]
+
+    # Bootstrap evaluation
+    subset_index = build_subset_index(questions)
+    confidence_intervals = bootstrap_evaluate(
+        all_gt_probs, all_model_probs, subset_index,
+        mode="probabilistic", n_bootstrap=n_bootstrap,
+        model_logprobs=all_model_logprobs,
+    )
+
+    # Always write JSON report
+    meta = {
+        "model_id": model_id,
+        "benchmark_file": str(path),
+        "eval_mode": "probabilistic",
+        "timestamp": timestamp,
+        "n_questions": total,
+        "n_bootstrap": n_bootstrap,
+    }
+    write_json_report(json_report_path, meta, per_question_results,
+                      confidence_intervals, correct_vector)
+
+    # Optionally write verbose markdown
+    if verbose_report:
+        by_category = {cat: sum(scores) / len(scores)
+                       for cat, scores in category_scores.items()}
+        summary_lines = [
+            f"# Full Eval — {model_id}\n",
+            "## Summary\n",
+            f"**Scoring failure rate:** {scoring_fail_rate:.1%} "
+            f"({scoring_fail_total} of {total} questions had all-zero log-likelihoods)\n",
+            "| Metric | Mean Brier Score | Scoring Failures |",
+            "|--------|-----------------|-----------------|",
+            f"| **Overall** | {overall_mean:.4f} | {scoring_fail_total} / {total} |",
+        ]
+        for cat, mean_brier in sorted(by_category.items()):
+            cat_total = len(category_scores[cat])
+            cat_fails = category_scoring_fail.get(cat, 0)
+            summary_lines.append(f"| {cat} | {mean_brier:.4f} | {cat_fails} / {cat_total} |")
+        summary_lines.append("")
+
+        report_text = "\n".join(summary_lines) + "\n" + "\n\n".join(per_question_blocks)
+        with open(md_report_path, "w", encoding="utf-8") as f:
+            f.write(report_text)
+
+    print(f"Overall Brier score: {overall_mean:.4f}")
+    print(f"Scoring failure rate: {scoring_fail_rate:.1%} "
+          f"({scoring_fail_total} of {total} questions had all-zero log-likelihoods)")
+    print(f"JSON report: {json_report_path}")
+    return str(json_report_path)
+
+
+def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
+                include_negation=False, verbose_report=False, n_bootstrap=1000):
+    """Evaluate a model on multiple-choice questions; write JSON and optional markdown.
+
+    For each question: build a lettered MCQ prompt, generate a response, parse
+    the chosen letter, check against the correct letter. Runs bootstrap
+    evaluation for confidence intervals. Always writes a JSON report; writes
+    a verbose markdown report only if verbose_report is True.
+
+    Args:
+        model_id:           HF model ID or local path.
+        path_to_jsonl:      path to a JSONL file of benchmark questions.
+        device:             device string ('mps', 'cuda', 'cpu') or None for auto.
+        trust_remote_code:  passed through to HF from_pretrained calls.
+        include_negation:   if True, include negation-type answers as distractors.
+        verbose_report:     if True, also write the detailed markdown report.
+        n_bootstrap:        number of bootstrap iterations for confidence intervals.
+
+    Returns:
+        str: absolute path to the written JSON report.
+    """
+    path = Path(path_to_jsonl)
+
+    questions = []
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                questions.append(json.loads(line))
+
+    model, tokenizer = load_model(model_id, device=device, trust_remote_code=trust_remote_code)
+
+    model_safe = model_id.replace(":", "_").replace("/", "_")
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    json_report_path = path.parent / f"eval_results_mcq_{model_safe}_{timestamp}.json"
+    md_report_path = path.parent / f"eval_report_mcq_{model_safe}_{timestamp}.md"
 
     total = len(questions)
     try:
@@ -738,6 +1163,7 @@ def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
     all_skill_scores = []
     category_skill = {}      # category → list of per-question skill scores
     per_question_blocks = []
+    all_mcq_results = []     # collected for bootstrap
 
     for i, question in question_iter:
         if not _tqdm_active and i % 50 == 0:
@@ -774,6 +1200,7 @@ def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
         skill = calculate_mcq_skill_score(is_correct, k, r)
         all_skill_scores.append(skill)
         category_skill.setdefault(category, []).append(skill)
+        all_mcq_results.append({"is_correct": is_correct, "k": k})
 
         result_str = "TRUE" if is_correct else "FALSE"
         no_resp_str = "  ⚠ NO RESPONSE" if chosen_letter is None else ""
@@ -802,43 +1229,73 @@ def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
 
     overall_accuracy = correct_total / total if total > 0 else 0.0
     no_response_rate = no_response_total / total if total > 0 else 0.0
-    by_category = {
-        cat: counts[0] / counts[1] if counts[1] > 0 else 0.0
-        for cat, counts in category_results.items()
-    }
     overall_mean_skill = sum(all_skill_scores) / len(all_skill_scores) if all_skill_scores else 0.0
-    by_category_skill = {cat: sum(s) / len(s) for cat, s in category_skill.items()}
 
-    summary_lines = [
-        f"# MCQ Eval — {model_id}\n",
-        "## Summary\n",
-        f"**No-response rate:** {no_response_rate:.1%} "
-        f"({no_response_total} of {total} questions returned no parseable letter)\n",
-        "| Metric | Accuracy | Skill Score | No Response |",
-        "|--------|----------|-------------|-------------|",
-        f"| **Overall** | {overall_accuracy:.1%} | {overall_mean_skill:.4f} "
-        f"| {no_response_total} / {total} |",
+    # Build correct_vector and per_question_results for JSON
+    correct_vector = [r["is_correct"] for r in all_mcq_results]
+    per_question_results = [
+        {"model_probs": None, "chosen_letter": None, "correct": r["is_correct"]}
+        for r in all_mcq_results
     ]
-    for cat in sorted(by_category.keys()):
-        acc = by_category[cat]
-        skill_avg = by_category_skill.get(cat, 0.0)
-        cat_total = category_results[cat][1]
-        cat_no_resp = category_no_response.get(cat, 0)
-        summary_lines.append(
-            f"| {cat} | {acc:.1%} | {skill_avg:.4f} | {cat_no_resp} / {cat_total} |"
-        )
-    summary_lines.append("")
 
-    report_text = "\n".join(summary_lines) + "\n" + "\n\n".join(per_question_blocks)
+    # Bootstrap evaluation
+    gt_probs_list = [q["answer_probabilities"] for q in questions]
+    subset_index = build_subset_index(questions)
+    confidence_intervals = bootstrap_evaluate(
+        gt_probs_list, all_mcq_results, subset_index,
+        mode="mcq", n_bootstrap=n_bootstrap,
+    )
 
-    with open(report_path, "w", encoding="utf-8") as f:
-        f.write(report_text)
+    # Always write JSON report
+    meta = {
+        "model_id": model_id,
+        "benchmark_file": str(path),
+        "eval_mode": "mcq",
+        "timestamp": timestamp,
+        "n_questions": total,
+        "n_bootstrap": n_bootstrap,
+    }
+    write_json_report(json_report_path, meta, per_question_results,
+                      confidence_intervals, correct_vector)
+
+    # Optionally write verbose markdown
+    if verbose_report:
+        by_category = {
+            cat: counts[0] / counts[1] if counts[1] > 0 else 0.0
+            for cat, counts in category_results.items()
+        }
+        by_category_skill = {cat: sum(s) / len(s) for cat, s in category_skill.items()}
+
+        summary_lines = [
+            f"# MCQ Eval — {model_id}\n",
+            "## Summary\n",
+            f"**No-response rate:** {no_response_rate:.1%} "
+            f"({no_response_total} of {total} questions returned no parseable letter)\n",
+            "| Metric | Accuracy | Skill Score | No Response |",
+            "|--------|----------|-------------|-------------|",
+            f"| **Overall** | {overall_accuracy:.1%} | {overall_mean_skill:.4f} "
+            f"| {no_response_total} / {total} |",
+        ]
+        for cat in sorted(by_category.keys()):
+            acc = by_category[cat]
+            skill_avg = by_category_skill.get(cat, 0.0)
+            cat_total = category_results[cat][1]
+            cat_no_resp = category_no_response.get(cat, 0)
+            summary_lines.append(
+                f"| {cat} | {acc:.1%} | {skill_avg:.4f} | {cat_no_resp} / {cat_total} |"
+            )
+        summary_lines.append("")
+
+        report_text = "\n".join(summary_lines) + "\n" + "\n\n".join(per_question_blocks)
+        with open(md_report_path, "w", encoding="utf-8") as f:
+            f.write(report_text)
 
     print(f"Overall MCQ accuracy: {overall_accuracy:.1%}")
     print(f"Overall MCQ skill score: {overall_mean_skill:.4f}")
     print(f"No-response rate: {no_response_rate:.1%} "
           f"({no_response_total} of {total} questions returned no parseable letter)")
-    return str(report_path)
+    print(f"JSON report: {json_report_path}")
+    return str(json_report_path)
 
 
 # ---------------------------------------------------------------------------
@@ -1061,14 +1518,15 @@ def _generate_openai(prompt, model_id, client, valid_letters=None,
 
 
 def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
-                    include_negation=False, trace=False):
+                    include_negation=False, trace=False,
+                    verbose_report=False, n_bootstrap=1000):
     """Evaluate an OpenAI-hosted model on multiple-choice questions.
 
     Uses the Chat Completions API.  For each question the function builds a
     lettered MCQ prompt, sends it to the model, parses the chosen letter, and
-    checks it against the correct answer.  Reports top-1 accuracy and skill
-    score overall and broken down by question_category — identical format to
-    mcq_eval_hf().
+    checks it against the correct answer.  Runs bootstrap evaluation for
+    confidence intervals. Always writes a JSON report; writes a verbose
+    markdown report only if verbose_report is True.
 
     Args:
         model_id:          OpenAI model identifier (e.g. 'gpt-4.1-2025-04-14').
@@ -1080,9 +1538,11 @@ def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
                            prompt, raw API response, parsed letter, and correct
                            letter to stdout for each — useful for debugging
                            response-parsing failures.
+        verbose_report:    if True, also write the detailed markdown report.
+        n_bootstrap:       number of bootstrap iterations for confidence intervals.
 
     Returns:
-        str: absolute path to the written markdown report.
+        str: absolute path to the written JSON report.
 
     Raises:
         FileNotFoundError: if credentials file is missing.
@@ -1112,7 +1572,8 @@ def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
 
     model_safe = model_id.replace(":", "_").replace("/", "_")
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    report_path = path.parent / f"eval_report_mcq_{model_safe}_{timestamp}.md"
+    json_report_path = path.parent / f"eval_results_mcq_{model_safe}_{timestamp}.json"
+    md_report_path = path.parent / f"eval_report_mcq_{model_safe}_{timestamp}.md"
 
     total = len(questions)
     try:
@@ -1130,6 +1591,7 @@ def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
     all_skill_scores = []
     category_skill = {}      # category → list of per-question skill scores
     per_question_blocks = []
+    all_mcq_results = []     # collected for bootstrap
 
     for i, question in question_iter:
         if not _tqdm_active and not trace and i % 50 == 0:
@@ -1183,6 +1645,7 @@ def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
         skill = calculate_mcq_skill_score(is_correct, k, r)
         all_skill_scores.append(skill)
         category_skill.setdefault(category, []).append(skill)
+        all_mcq_results.append({"is_correct": is_correct, "k": k})
 
         result_str = "TRUE" if is_correct else "FALSE"
         no_resp_str = "  ⚠ NO RESPONSE" if chosen_letter is None else ""
@@ -1211,45 +1674,75 @@ def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
 
     overall_accuracy = correct_total / total if total > 0 else 0.0
     no_response_rate = no_response_total / total if total > 0 else 0.0
-    by_category = {
-        cat: counts[0] / counts[1] if counts[1] > 0 else 0.0
-        for cat, counts in category_results.items()
-    }
     overall_mean_skill = (
         sum(all_skill_scores) / len(all_skill_scores) if all_skill_scores else 0.0
     )
-    by_category_skill = {cat: sum(s) / len(s) for cat, s in category_skill.items()}
 
-    summary_lines = [
-        f"# MCQ Eval — {model_id}\n",
-        "## Summary\n",
-        f"**No-response rate:** {no_response_rate:.1%} "
-        f"({no_response_total} of {total} questions returned no parseable letter)\n",
-        "| Metric | Accuracy | Skill Score | No Response |",
-        "|--------|----------|-------------|-------------|",
-        f"| **Overall** | {overall_accuracy:.1%} | {overall_mean_skill:.4f} "
-        f"| {no_response_total} / {total} |",
+    # Build correct_vector and per_question_results for JSON
+    correct_vector = [r["is_correct"] for r in all_mcq_results]
+    per_question_results = [
+        {"model_probs": None, "chosen_letter": None, "correct": r["is_correct"]}
+        for r in all_mcq_results
     ]
-    for cat in sorted(by_category.keys()):
-        acc = by_category[cat]
-        skill_avg = by_category_skill.get(cat, 0.0)
-        cat_total = category_results[cat][1]
-        cat_no_resp = category_no_response.get(cat, 0)
-        summary_lines.append(
-            f"| {cat} | {acc:.1%} | {skill_avg:.4f} | {cat_no_resp} / {cat_total} |"
-        )
-    summary_lines.append("")
 
-    report_text = "\n".join(summary_lines) + "\n" + "\n\n".join(per_question_blocks)
+    # Bootstrap evaluation
+    gt_probs_list = [q["answer_probabilities"] for q in questions]
+    subset_index = build_subset_index(questions)
+    confidence_intervals = bootstrap_evaluate(
+        gt_probs_list, all_mcq_results, subset_index,
+        mode="mcq", n_bootstrap=n_bootstrap,
+    )
 
-    with open(report_path, "w", encoding="utf-8") as f:
-        f.write(report_text)
+    # Always write JSON report
+    meta = {
+        "model_id": model_id,
+        "benchmark_file": str(path),
+        "eval_mode": "mcq",
+        "timestamp": timestamp,
+        "n_questions": total,
+        "n_bootstrap": n_bootstrap,
+    }
+    write_json_report(json_report_path, meta, per_question_results,
+                      confidence_intervals, correct_vector)
+
+    # Optionally write verbose markdown
+    if verbose_report:
+        by_category = {
+            cat: counts[0] / counts[1] if counts[1] > 0 else 0.0
+            for cat, counts in category_results.items()
+        }
+        by_category_skill = {cat: sum(s) / len(s) for cat, s in category_skill.items()}
+
+        summary_lines = [
+            f"# MCQ Eval — {model_id}\n",
+            "## Summary\n",
+            f"**No-response rate:** {no_response_rate:.1%} "
+            f"({no_response_total} of {total} questions returned no parseable letter)\n",
+            "| Metric | Accuracy | Skill Score | No Response |",
+            "|--------|----------|-------------|-------------|",
+            f"| **Overall** | {overall_accuracy:.1%} | {overall_mean_skill:.4f} "
+            f"| {no_response_total} / {total} |",
+        ]
+        for cat in sorted(by_category.keys()):
+            acc = by_category[cat]
+            skill_avg = by_category_skill.get(cat, 0.0)
+            cat_total = category_results[cat][1]
+            cat_no_resp = category_no_response.get(cat, 0)
+            summary_lines.append(
+                f"| {cat} | {acc:.1%} | {skill_avg:.4f} | {cat_no_resp} / {cat_total} |"
+            )
+        summary_lines.append("")
+
+        report_text = "\n".join(summary_lines) + "\n" + "\n\n".join(per_question_blocks)
+        with open(md_report_path, "w", encoding="utf-8") as f:
+            f.write(report_text)
 
     print(f"Overall MCQ accuracy: {overall_accuracy:.1%}")
     print(f"Overall MCQ skill score: {overall_mean_skill:.4f}")
     print(f"No-response rate: {no_response_rate:.1%} "
           f"({no_response_total} of {total} questions returned no parseable letter)")
-    return str(report_path)
+    print(f"JSON report: {json_report_path}")
+    return str(json_report_path)
 
 
 if __name__ == "__main__":
@@ -1290,6 +1783,12 @@ if __name__ == "__main__":
     parser.add_argument("--trace", action="store_true",
                         help="Sample 5 questions, print full prompt + raw response to stdout "
                              "(OpenAI --mcq only; useful for debugging parse failures)")
+    parser.add_argument("--verbose-report", action="store_true",
+                        help="Also write a detailed per-question markdown report "
+                             "(--full-eval and --mcq modes)")
+    parser.add_argument("--n-bootstrap", type=int, default=1000,
+                        help="Number of bootstrap iterations for confidence intervals "
+                             "(default: 1000)")
 
     args = parser.parse_args()
 
@@ -1306,6 +1805,8 @@ if __name__ == "__main__":
             args.model_id, args.path_to_jsonl,
             device=args.device,
             trust_remote_code=args.trust_remote_code,
+            verbose_report=args.verbose_report,
+            n_bootstrap=args.n_bootstrap,
         )
     elif args.mcq:
         if is_openai_model(args.model_id):
@@ -1314,6 +1815,8 @@ if __name__ == "__main__":
                 credentials_path=args.credentials,
                 include_negation=args.include_negation,
                 trace=args.trace,
+                verbose_report=args.verbose_report,
+                n_bootstrap=args.n_bootstrap,
             )
         else:
             report = mcq_eval_hf(
@@ -1321,11 +1824,14 @@ if __name__ == "__main__":
                 device=args.device,
                 trust_remote_code=args.trust_remote_code,
                 include_negation=args.include_negation,
+                verbose_report=args.verbose_report,
+                n_bootstrap=args.n_bootstrap,
             )
     else:
         report = test_five_questions_hf(
             args.model_id, args.path_to_jsonl,
             device=args.device,
             trust_remote_code=args.trust_remote_code,
+            n_bootstrap=args.n_bootstrap,
         )
     print(f"Report written to: {report}")
