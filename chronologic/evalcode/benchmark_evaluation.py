@@ -5,10 +5,12 @@ Primary path: HuggingFace AutoModelForCausalLM (works on Apple Silicon, CUDA, CP
   - Five-question sampling mode (default)
   - Full eval mode (--full-eval): scores every question, reports mean Brier score
   - MCQ mode (--mcq): presents lettered multiple-choice prompts, scores top-1 accuracy
-OpenAI API path: Chat Completions API for GPT-4.1, GPT-5, and fine-tuned variants.
+OpenAI API path: Responses API for GPT-4.1, GPT-5, and fine-tuned variants.
   - MCQ mode only (--mcq): auto-detected when model name matches a known OpenAI pattern
   - Credentials loaded from evalcode/credentials.txt (org ID line 1, API key line 2)
   - Retry logic with exponential backoff for rate-limit errors
+  - Reasoning effort controllable via --reasoning-effort (none/minimal/low/medium/high)
+  - JSON schema structured output on by default; disable with --no-json-schema
 Legacy path:  vLLM's OpenAI-compatible endpoint with echo=True (requires a running
               vLLM server; unavailable on Apple Silicon MPS).
 
@@ -1417,29 +1419,27 @@ def is_openai_model(model_id):
     return model_id.startswith(OPENAI_MODEL_PREFIXES)
 
 
-def _call_openai_with_retry(client, model_id, messages, max_completion_tokens,
-                             response_format=None, max_retries=3):
-    """Call client.chat.completions.create() with exponential-backoff retries.
+def _call_responses_with_retry(client, model_id, input_text, instructions,
+                                max_output_tokens=25000, reasoning_effort="medium",
+                                text_format=None, max_retries=3):
+    """Call client.responses.create() with exponential-backoff retries.
 
     Retries specifically on openai.RateLimitError (HTTP 429).  Other
     exceptions propagate immediately.
 
-    Uses max_completion_tokens (required by GPT-4.1+ and GPT-5 series;
-    the older max_tokens parameter is not accepted by these models).
-    Temperature is not passed — GPT-5 series only accepts the API default,
-    and the system prompt already constrains output to a single letter.
-
     Args:
-        client:                an openai.OpenAI instance.
-        model_id:              model identifier string.
-        messages:              list of message dicts (role/content).
-        max_completion_tokens: maximum tokens to generate.
-        response_format:       optional dict passed as response_format to the API
-                               (e.g. a JSON schema for structured outputs).
-        max_retries:           number of retry attempts after the first failure.
+        client:            an openai.OpenAI instance.
+        model_id:          model identifier string.
+        input_text:        the user input string.
+        instructions:      the system instructions string.
+        max_output_tokens: maximum tokens to generate (includes reasoning tokens).
+        reasoning_effort:  one of "none", "minimal", "low", "medium", "high".
+        text_format:       optional dict passed as text={"format": text_format}
+                           (e.g. a JSON schema for structured outputs).
+        max_retries:       number of retry attempts after the first failure.
 
     Returns:
-        openai.types.chat.ChatCompletion: the API response object.
+        openai.types.responses.Response: the API response object.
 
     Raises:
         openai.RateLimitError: if all retries are exhausted.
@@ -1457,16 +1457,20 @@ def _call_openai_with_retry(client, model_id, messages, max_completion_tokens,
 
     kwargs = dict(
         model=model_id,
-        messages=messages,
-        max_completion_tokens=max_completion_tokens,
+        input=input_text,
+        instructions=instructions,
+        max_output_tokens=max_output_tokens,
+        store=False,
     )
-    if response_format is not None:
-        kwargs["response_format"] = response_format
+    if reasoning_effort != "none":
+        kwargs["reasoning"] = {"effort": reasoning_effort}
+    if text_format is not None:
+        kwargs["text"] = {"format": text_format}
 
     last_exc = None
     for attempt in range(max_retries + 1):
         try:
-            return client.chat.completions.create(**kwargs)
+            return client.responses.create(**kwargs)
         except RateLimitError as exc:
             last_exc = exc
             if attempt < max_retries:
@@ -1506,80 +1510,72 @@ def _parse_mcq_response_openai(response_text):
 
 
 def _generate_openai(prompt, model_id, client, valid_letters=None,
-                     max_completion_tokens=1500):
-    """Generate a chat completion response for an MCQ prompt.
+                     max_output_tokens=25000, reasoning_effort="medium",
+                     use_json_schema=True):
+    """Generate a Responses API completion for an MCQ prompt.
 
-    Sends a two-message conversation:
-        system: instructs the model to respond with only a single letter.
-        user:   the MCQ prompt (metadata frame + question + lettered choices).
+    Sends the prompt as input with a concise instructions string.  Reasoning
+    is controlled via the reasoning_effort parameter rather than being
+    suppressed in the instructions.
 
-    Uses Structured Outputs (JSON schema with an enum of valid_letters) so the
-    model is forced to emit exactly one of the presented choice letters.  This
-    eliminates the "no response" failure mode caused by reasoning-capable models
-    (GPT-5 family) consuming their entire max_completion_tokens budget on
-    internal chain-of-thought before producing visible output.
+    When use_json_schema=True (default), uses a JSON schema structured output
+    (Responses API format) to guarantee a valid letter regardless of how much
+    reasoning the model performs.
 
-    max_completion_tokens is kept generous (1500) to give the reasoning engine
-    sufficient headroom without an open-ended budget.
+    When use_json_schema=False, relies on the instructions alone to produce a
+    short answer; max_output_tokens should still be generous to leave room for
+    reasoning tokens.
 
     Args:
-        prompt:                the full MCQ prompt string (from _build_mcq_prompt).
-        model_id:              OpenAI model identifier string.
-        client:                an openai.OpenAI instance.
-        valid_letters:         list of uppercase letter strings that are valid
-                               answers for this question (e.g. ['A','B','C','D']).
-                               Used to build the structured-output enum.  If None,
-                               no response_format is applied.
-        max_completion_tokens: maximum tokens to generate (default 1500).
+        prompt:             the full MCQ prompt string (from _build_mcq_prompt).
+        model_id:           OpenAI model identifier string.
+        client:             an openai.OpenAI instance.
+        valid_letters:      list of uppercase letter strings that are valid
+                            answers for this question (e.g. ['A','B','C','D']).
+                            Used to build the structured-output enum when
+                            use_json_schema=True.  If None, no schema is applied.
+        max_output_tokens:  maximum tokens to generate (includes reasoning tokens).
+        reasoning_effort:   one of "none", "minimal", "low", "medium", "high".
+        use_json_schema:    if True, apply JSON schema constraint (default True).
 
     Returns:
         str: the model's raw response text (JSON string when structured outputs
              are active, e.g. '{"choice":"C"}'; plain text otherwise).
     """
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "Choose the best answer quickly. "
-                "Do not reason step by step. "
-                "Select the option that seems most plausible and return only the JSON."
-            ),
-        },
-        {"role": "user", "content": prompt},
-    ]
+    instructions = "Choose the best answer. Respond with only the letter of the correct answer."
 
-    response_format = None
-    if valid_letters:
-        response_format = {
+    text_format = None
+    if use_json_schema and valid_letters:
+        text_format = {
             "type": "json_schema",
-            "json_schema": {
-                "name": "mcq_answer",
-                "strict": True,
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "choice": {"type": "string", "enum": list(valid_letters)},
-                    },
-                    "required": ["choice"],
-                    "additionalProperties": False,
+            "name": "mcq_answer",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "choice": {"type": "string", "enum": list(valid_letters)},
                 },
+                "required": ["choice"],
+                "additionalProperties": False,
             },
         }
 
-    response = _call_openai_with_retry(
-        client, model_id, messages,
-        max_completion_tokens=max_completion_tokens,
-        response_format=response_format,
+    response = _call_responses_with_retry(
+        client, model_id, prompt, instructions,
+        max_output_tokens=max_output_tokens,
+        reasoning_effort=reasoning_effort,
+        text_format=text_format,
     )
-    return response.choices[0].message.content or ""
+    return response.output_text or ""
 
 
 def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
                     include_negation=False, trace=False,
-                    verbose_report=False, n_bootstrap=1000):
+                    verbose_report=False, n_bootstrap=1000,
+                    reasoning_effort="medium", use_json_schema=True):
     """Evaluate an OpenAI-hosted model on multiple-choice questions.
 
-    Uses the Chat Completions API.  For each question the function builds a
+    Uses the Responses API.  For each question the function builds a
     lettered MCQ prompt, sends it to the model, parses the chosen letter, and
     checks it against the correct answer.  Runs bootstrap evaluation for
     confidence intervals. Always writes a JSON report; writes a verbose
@@ -1597,6 +1593,10 @@ def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
                            response-parsing failures.
         verbose_report:    if True, also write the detailed markdown report.
         n_bootstrap:       number of bootstrap iterations for confidence intervals.
+        reasoning_effort:  reasoning effort for the Responses API; one of
+                           "none", "minimal", "low", "medium", "high".
+        use_json_schema:   if True (default), apply JSON schema structured
+                           output to guarantee a valid letter response.
 
     Returns:
         str: absolute path to the written JSON report.
@@ -1659,7 +1659,8 @@ def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
         )
         valid_letters = [letter for letter, _, _ in answer_order]
         response_text = _generate_openai(
-            prompt_text, model_id, client, valid_letters=valid_letters
+            prompt_text, model_id, client, valid_letters=valid_letters,
+            reasoning_effort=reasoning_effort, use_json_schema=use_json_schema,
         )
         chosen_letter = _parse_mcq_response_openai(response_text)
 
@@ -1809,7 +1810,7 @@ if __name__ == "__main__":
         description=(
             "Evaluate a model on benchmark questions (Brier score or MCQ accuracy).\n\n"
             "OpenAI models (gpt-4.1-*, gpt-5*, ft:gpt-4.1-*, ft:gpt-5*) are detected\n"
-            "automatically when --mcq is set and routed to the Chat Completions API.\n"
+            "automatically when --mcq is set and routed to the Responses API.\n"
             "Credentials are read from evalcode/credentials.txt (or --credentials)."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -1853,6 +1854,13 @@ if __name__ == "__main__":
     parser.add_argument("--n-bootstrap", type=int, default=1000,
                         help="Number of bootstrap iterations for confidence intervals "
                              "(default: 1000)")
+    parser.add_argument("--reasoning-effort", default="none",
+                        choices=["none", "minimal", "low", "medium", "high"],
+                        help="Reasoning effort for OpenAI models via Responses API "
+                             "(default: medium)")
+    parser.add_argument("--no-json-schema", action="store_true",
+                        help="Skip JSON schema constraint; rely on instructions for "
+                             "output format (OpenAI --mcq only)")
 
     args = parser.parse_args()
 
@@ -1862,8 +1870,8 @@ if __name__ == "__main__":
         if is_openai_model(args.model_id):
             parser.error(
                 f"'{args.model_id}' is an OpenAI API model. "
-                "Log-likelihood scoring (--full-eval) is not supported for the Chat "
-                "Completions API. Use --mcq instead."
+                "Log-likelihood scoring (--full-eval) is not supported for the Responses "
+                "API. Use --mcq instead."
             )
         report = full_eval_hf(
             args.model_id, args.path_to_jsonl,
@@ -1883,6 +1891,8 @@ if __name__ == "__main__":
                 trace=args.trace,
                 verbose_report=args.verbose_report,
                 n_bootstrap=args.n_bootstrap,
+                reasoning_effort=args.reasoning_effort,
+                use_json_schema=not args.no_json_schema,
             )
         else:
             report = mcq_eval_hf(
