@@ -28,9 +28,9 @@ source ../qwentuning/qlora-env/bin/activate
 SCRIPT_DIR="$SLURM_SUBMIT_DIR"
 cd "$SCRIPT_DIR"
 
-python evalcode/benchmark_evaluation.py \
+python benchmark_evaluation.py \
     Qwen/Qwen2.5-7B-Instruct \
-    booksample/chronologic_en_0.1.jsonl \
+    ../booksample/chronologic_en_0.1.jsonl \
     --full-eval \
     --verbose-report
 
