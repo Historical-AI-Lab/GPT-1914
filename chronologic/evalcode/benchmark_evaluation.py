@@ -293,7 +293,7 @@ def _score_answer_ll_hf(context_text, answer_text, model, tokenizer):
 # Public API
 # ---------------------------------------------------------------------------
 
-def load_model(model_id, device=None, trust_remote_code=False):
+def load_model(model_id, device=None, trust_remote_code=False, quantize=None, lora_adapter=None):
     """Load a HuggingFace causal LM and tokenizer.
 
     Auto-detects device: mps (Apple Silicon) → cuda → cpu.
@@ -303,6 +303,12 @@ def load_model(model_id, device=None, trust_remote_code=False):
         model_id:           HF model ID or local path.
         device:             device string ('mps', 'cuda', 'cpu') or None for auto.
         trust_remote_code:  passed through to HF from_pretrained calls.
+        quantize:           'int4' or 'int8' to use torchao quantization (works on
+                            MPS and CUDA); None for full-precision float16 (default).
+                            Requires: pip install torchao
+        lora_adapter:       path to a LoRA/QLoRA adapter checkpoint to attach to the
+                            base model after loading; None to skip (default).
+                            Requires: pip install peft
 
     Returns:
         tuple: (model, tokenizer)
@@ -321,12 +327,56 @@ def load_model(model_id, device=None, trust_remote_code=False):
     tokenizer = AutoTokenizer.from_pretrained(
         model_id, trust_remote_code=trust_remote_code
     )
-    model = AutoModelForCausalLM.from_pretrained(
-        model_id,
-        trust_remote_code=trust_remote_code,
-        torch_dtype=torch.float16 if device != "cpu" else torch.float32,
-    ).to(device)
+
+    # Workaround for transformers 5.3.0: Mistral-Small-3.1 uses Mistral3Config but
+    # is registered only under AutoModelForImageTextToText (it's a VLM). Register
+    # Mistral3ForConditionalGeneration with AutoModelForCausalLM so text-only
+    # log-likelihood scoring works normally.
+    try:
+        from transformers.models.mistral3 import (
+            Mistral3Config, Mistral3ForConditionalGeneration
+        )
+        AutoModelForCausalLM.register(Mistral3Config, Mistral3ForConditionalGeneration)
+    except (ImportError, AttributeError):
+        pass
+
+    if quantize is not None:
+        # Use torchao directly — bypasses transformers' TorchAoConfig wrapper,
+        # which has a fragile dependency on torchao's internal API names.
+        from torchao.quantization import quantize_
+        if quantize == "int4":
+            from torchao.quantization import Int4WeightOnlyConfig
+            quant_config = Int4WeightOnlyConfig()
+        elif quantize == "int8":
+            from torchao.quantization import Int8WeightOnlyConfig
+            quant_config = Int8WeightOnlyConfig()
+        else:
+            raise ValueError(f"--quantize must be 'int4' or 'int8', got '{quantize}'")
+        # Load on CPU first: MPS cannot allocate the full bfloat16 model as a
+        # single contiguous buffer. Quantize in-place on CPU (~12GB result),
+        # then move the small quantized model to the target device.
+        model = AutoModelForCausalLM.from_pretrained(
+            model_id,
+            trust_remote_code=trust_remote_code,
+            dtype=torch.bfloat16,
+            device_map="cpu",
+        )
+        quantize_(model, quant_config)
+        model = model.to(device)
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            model_id,
+            trust_remote_code=trust_remote_code,
+            dtype=torch.float16 if device != "cpu" else torch.float32,
+        ).to(device)
+
     model.eval()
+
+    if lora_adapter is not None:
+        from peft import PeftModel
+        model = PeftModel.from_pretrained(model, lora_adapter)
+        model.eval()
+
     return model, tokenizer
 
 
@@ -799,7 +849,7 @@ def test_five_questions(model_name, path_to_jsonl, base_url=VLLM_BASE_URL):
 
 def test_five_questions_hf(model_id, path_to_jsonl, device=None,
                            trust_remote_code=False, verbose_report=True,
-                           n_bootstrap=1000):
+                           n_bootstrap=1000, quantize=None, lora_adapter=None):
     """Run probabilistic evaluation on 5 randomly sampled questions.
 
     Uses the HuggingFace path. Loads the model once, then scores each question.
@@ -828,9 +878,11 @@ def test_five_questions_hf(model_id, path_to_jsonl, device=None,
 
     selected = random.sample(questions, min(5, len(questions)))
 
-    model, tokenizer = load_model(model_id, device=device, trust_remote_code=trust_remote_code)
+    model, tokenizer = load_model(model_id, device=device, trust_remote_code=trust_remote_code, quantize=quantize, lora_adapter=lora_adapter)
 
     model_safe = model_id.replace(":", "_").replace("/", "_")
+    if lora_adapter is not None:
+        model_safe += "_" + Path(lora_adapter).name
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     json_report_path = path.parent / f"eval_results_{model_safe}_{timestamp}.json"
     md_report_path = path.parent / f"eval_report_{model_safe}_{timestamp}.md"
@@ -945,7 +997,7 @@ def test_five_questions_hf(model_id, path_to_jsonl, device=None,
 
 
 def full_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
-                 verbose_report=False, n_bootstrap=1000):
+                 verbose_report=False, n_bootstrap=1000, quantize=None, lora_adapter=None):
     """Score every question in a JSONL; write JSON report and optional markdown.
 
     For each question: get_answer_lls_hf() → lls_to_probabilities() →
@@ -979,9 +1031,11 @@ def full_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
             if line:
                 questions.append(json.loads(line))
 
-    model, tokenizer = load_model(model_id, device=device, trust_remote_code=trust_remote_code)
+    model, tokenizer = load_model(model_id, device=device, trust_remote_code=trust_remote_code, quantize=quantize, lora_adapter=lora_adapter)
 
     model_safe = model_id.replace(":", "_").replace("/", "_")
+    if lora_adapter is not None:
+        model_safe += "_" + Path(lora_adapter).name
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     json_report_path = path.parent / f"eval_results_full_{model_safe}_{timestamp}.json"
     md_report_path = path.parent / f"eval_report_full_{model_safe}_{timestamp}.md"
@@ -1111,7 +1165,8 @@ def full_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
 
 
 def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
-                include_negation=False, verbose_report=False, n_bootstrap=1000):
+                include_negation=False, verbose_report=False, n_bootstrap=1000,
+                quantize=None, lora_adapter=None):
     """Evaluate a model on multiple-choice questions; write JSON and optional markdown.
 
     For each question: build a lettered MCQ prompt, generate a response, parse
@@ -1140,9 +1195,11 @@ def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
             if line:
                 questions.append(json.loads(line))
 
-    model, tokenizer = load_model(model_id, device=device, trust_remote_code=trust_remote_code)
+    model, tokenizer = load_model(model_id, device=device, trust_remote_code=trust_remote_code, quantize=quantize, lora_adapter=lora_adapter)
 
     model_safe = model_id.replace(":", "_").replace("/", "_")
+    if lora_adapter is not None:
+        model_safe += "_" + Path(lora_adapter).name
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     json_report_path = path.parent / f"eval_results_mcq_{model_safe}_{timestamp}.json"
     md_report_path = path.parent / f"eval_report_mcq_{model_safe}_{timestamp}.md"
@@ -1765,8 +1822,15 @@ if __name__ == "__main__":
                         help="Use legacy vLLM endpoint instead of HuggingFace")
     parser.add_argument("--device",      default=None,
                         help="Device override: mps | cuda | cpu (HF mode only)")
+    parser.add_argument("--quantize",    default=None, choices=["int4", "int8"],
+                        help="Quantize model weights via torchao (HF mode only). "
+                             "int4 (~4GB for 7B, ~12GB for 24B) works on MPS and CUDA. "
+                             "Requires: pip install torchao")
     parser.add_argument("--trust-remote-code", action="store_true",
                         help="Pass trust_remote_code=True to HF (HF mode only)")
+    parser.add_argument("--lora-adapter", default=None, metavar="PATH",
+                        help="Path to a LoRA/QLoRA adapter checkpoint to attach "
+                             "to the base model (requires: pip install peft)")
     parser.add_argument("--credentials", default=None, metavar="PATH",
                         help="Path to OpenAI credentials file "
                              "(default: evalcode/credentials.txt)")
@@ -1807,6 +1871,8 @@ if __name__ == "__main__":
             trust_remote_code=args.trust_remote_code,
             verbose_report=args.verbose_report,
             n_bootstrap=args.n_bootstrap,
+            quantize=args.quantize,
+            lora_adapter=args.lora_adapter,
         )
     elif args.mcq:
         if is_openai_model(args.model_id):
@@ -1826,6 +1892,8 @@ if __name__ == "__main__":
                 include_negation=args.include_negation,
                 verbose_report=args.verbose_report,
                 n_bootstrap=args.n_bootstrap,
+                quantize=args.quantize,
+                lora_adapter=args.lora_adapter,
             )
     else:
         report = test_five_questions_hf(
@@ -1833,5 +1901,7 @@ if __name__ == "__main__":
             device=args.device,
             trust_remote_code=args.trust_remote_code,
             n_bootstrap=args.n_bootstrap,
+            quantize=args.quantize,
+            lora_adapter=args.lora_adapter,
         )
     print(f"Report written to: {report}")
