@@ -296,9 +296,13 @@ def generate_answer_openai(question, model_id, client, reasoning_effort="none"):
         tuple: (answer_str, length_spec_str)
     """
     system_str, user_str, max_tokens, length_spec = build_prompts(question)
+    # For reasoning models, max_output_tokens covers thinking + answer combined.
+    # Use 25000 whenever reasoning is active so thinking tokens don't crowd out
+    # the answer; the length_spec in the system prompt still constrains length.
+    effective_max_tokens = max_tokens if reasoning_effort == "none" else 25000
     response = _call_responses_with_retry(
         client, model_id, user_str, system_str,
-        max_output_tokens=max_tokens,
+        max_output_tokens=effective_max_tokens,
         reasoning_effort=reasoning_effort,
         text_format=None,
     )

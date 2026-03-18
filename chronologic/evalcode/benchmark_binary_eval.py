@@ -244,18 +244,24 @@ def evaluate_openai(question_data, model_id, client, reasoning_effort="none"):
         str: "ground truth", "generation", or "unparseable".
     """
     system_str, user_str, ground_truth_letter = build_binary_prompt(question_data)
-    # Reasoning models share max_output_tokens across reasoning + output tokens.
-    # 16 is enough when reasoning is off; use 1024 otherwise to leave room for
-    # the model to think before emitting the JSON payload.
-    max_tokens = 16 if reasoning_effort == "none" else 1024
+    # max_output_tokens covers reasoning tokens + output tokens combined.
+    # Some models (e.g. gpt-5.x) emit implicit reasoning tokens even when
+    # reasoning_effort="none", so 16 is too small and causes empty output_text.
+    # Use 256 for the no-reasoning path (generous for the JSON payload alone)
+    # and 25000 for any reasoning effort — matching the MCQ evaluator — since
+    # medium/high reasoning on gpt-5.x can consume thousands of tokens before
+    # emitting output.
+    max_tokens = 256 if reasoning_effort == "none" else 25000
     response = _call_responses_with_retry(
         client, model_id, user_str, system_str,
         max_output_tokens=max_tokens,
         reasoning_effort=reasoning_effort,
         text_format=BINARY_CHOICE_SCHEMA,
     )
-    letter = _parse_letter(response.output_text or "")
+    raw = response.output_text or ""
+    letter = _parse_letter(raw)
     if letter is None:
+        print(f"[unparseable output_text={raw!r}]", end=" ")
         return "unparseable"
     return "ground truth" if letter == ground_truth_letter else "generation"
 
