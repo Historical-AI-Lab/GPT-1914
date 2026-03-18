@@ -276,7 +276,7 @@ def build_prompts(question):
         + "\nQUESTION: " + question.get('main_question', '')
         + "\nANSWER: "
     )
-    return system_str, user_str, upper * 2, length_spec
+    return system_str, user_str, max(16, upper * 2), length_spec
 
 
 # ---------------------------------------------------------------------------

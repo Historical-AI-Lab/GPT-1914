@@ -46,10 +46,74 @@ from benchmark_evaluation import (
 SYSTEM_PROMPT = (
     "You will be provided a historical context, a question, and two answers to "
     "the question. Decide which answer to the question is a better fit for the "
-    "context, and then reply with only a single letter, A or B."
+    "beliefs and writing style of the context, and then reply with only a single "
+    "letter, A or B."
 )
 
 ABSTENTION_PHRASES = {"insufficient information", "i don't know", "abstain", "n/a"}
+
+ABSTENTION_TRIAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
+
+# JSON schema for OpenAI structured output: constrains response to {"choice": "A"|"B"}.
+# Mirrors the pattern used in benchmark_evaluation.py and eliminates unparseable responses.
+BINARY_CHOICE_SCHEMA = {
+    "type": "json_schema",
+    "name": "binary_choice",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "choice": {"type": "string", "enum": ["A", "B"]},
+        },
+        "required": ["choice"],
+        "additionalProperties": False,
+    },
+}
+
+# Few-shot prompt for LLM-based abstention triage.  Used when reasoning_type
+# is "abstention" but neither answer matches ABSTENTION_PHRASES exactly.
+ABSTENTION_TRIAGE_PROMPT = """\
+You are deciding whether two answers to a historical question both amount to \
+refusing or declining to answer, or whether at least one gives substantive information.
+
+Refusing to answer includes expressions like: "no longer exists", \
+"not a meaningful question", "unanswerable", "insufficient information", \
+"I don't know", "cannot be determined", "this question doesn't apply", \
+and similar variants.
+
+Substantive answers include actual names, dates, facts, descriptions, or any \
+attempt to provide real information about the topic.
+
+Respond with exactly BOTH_ABSTAIN if both answers refuse or decline, \
+or ONE_SUBSTANTIVE if at least one answer provides real information.
+
+A: "No longer exists"
+B: "This is not a meaningful question."
+→ BOTH_ABSTAIN
+
+A: "insufficient information"
+B: "The Republic of Transvaal was dissolved in 1902 after the Second Boer War."
+→ ONE_SUBSTANTIVE
+
+A: "I cannot determine this from the given context."
+B: "unanswerable in context"
+→ BOTH_ABSTAIN
+
+A: "Paul Kruger"
+B: "That question cannot be answered."
+→ ONE_SUBSTANTIVE
+
+A: "It no longer exists as of 1902"
+B: "I don't know"
+→ BOTH_ABSTAIN
+
+A: "The question is anachronistic; the Transvaal ceased to exist in 1902."
+B: "Unanswerable — this asks about a republic that no longer exists."
+→ BOTH_ABSTAIN
+
+A: {answer_a}
+B: {answer_b}
+→"""
 
 
 # ---------------------------------------------------------------------------
@@ -84,6 +148,29 @@ def triage(answer, ground_truth, reasoning_type):
         if ratio > 0.94:
             return "indistinguishable"
 
+    return None
+
+
+def triage_abstention_llm(answer_a, answer_b, model, tokenizer):
+    """Use an LLM to check if both answers are effectively abstentions.
+
+    Called when reasoning_type == "abstention" and the exact-phrase check did
+    not fire.  Handles paraphrased abstentions such as "No longer exists" vs
+    "This is not a meaningful question."
+
+    Args:
+        answer_a: first answer string (typically the ground truth).
+        answer_b: second answer string (the free-generated answer).
+        model:    loaded HF AutoModelForCausalLM in eval mode.
+        tokenizer: matching AutoTokenizer.
+
+    Returns:
+        str "indistinguishable" if both answers abstain, else None.
+    """
+    prompt = ABSTENTION_TRIAGE_PROMPT.format(answer_a=answer_a, answer_b=answer_b)
+    response = _generate_hf(prompt, model, tokenizer, max_new_tokens=8)
+    if "BOTH" in response.upper():
+        return "indistinguishable"
     return None
 
 
@@ -157,11 +244,15 @@ def evaluate_openai(question_data, model_id, client, reasoning_effort="none"):
         str: "ground truth", "generation", or "unparseable".
     """
     system_str, user_str, ground_truth_letter = build_binary_prompt(question_data)
+    # Reasoning models share max_output_tokens across reasoning + output tokens.
+    # 16 is enough when reasoning is off; use 1024 otherwise to leave room for
+    # the model to think before emitting the JSON payload.
+    max_tokens = 16 if reasoning_effort == "none" else 1024
     response = _call_responses_with_retry(
         client, model_id, user_str, system_str,
-        max_output_tokens=10,
+        max_output_tokens=max_tokens,
         reasoning_effort=reasoning_effort,
-        text_format=None,
+        text_format=BINARY_CHOICE_SCHEMA,
     )
     letter = _parse_letter(response.output_text or "")
     if letter is None:
@@ -193,12 +284,14 @@ def evaluate_hf(question_data, model, tokenizer):
 # Inspection utilities
 # ---------------------------------------------------------------------------
 
-def show_sample_prompts(input_json_path, n=5):
+def show_sample_prompts(input_json_path, n=5, triage_model=None, triage_tokenizer=None):
     """Print sample binary prompts for inspection before running.
 
     Args:
         input_json_path: path to free-generation JSON file.
         n:               number of questions to sample.
+        triage_model:    optional loaded HF model for LLM-based abstention triage.
+        triage_tokenizer: matching tokenizer for triage_model.
     """
     with open(input_json_path, encoding="utf-8") as fh:
         data = json.load(fh)
@@ -212,13 +305,27 @@ def show_sample_prompts(input_json_path, n=5):
     print(f"{'='*70}")
 
     for i, (qnum, qdata) in enumerate(sample, 1):
+        reasoning_type = qdata.get("reasoning_type", "")
         triaged = triage(
             qdata.get("answer", ""),
             qdata.get("ground_truth", ""),
-            qdata.get("reasoning_type", ""),
+            reasoning_type,
         )
+        if triaged is None and reasoning_type == "abstention":
+            if triage_model is not None:
+                triaged = triage_abstention_llm(
+                    qdata.get("ground_truth", ""),
+                    qdata.get("answer", ""),
+                    triage_model,
+                    triage_tokenizer,
+                )
+                triage_note = triaged or "no — will be posed (LLM triage: not both abstentions)"
+            else:
+                triage_note = "no — abstention, triage model not loaded"
+        else:
+            triage_note = triaged or "no — will be posed"
         print(f"\n{'─'*70}")
-        print(f"Question {qnum}  |  triaged: {triaged or 'no — will be posed'}")
+        print(f"Question {qnum}  |  triaged: {triage_note}")
         print(f"{'─'*70}")
         if triaged:
             print(f"[GROUND TRUTH]  {qdata.get('ground_truth', '')!r}")
@@ -333,6 +440,23 @@ def run_binary_eval(
         )
         client = None
 
+    # Load abstention triage model (Qwen-2.5-7B) if any pending questions have
+    # reasoning_type == "abstention".  Reuses the evaluator model when it is
+    # already Qwen-2.5-7B-Instruct to avoid loading a second copy.
+    pending_abstentions = any(
+        qdata.get("reasoning_type") == "abstention"
+        for qnum, qdata in items
+        if qnum not in already_done
+    )
+    triage_model = triage_tokenizer = None
+    if pending_abstentions:
+        if not use_openai and evaluator_model_id == ABSTENTION_TRIAGE_MODEL:
+            print("Reusing evaluator model for abstention triage.")
+            triage_model, triage_tokenizer = hf_model, hf_tokenizer
+        else:
+            print(f"Loading abstention triage model: {ABSTENTION_TRIAGE_MODEL}")
+            triage_model, triage_tokenizer = load_model(ABSTENTION_TRIAGE_MODEL)
+
     total = len(items)
     for idx, (qnum, qdata) in enumerate(items):
         if qnum in already_done:
@@ -345,6 +469,10 @@ def run_binary_eval(
         reasoning_type = qdata.get("reasoning_type", "")
 
         triaged = triage(generation, ground_truth, reasoning_type)
+        if triaged is None and reasoning_type == "abstention" and triage_model is not None:
+            triaged = triage_abstention_llm(
+                ground_truth, generation, triage_model, triage_tokenizer
+            )
 
         if triaged:
             selected = triaged
@@ -442,7 +570,18 @@ def main():
     args = parser.parse_args()
 
     if args.show_prompts:
-        show_sample_prompts(args.input_json)
+        with open(args.input_json, encoding="utf-8") as fh:
+            _preview_data = json.load(fh)
+        has_abstentions = any(
+            v.get("reasoning_type") == "abstention"
+            for v in _preview_data.get("answers", {}).values()
+        )
+        triage_model = triage_tokenizer = None
+        if has_abstentions:
+            print(f"Loading abstention triage model: {ABSTENTION_TRIAGE_MODEL}")
+            triage_model, triage_tokenizer = load_model(ABSTENTION_TRIAGE_MODEL)
+        show_sample_prompts(args.input_json, triage_model=triage_model,
+                            triage_tokenizer=triage_tokenizer)
         return
 
     if not args.evaluator_model_id:
