@@ -27,6 +27,7 @@ Requires (OpenAI path): pip install openai  +  evalcode/credentials.txt
 """
 
 import json
+import math
 import random
 import re
 import datetime
@@ -111,27 +112,35 @@ def extract_features(cleaned_answers):
     )
 
 
-def clamp_and_round(value, form):
+def clamp_and_round(value, form, direction='nearest'):
     """Round value to a natural step size and clamp to a form minimum.
 
     Args:
-        value: raw numeric value (may be negative or fractional).
-        form:  one of 'verse', 'short_phrase', 'single_sentence',
-               'multi_sentence', 'phrase_or_sentence'.
+        value:     raw numeric value (may be fractional).
+        form:      one of 'verse', 'short_phrase', 'single_sentence',
+                   'multi_sentence', 'phrase_or_sentence'.
+        direction: 'floor' rounds down (for lower bounds),
+                   'ceil'  rounds up   (for upper bounds),
+                   'nearest' rounds to closest step (default).
 
     Returns:
         int: rounded, clamped value >= the form's minimum.
     """
     config = {
-        'verse':            (1, 1),
-        'short_phrase':     (1, 1),
-        'single_sentence':  (5, 5),
-        'multi_sentence':   (10, 5),
-        'phrase_or_sentence': (3, 5),
+        'verse':              (1,  1),
+        'short_phrase':       (1,  1),
+        'single_sentence':    (10, 10),
+        'multi_sentence':     (10, 10),
+        'phrase_or_sentence': (3,  5),
     }
     minimum, step = config.get(form, (3, 5))
-    rounded = max(minimum, round(value / step) * step) if step > 1 else max(minimum, round(value))
-    return int(rounded)
+    if step <= 1:
+        return int(max(minimum, round(value)))
+    if direction == 'floor':
+        return int(max(minimum, math.floor(value / step) * step))
+    if direction == 'ceil':
+        return int(max(minimum, math.ceil(value / step) * step))
+    return int(max(minimum, round(value / step) * step))
 
 
 def verbal_sentence_range(median_sent_count):
@@ -191,26 +200,35 @@ def make_length_spec(answer_strings, question_category):
         form = 'phrase_or_sentence'
 
     # --- Length summary ---
-    counts = features.word_counts
-    median = statistics.median(counts)
+    counts = sorted(features.word_counts)
     if len(counts) >= 2:
         q1 = statistics.median(counts[:len(counts)//2])
         q3 = statistics.median(counts[(len(counts)+1)//2:])
-        iqr = q3 - q1
     else:
-        iqr = median * 0.5   # rough fallback for very small samples
+        q1 = q3 = counts[0] if counts else 20
 
-    lower = clamp_and_round(median - iqr, form)
-    upper = clamp_and_round(median + iqr, form)
+    lower = clamp_and_round(q1, form, direction='floor')
+    upper = clamp_and_round(q3, form, direction='ceil')
+
+    # If actual data starts below a lower bound of 10, pull the lower bound down
+    # to reflect where the answers actually begin: clamp to 5 if min >= 5,
+    # otherwise use the actual minimum directly.
+    actual_min = counts[0]
+    if lower == 10 and actual_min < 10:
+        lower = 5 if actual_min >= 5 else actual_min
 
     # Ensure lower < upper
     if lower >= upper:
-        lower = max(1, upper - (5 if upper >= 10 else 1))
+        lower = max(1, upper - (10 if upper >= 20 else 5 if upper >= 5 else 1))
+
+    # --- Sentence vs phrase labeling ---
+    # If no sample answer starts with a capital letter, call it a "phrase".
+    none_capitalized = not any(s[0].isupper() for s in cleaned if s)
+    unit = 'phrase' if none_capitalized else 'sentence'
 
     # --- Verbalization ---
     if form == 'verse':
-        upper = max(4, upper)
-        return upper, f"{upper} lines of verse, as described in the question"
+        return 75, "lines of verse, as specified in the question"
 
     if form == 'short_phrase':
         if upper <= 3:
@@ -219,10 +237,12 @@ def make_length_spec(answer_strings, question_category):
             return upper, f"a short phrase of about {lower}\u2013{upper} words"
 
     if form == 'single_sentence':
-        return upper, f"one sentence of about {lower}\u2013{upper} words"
+        return upper, f"one {unit} of about {lower}\u2013{upper} words"
 
     if form == 'multi_sentence':
         sent_range = verbal_sentence_range(features.median_sentence_count)
+        if unit == 'phrase':
+            sent_range = sent_range.replace('sentences', 'phrases').replace('sentence', 'phrase')
         return upper, f"{sent_range}, about {lower}\u2013{upper} words total"
 
     # phrase_or_sentence fallback
@@ -303,6 +323,30 @@ def generate_answer_hf(question, model, tokenizer):
     full_prompt = system_str + "\n" + user_str
     answer = _generate_hf(full_prompt, model, tokenizer, max_new_tokens=max_tokens)
     return answer.strip(), length_spec
+
+
+# ---------------------------------------------------------------------------
+# Output normalization
+# ---------------------------------------------------------------------------
+
+def normalize_answer(answer, answer_strings):
+    """Normalize a model reply to match the formatting conventions of sample answers.
+
+    Currently: if none of the sample answers end with terminal punctuation,
+    silently strips any trailing punctuation from the model's reply.
+    Capitalization is left untouched (proper nouns may appear first).
+
+    Args:
+        answer:         the model's raw reply string.
+        answer_strings: list of sample answer strings from the benchmark question.
+
+    Returns:
+        str: normalized answer.
+    """
+    cleaned = [s.strip() for s in answer_strings if s.strip()]
+    if cleaned and not any(re.search(r'[.!?]\s*$', s) for s in cleaned):
+        answer = re.sub(r'[.!?]+\s*$', '', answer).rstrip()
+    return answer
 
 
 # ---------------------------------------------------------------------------
@@ -490,6 +534,7 @@ def run_free_generation(
         else:
             answer, length_spec = generate_answer_hf(q, hf_model, hf_tokenizer)
 
+        answer = normalize_answer(answer, q.get('answer_strings', []))
         print(f"→ {answer[:60]!r}{'...' if len(answer) > 60 else ''}")
 
         answers[qnum] = {
