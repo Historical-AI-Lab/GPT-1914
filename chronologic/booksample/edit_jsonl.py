@@ -46,6 +46,23 @@ def truncate(text, max_len=120):
     return text
 
 
+def input_multiline():
+    print("Enter text (end with a line containing only '.'):")
+    lines = []
+    while True:
+        line = input()
+        if line == '.':
+            break
+        lines.append(line)
+    return '\n'.join(lines)
+
+
+def maybe_multiline(value):
+    if value == 'multiline':
+        return input_multiline()
+    return value
+
+
 def review_file(filepath):
     # Derive changes file path
     base = filepath
@@ -120,9 +137,9 @@ def review_file(filepath):
                 break
 
             if response == 'c':
-                new_metadata = input("New metadata frame (enter to skip): ").strip()
-                new_question = input("New main question (enter to skip): ").strip()
-                comments = input("Other comments (enter to skip): ").strip()
+                new_metadata = maybe_multiline(input("New metadata frame (enter to skip): ").strip())
+                new_question = maybe_multiline(input("New main question (enter to skip): ").strip())
+                comments = maybe_multiline(input("Other comments (enter to skip): ").strip())
             else:
                 new_metadata = ''
                 new_question = ''
