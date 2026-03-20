@@ -92,6 +92,7 @@ def review_file(filepath):
     filename_display = os.path.basename(filepath)
     print(f"\nReviewing {filename_display} ({total} questions, {already_done} already reviewed, {remaining} remaining)")
     print("Press 'q' to quit. Re-running on the same file will resume where you left off.\n")
+    print("Note: For fields that contain verse, or that for some other reason require multiple lines, you can enter 'multiline' to input multiple lines of text (end with a line containing only '.').\n")
 
     with open(changes_path, 'a', encoding='utf-8') as out:
         for q in questions:
