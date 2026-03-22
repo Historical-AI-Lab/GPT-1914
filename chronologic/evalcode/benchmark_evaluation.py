@@ -5,6 +5,11 @@ Primary path: HuggingFace AutoModelForCausalLM (works on Apple Silicon, CUDA, CP
   - Five-question sampling mode (default)
   - Full eval mode (--full-eval): scores every question, reports mean Brier score
   - MCQ mode (--mcq): presents lettered multiple-choice prompts, scores top-1 accuracy
+Together AI path: Together's OpenAI-compatible API for probabilistic and MCQ eval.
+  - Select with --api together
+  - Probabilistic eval (--full-eval): uses completions endpoint with echo=True
+  - MCQ eval (--mcq): uses chat completions endpoint
+  - API key loaded from evalcode/TogetherAPIKey.txt (or --together-key)
 OpenAI API path: Responses API for GPT-4.1, GPT-5, and fine-tuned variants.
   - MCQ mode only (--mcq): auto-detected when model name matches a known OpenAI pattern
   - Credentials loaded from evalcode/credentials.txt (org ID line 1, API key line 2)
@@ -14,9 +19,10 @@ OpenAI API path: Responses API for GPT-4.1, GPT-5, and fine-tuned variants.
 Legacy path:  vLLM's OpenAI-compatible endpoint with echo=True (requires a running
               vLLM server; unavailable on Apple Silicon MPS).
 
-Requires (HF path):  pip install torch transformers
-Requires (vLLM path): pip install openai  +  a running vLLM server
-Requires (OpenAI path): pip install openai  +  evalcode/credentials.txt
+Requires (HF path):      pip install torch transformers
+Requires (vLLM path):    pip install openai  +  a running vLLM server
+Requires (Together path): pip install openai  +  evalcode/TogetherAPIKey.txt
+Requires (OpenAI path):  pip install openai  +  evalcode/credentials.txt
 """
 
 import json
@@ -34,6 +40,9 @@ HF_DEFAULT_DEVICE = None  # None → auto-detect at runtime
 # vLLM path (legacy)
 VLLM_BASE_URL = "http://localhost:9011/v1"
 MODEL = "gpt-oss:20b"
+
+# Together AI path
+TOGETHER_BASE_URL = "https://api.together.xyz/v1"
 
 # OpenAI API path
 # Model ID prefixes that indicate an OpenAI-hosted model (including fine-tunes).
@@ -154,7 +163,7 @@ def _generate_hf(prompt, model, tokenizer, max_new_tokens=10):
     import torch
 
     inputs = tokenizer(prompt, return_tensors="pt")
-    device = next(model.parameters()).device
+    device = _input_device(model)
     input_ids = inputs.input_ids.to(device)
     prompt_len = input_ids.shape[1]
 
@@ -169,24 +178,29 @@ def _generate_hf(prompt, model, tokenizer, max_new_tokens=10):
     return tokenizer.decode(new_ids, skip_special_tokens=True)
 
 
-def _score_answer_ll(context_text, answer_text, model_name, base_url):
+def _score_answer_ll(context_text, answer_text, model_name, base_url, api_key="EMPTY"):
     """Return the average log-probability per token for answer_text given context_text.
 
-    Uses vLLM's echo=True mode: one API call returns logprobs for the entire
-    (context + answer) sequence. Tokens at or after len(context_text) are
-    treated as answer tokens; their logprobs are averaged.
+    Uses echo=True mode on an OpenAI-compatible completions endpoint: one API
+    call returns logprobs for the entire (context + answer) sequence. Tokens at
+    or after len(context_text) are treated as answer tokens; their logprobs are
+    averaged.
+
+    Works with vLLM (api_key="EMPTY") and Together AI (real api_key,
+    base_url=TOGETHER_BASE_URL).
 
     Args:
         context_text: the prompt prefix (question text ending with 'ANSWER: ').
         answer_text:  the candidate answer string.
-        model_name:   model identifier passed to vLLM.
-        base_url:     vLLM OpenAI-compatible endpoint URL.
+        model_name:   model identifier.
+        base_url:     OpenAI-compatible endpoint URL.
+        api_key:      API key string (default 'EMPTY' for local vLLM).
 
     Returns:
         float: average log-prob per answer token, or 0.0 if no answer tokens.
 
     Raises:
-        ConnectionError: if the vLLM endpoint cannot be reached.
+        ConnectionError: if the endpoint cannot be reached.
         ImportError: if the 'openai' package is not installed.
     """
     if not answer_text:
@@ -201,7 +215,7 @@ def _score_answer_ll(context_text, answer_text, model_name, base_url):
         ) from e
 
     try:
-        client = OpenAI(base_url=base_url, api_key="EMPTY")
+        client = OpenAI(base_url=base_url, api_key=api_key)
         response = client.completions.create(
             model=model_name,
             prompt=context_text + answer_text,
@@ -278,7 +292,7 @@ def _score_answer_ll_hf(context_text, answer_text, model, tokenizer):
     if answer_start >= full_ids.shape[1]:
         return 0.0
 
-    device = next(model.parameters()).device
+    device = _input_device(model)
     full_ids = full_ids.to(device)
 
     with torch.no_grad():
@@ -295,7 +309,16 @@ def _score_answer_ll_hf(context_text, answer_text, model, tokenizer):
 # Public API
 # ---------------------------------------------------------------------------
 
-def load_model(model_id, device=None, trust_remote_code=False, quantize=None, lora_adapter=None):
+def _input_device(model):
+    """Return the device where input tensors should be placed.
+
+    For device_map='auto' models, this is the device of the first parameter
+    (embedding layer). For single-device models, same result.
+    """
+    return next(model.parameters()).device
+
+
+def load_model(model_id, device=None, device_map=None, trust_remote_code=False, quantize=None, lora_adapter=None):
     """Load a HuggingFace causal LM and tokenizer.
 
     Auto-detects device: mps (Apple Silicon) → cuda → cpu.
@@ -304,6 +327,10 @@ def load_model(model_id, device=None, trust_remote_code=False, quantize=None, lo
     Args:
         model_id:           HF model ID or local path.
         device:             device string ('mps', 'cuda', 'cpu') or None for auto.
+                            Mutually exclusive with device_map.
+        device_map:         HF Accelerate device_map (e.g. 'auto') for multi-GPU
+                            inference; None to use single-device mode (default).
+                            Mutually exclusive with quantize.
         trust_remote_code:  passed through to HF from_pretrained calls.
         quantize:           'int4' or 'int8' to use torchao quantization (works on
                             MPS and CUDA); None for full-precision float16 (default).
@@ -318,13 +345,20 @@ def load_model(model_id, device=None, trust_remote_code=False, quantize=None, lo
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    if device is None:
-        if torch.backends.mps.is_available():
-            device = "mps"
-        elif torch.cuda.is_available():
-            device = "cuda"
-        else:
-            device = "cpu"
+    if device_map is not None and quantize is not None:
+        raise ValueError(
+            "--device-map and --quantize are mutually exclusive: "
+            "torchao quantize-then-move does not work with sharded models."
+        )
+
+    if device_map is None:
+        if device is None:
+            if torch.backends.mps.is_available():
+                device = "mps"
+            elif torch.cuda.is_available():
+                device = "cuda"
+            else:
+                device = "cpu"
 
     tokenizer = AutoTokenizer.from_pretrained(
         model_id, trust_remote_code=trust_remote_code
@@ -342,7 +376,16 @@ def load_model(model_id, device=None, trust_remote_code=False, quantize=None, lo
     except (ImportError, AttributeError):
         pass
 
-    if quantize is not None:
+    if device_map is not None:
+        # Multi-GPU / Accelerate path: let HF shard the model across devices.
+        # Do NOT call .to(device) — Accelerate handles placement via dispatch hooks.
+        model = AutoModelForCausalLM.from_pretrained(
+            model_id,
+            trust_remote_code=trust_remote_code,
+            torch_dtype=torch.bfloat16,
+            device_map=device_map,
+        )
+    elif quantize is not None:
         # Use torchao directly — bypasses transformers' TorchAoConfig wrapper,
         # which has a fragile dependency on torchao's internal API names.
         from torchao.quantization import quantize_
@@ -382,14 +425,20 @@ def load_model(model_id, device=None, trust_remote_code=False, quantize=None, lo
     return model, tokenizer
 
 
-def get_answer_lls(question, model_name, use_metadata=True, base_url=VLLM_BASE_URL):
-    """Return average log-probability per token for each candidate answer (vLLM path).
+def get_answer_lls(question, model_name, use_metadata=True, base_url=VLLM_BASE_URL,
+                   api_key="EMPTY"):
+    """Return average log-probability per token for each candidate answer.
+
+    Uses an OpenAI-compatible completions endpoint with echo=True. Works with
+    vLLM (default) and Together AI (pass base_url=TOGETHER_BASE_URL and a real
+    api_key).
 
     Args:
         question:     dict conforming to the benchmark question format.
         model_name:   model identifier string (e.g. 'gpt-oss:20b').
         use_metadata: if True, include metadata_frame in the prompt.
-        base_url:     vLLM OpenAI-compatible endpoint URL.
+        base_url:     OpenAI-compatible endpoint URL.
+        api_key:      API key string (default 'EMPTY' for local vLLM).
 
     Returns:
         list[float]: one score per entry in question['answer_strings'],
@@ -397,7 +446,7 @@ def get_answer_lls(question, model_name, use_metadata=True, base_url=VLLM_BASE_U
     """
     full_question_text = _build_question_text(question, use_metadata)
     return [
-        _score_answer_ll(full_question_text, answer, model_name, base_url)
+        _score_answer_ll(full_question_text, answer, model_name, base_url, api_key)
         for answer in question["answer_strings"]
     ]
 
@@ -851,7 +900,8 @@ def test_five_questions(model_name, path_to_jsonl, base_url=VLLM_BASE_URL):
 
 def test_five_questions_hf(model_id, path_to_jsonl, device=None,
                            trust_remote_code=False, verbose_report=True,
-                           n_bootstrap=1000, quantize=None, lora_adapter=None):
+                           n_bootstrap=1000, quantize=None, lora_adapter=None,
+                           device_map=None):
     """Run probabilistic evaluation on 5 randomly sampled questions.
 
     Uses the HuggingFace path. Loads the model once, then scores each question.
@@ -880,7 +930,9 @@ def test_five_questions_hf(model_id, path_to_jsonl, device=None,
 
     selected = random.sample(questions, min(5, len(questions)))
 
-    model, tokenizer = load_model(model_id, device=device, trust_remote_code=trust_remote_code, quantize=quantize, lora_adapter=lora_adapter)
+    model, tokenizer = load_model(model_id, device=device, device_map=device_map,
+                                  trust_remote_code=trust_remote_code,
+                                  quantize=quantize, lora_adapter=lora_adapter)
 
     model_safe = model_id.replace(":", "_").replace("/", "_")
     if lora_adapter is not None:
@@ -999,7 +1051,8 @@ def test_five_questions_hf(model_id, path_to_jsonl, device=None,
 
 
 def full_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
-                 verbose_report=False, n_bootstrap=1000, quantize=None, lora_adapter=None):
+                 verbose_report=False, n_bootstrap=1000, quantize=None, lora_adapter=None,
+                 device_map=None):
     """Score every question in a JSONL; write JSON report and optional markdown.
 
     For each question: get_answer_lls_hf() → lls_to_probabilities() →
@@ -1033,7 +1086,9 @@ def full_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
             if line:
                 questions.append(json.loads(line))
 
-    model, tokenizer = load_model(model_id, device=device, trust_remote_code=trust_remote_code, quantize=quantize, lora_adapter=lora_adapter)
+    model, tokenizer = load_model(model_id, device=device, device_map=device_map,
+                                  trust_remote_code=trust_remote_code,
+                                  quantize=quantize, lora_adapter=lora_adapter)
 
     model_safe = model_id.replace(":", "_").replace("/", "_")
     if lora_adapter is not None:
@@ -1168,7 +1223,7 @@ def full_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
 
 def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
                 include_negation=False, verbose_report=False, n_bootstrap=1000,
-                quantize=None, lora_adapter=None):
+                quantize=None, lora_adapter=None, device_map=None):
     """Evaluate a model on multiple-choice questions; write JSON and optional markdown.
 
     For each question: build a lettered MCQ prompt, generate a response, parse
@@ -1197,7 +1252,9 @@ def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
             if line:
                 questions.append(json.loads(line))
 
-    model, tokenizer = load_model(model_id, device=device, trust_remote_code=trust_remote_code, quantize=quantize, lora_adapter=lora_adapter)
+    model, tokenizer = load_model(model_id, device=device, device_map=device_map,
+                                  trust_remote_code=trust_remote_code,
+                                  quantize=quantize, lora_adapter=lora_adapter)
 
     model_safe = model_id.replace(":", "_").replace("/", "_")
     if lora_adapter is not None:
@@ -1318,6 +1375,569 @@ def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
                       confidence_intervals, correct_vector)
 
     # Optionally write verbose markdown
+    if verbose_report:
+        by_category = {
+            cat: counts[0] / counts[1] if counts[1] > 0 else 0.0
+            for cat, counts in category_results.items()
+        }
+        by_category_skill = {cat: sum(s) / len(s) for cat, s in category_skill.items()}
+
+        summary_lines = [
+            f"# MCQ Eval — {model_id}\n",
+            "## Summary\n",
+            f"**No-response rate:** {no_response_rate:.1%} "
+            f"({no_response_total} of {total} questions returned no parseable letter)\n",
+            "| Metric | Accuracy | Skill Score | No Response |",
+            "|--------|----------|-------------|-------------|",
+            f"| **Overall** | {overall_accuracy:.1%} | {overall_mean_skill:.4f} "
+            f"| {no_response_total} / {total} |",
+        ]
+        for cat in sorted(by_category.keys()):
+            acc = by_category[cat]
+            skill_avg = by_category_skill.get(cat, 0.0)
+            cat_total = category_results[cat][1]
+            cat_no_resp = category_no_response.get(cat, 0)
+            summary_lines.append(
+                f"| {cat} | {acc:.1%} | {skill_avg:.4f} | {cat_no_resp} / {cat_total} |"
+            )
+        summary_lines.append("")
+
+        report_text = "\n".join(summary_lines) + "\n" + "\n\n".join(per_question_blocks)
+        with open(md_report_path, "w", encoding="utf-8") as f:
+            f.write(report_text)
+
+    print(f"Overall MCQ accuracy: {overall_accuracy:.1%}")
+    print(f"Overall MCQ skill score: {overall_mean_skill:.4f}")
+    print(f"No-response rate: {no_response_rate:.1%} "
+          f"({no_response_total} of {total} questions returned no parseable letter)")
+    print(f"JSON report: {json_report_path}")
+    return str(json_report_path)
+
+
+# ---------------------------------------------------------------------------
+# Together AI path
+# ---------------------------------------------------------------------------
+
+def load_together_credentials(cred_path=None):
+    """Load the Together AI API key from a single-line text file.
+
+    Args:
+        cred_path: path to API key file, or None to use the default
+                   (evalcode/TogetherAPIKey.txt, resolved relative to this
+                   script so it works regardless of the working directory).
+
+    Returns:
+        str: the API key, stripped of whitespace.
+
+    Raises:
+        FileNotFoundError: if the key file does not exist.
+        ValueError: if the file is empty.
+    """
+    if cred_path is None:
+        cred_path = Path(__file__).parent / "TogetherAPIKey.txt"
+    else:
+        cred_path = Path(cred_path)
+
+    if not cred_path.exists():
+        raise FileNotFoundError(
+            f"Together AI key file not found: {cred_path}\n"
+            "Create it with the API key as a single line."
+        )
+
+    lines = [ln.strip() for ln in cred_path.read_text(encoding="utf-8").splitlines()
+             if ln.strip()]
+    if not lines:
+        raise ValueError("Together AI key file is empty.")
+
+    return lines[0]
+
+
+def _together_completions_raw(prompt, model_name, api_key, max_tokens=1,
+                               echo=True, logprobs=1):
+    """POST to Together's /completions endpoint and return the raw JSON dict.
+
+    Uses `requests` directly to bypass OpenAI SDK schema parsing, which
+    silently drops Together-specific fields like `token_logprobs` (Together's
+    flat list) because they don't match OpenAI's chat logprobs schema.
+
+    Args:
+        prompt:     the full prompt string (context + answer, or context alone).
+        model_name: Together AI model identifier.
+        api_key:    Together AI API key string.
+        max_tokens: number of tokens to generate (default 1).
+        echo:       if True, include prompt tokens in the logprobs response.
+        logprobs:   number of top logprobs to return per token.
+
+    Returns:
+        dict: the parsed JSON response from Together's API.
+
+    Raises:
+        RuntimeError: if the HTTP request fails.
+        ImportError:  if the `requests` package is not installed.
+    """
+    try:
+        import requests as _requests
+    except ImportError as e:
+        raise ImportError(
+            "The 'requests' package is required for Together AI evaluation. "
+            "Install it with: pip install requests"
+        ) from e
+
+    resp = _requests.post(
+        f"{TOGETHER_BASE_URL}/completions",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "model": model_name,
+            "prompt": prompt,
+            "max_tokens": max_tokens,
+            "echo": echo,
+            "logprobs": logprobs,
+        },
+        timeout=120,
+    )
+    if not resp.ok:
+        raise RuntimeError(
+            f"Together API error {resp.status_code}: {resp.text[:400]}"
+        )
+    return resp.json()
+
+
+def _extract_token_logprobs_from_raw(raw_json, first_call=False):
+    """Extract token_logprobs from a raw Together completions JSON response.
+
+    Together's completions response has logprobs at:
+        choices[0].logprobs.token_logprobs   (flat list of floats)
+
+    Prints a one-time diagnostic if the expected structure is missing.
+
+    Args:
+        raw_json:   dict returned by _together_completions_raw().
+        first_call: if True and extraction fails, print the response structure.
+
+    Returns:
+        list[float] or None
+    """
+    try:
+        tlp = raw_json["choices"][0]["logprobs"]["token_logprobs"]
+        if isinstance(tlp, list):
+            return tlp
+    except (KeyError, TypeError, IndexError):
+        pass
+    if first_call:
+        choices = raw_json.get("choices", [{}])
+        lp = choices[0].get("logprobs") if choices else None
+        print(f"  DEBUG: unexpected logprobs structure from Together API: "
+              f"choices[0].logprobs = {lp!r}")
+    return None
+
+
+def get_answer_lls_together(question, model_name, api_key, use_metadata=True):
+    """Return average log-probability per token for each candidate answer (Together path).
+
+    Uses Together's /completions endpoint with echo=True and logprobs=1 via
+    raw HTTP (requests), bypassing the OpenAI SDK which silently drops
+    Together-specific fields. Together does not return text_offset, so the
+    context/answer boundary is found by counting tokens in one preliminary
+    context-only call.
+
+    Total API calls per question: 1 (context token count) + N (answers).
+
+    Args:
+        question:     dict conforming to the benchmark question format.
+        model_name:   Together AI model identifier
+                      (e.g. 'meta-llama/Llama-3.3-70B-Instruct-Turbo').
+        api_key:      Together AI API key string.
+        use_metadata: if True, include metadata_frame in the prompt.
+
+    Returns:
+        list[float]: one score per entry in question['answer_strings'],
+                     in the same order.
+    """
+    context_text = _build_question_text(question, use_metadata)
+
+    # One preliminary call to count context tokens.
+    # echo=True + max_tokens=1 → token_logprobs contains context tokens + 1
+    # generated token.  Subtract 1 to get the number of context tokens.
+    ctx_raw = _together_completions_raw(context_text, model_name, api_key)
+    ctx_logprobs = _extract_token_logprobs_from_raw(ctx_raw, first_call=True)
+    if ctx_logprobs is None:
+        return [0.0] * len(question["answer_strings"])
+
+    context_token_count = len(ctx_logprobs) - 1  # exclude the 1 generated token
+    if context_token_count <= 0:
+        print(f"  DEBUG: context_token_count={context_token_count} "
+              f"(token_logprobs length={len(ctx_logprobs)}). "
+              f"Together may not be returning prompt logprobs for this model.")
+        return [0.0] * len(question["answer_strings"])
+
+    results = []
+    for answer in question["answer_strings"]:
+        if not answer:
+            results.append(0.0)
+            continue
+
+        ans_raw = _together_completions_raw(
+            context_text + answer, model_name, api_key
+        )
+        tlp = _extract_token_logprobs_from_raw(ans_raw)
+        if tlp is None:
+            results.append(0.0)
+            continue
+
+        # Answer tokens are between the context and the 1 generated token
+        answer_logprobs = tlp[context_token_count:-1]
+        valid = [lp for lp in answer_logprobs if lp is not None]
+        results.append(sum(valid) / len(valid) if valid else 0.0)
+
+    return results
+
+
+def _generate_together(prompt, model_id, api_key, max_tokens=10):
+    """Generate text from a prompt via Together AI chat completions.
+
+    Args:
+        prompt:     the input prompt string (MCQ format).
+        model_id:   Together AI model identifier.
+        api_key:    Together AI API key string.
+        max_tokens: maximum tokens to generate.
+
+    Returns:
+        str: the generated text.
+
+    Raises:
+        ImportError: if the 'openai' package is not installed.
+    """
+    try:
+        from openai import OpenAI
+    except ImportError as e:
+        raise ImportError(
+            "The 'openai' package is required for Together AI evaluation. "
+            "Install it with: pip install openai"
+        ) from e
+
+    client = OpenAI(base_url=TOGETHER_BASE_URL, api_key=api_key)
+    response = client.chat.completions.create(
+        model=model_id,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=max_tokens,
+        temperature=0,
+    )
+    return response.choices[0].message.content or ""
+
+
+def full_eval_together(model_id, path_to_jsonl, api_key_path=None,
+                       verbose_report=False, n_bootstrap=1000):
+    """Score every question via the Together AI API; write JSON and optional markdown.
+
+    Uses Together AI's OpenAI-compatible completions endpoint with echo=True
+    for log-likelihood scoring. Runs bootstrap evaluation with cross-validated
+    Platt scaling for confidence intervals.
+
+    Args:
+        model_id:       Together AI model identifier
+                        (e.g. 'meta-llama/Llama-3.3-70B-Instruct-Turbo').
+        path_to_jsonl:  path to a JSONL file of benchmark questions.
+        api_key_path:   path to API key file; None uses evalcode/TogetherAPIKey.txt.
+        verbose_report: if True, also write the detailed markdown report.
+        n_bootstrap:    number of bootstrap iterations for confidence intervals.
+
+    Returns:
+        str: absolute path to the written JSON report.
+    """
+    path = Path(path_to_jsonl)
+    api_key = load_together_credentials(api_key_path)
+
+    questions = []
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                questions.append(json.loads(line))
+
+    model_safe = model_id.replace(":", "_").replace("/", "_")
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    json_report_path = path.parent / f"eval_results_full_{model_safe}_{timestamp}.json"
+    md_report_path = path.parent / f"eval_report_full_{model_safe}_{timestamp}.md"
+
+    total = len(questions)
+    try:
+        from tqdm import tqdm
+        question_iter = tqdm(enumerate(questions, 1), total=total, desc=model_id)
+        _tqdm_active = True
+    except ImportError:
+        question_iter = enumerate(questions, 1)
+        _tqdm_active = False
+
+    all_brier_scores = []
+    all_model_probs = []
+    all_model_logprobs = []
+    all_gt_probs = []
+    category_scores = {}
+    scoring_fail_total = 0
+    category_scoring_fail = {}
+    per_question_blocks = []
+
+    for i, question in question_iter:
+        if not _tqdm_active and i % 50 == 0:
+            print(f"  Processed {i} of {total} questions...")
+
+        lls = get_answer_lls_together(question, model_id, api_key, use_metadata=True)
+        all_model_logprobs.append(lls)
+
+        scoring_failed = all(ll == 0.0 for ll in lls)
+        category = question.get("question_category", "unknown")
+        if scoring_failed:
+            scoring_fail_total += 1
+            print(f"  WARNING: all log-likelihoods are 0.0 for question {i} "
+                  f"(category: {category}) — scoring may have failed "
+                  f"(empty answer tokens?)")
+            if i == 1:
+                raise RuntimeError(
+                    "\nTogether AI is not returning prompt log-probabilities for model "
+                    f"'{model_id}'.\n"
+                    "This means the /completions endpoint's echo=True feature is not "
+                    "working on Together's live service for this model — a known gap "
+                    "between their documentation and live behavior.\n\n"
+                    "Options:\n"
+                    "  1. Use MCQ evaluation instead:  --api together --mcq\n"
+                    "  2. Try a Together base (non-instruct) model on /completions.\n"
+                    "  3. Report the bug to Together support and await a fix.\n"
+                )
+        model_probs = lls_to_probabilities(lls)
+        gt_probs = question["answer_probabilities"]
+        brier = calculate_brier_score(gt_probs, model_probs)
+
+        all_brier_scores.append(brier)
+        all_model_probs.append(model_probs)
+        all_gt_probs.append(gt_probs)
+        category_scores.setdefault(category, []).append(brier)
+        if scoring_failed:
+            category_scoring_fail[category] = category_scoring_fail.get(category, 0) + 1
+
+        fail_note = "  ⚠ SCORING FAILURE (all LLs = 0.0)" if scoring_failed else ""
+        block = []
+        block.append(f"## Question {i}\n")
+        block.append(f"**Metadata:** {question.get('metadata_frame', '')}\n")
+        block.append(f"**Question:** {question.get('main_question', '')}\n")
+        block.append(f"**Category:** {category}\n")
+        block.append("| Answer | Type | Ground Truth Prob | Model Prob |")
+        block.append("|--------|------|-------------------|------------|")
+        for ans, atype, gtp, mp in zip(
+            question["answer_strings"],
+            question["answer_types"],
+            gt_probs,
+            model_probs,
+        ):
+            block.append(f"| {ans} | {atype} | {gtp:.3f} | {mp:.3f} |")
+        block.append(f"\n**Brier Score:** {brier:.4f}{fail_note}\n")
+        per_question_blocks.append("\n".join(block))
+
+    overall_mean = sum(all_brier_scores) / len(all_brier_scores) if all_brier_scores else 0.0
+    scoring_fail_rate = scoring_fail_total / total if total > 0 else 0.0
+
+    correct_vector = [
+        bool(np.argmax(mp) == np.argmax(gt))
+        for mp, gt in zip(all_model_probs, all_gt_probs)
+    ]
+    per_question_results = [
+        {"model_probs": mp, "chosen_letter": None, "correct": c}
+        for mp, c in zip(all_model_probs, correct_vector)
+    ]
+
+    subset_index = build_subset_index(questions)
+    confidence_intervals = bootstrap_evaluate(
+        all_gt_probs, all_model_probs, subset_index,
+        mode="probabilistic", n_bootstrap=n_bootstrap,
+        model_logprobs=all_model_logprobs,
+    )
+
+    meta = {
+        "model_id": model_id,
+        "benchmark_file": str(path),
+        "eval_mode": "probabilistic",
+        "api": "together",
+        "timestamp": timestamp,
+        "n_questions": total,
+        "n_bootstrap": n_bootstrap,
+    }
+    write_json_report(json_report_path, meta, per_question_results,
+                      confidence_intervals, correct_vector)
+
+    if verbose_report:
+        by_category = {cat: sum(scores) / len(scores)
+                       for cat, scores in category_scores.items()}
+        summary_lines = [
+            f"# Full Eval — {model_id}\n",
+            "## Summary\n",
+            f"**Scoring failure rate:** {scoring_fail_rate:.1%} "
+            f"({scoring_fail_total} of {total} questions had all-zero log-likelihoods)\n",
+            "| Metric | Mean Brier Score | Scoring Failures |",
+            "|--------|-----------------|-----------------|",
+            f"| **Overall** | {overall_mean:.4f} | {scoring_fail_total} / {total} |",
+        ]
+        for cat, mean_brier in sorted(by_category.items()):
+            cat_total = len(category_scores[cat])
+            cat_fails = category_scoring_fail.get(cat, 0)
+            summary_lines.append(f"| {cat} | {mean_brier:.4f} | {cat_fails} / {cat_total} |")
+        summary_lines.append("")
+
+        report_text = "\n".join(summary_lines) + "\n" + "\n\n".join(per_question_blocks)
+        with open(md_report_path, "w", encoding="utf-8") as f:
+            f.write(report_text)
+
+    print(f"Overall Brier score: {overall_mean:.4f}")
+    print(f"Scoring failure rate: {scoring_fail_rate:.1%} "
+          f"({scoring_fail_total} of {total} questions had all-zero log-likelihoods)")
+    print(f"JSON report: {json_report_path}")
+    return str(json_report_path)
+
+
+def mcq_eval_together(model_id, path_to_jsonl, api_key_path=None,
+                      include_negation=False, verbose_report=False, n_bootstrap=1000):
+    """Evaluate a Together AI model on multiple-choice questions.
+
+    Uses Together AI's chat completions endpoint for generation. Runs bootstrap
+    evaluation for confidence intervals. Always writes a JSON report; writes a
+    verbose markdown report only if verbose_report is True.
+
+    Args:
+        model_id:          Together AI model identifier.
+        path_to_jsonl:     path to a JSONL file of benchmark questions.
+        api_key_path:      path to API key file; None uses evalcode/TogetherAPIKey.txt.
+        include_negation:  if True, include negation-type answers as distractors.
+        verbose_report:    if True, also write the detailed markdown report.
+        n_bootstrap:       number of bootstrap iterations for confidence intervals.
+
+    Returns:
+        str: absolute path to the written JSON report.
+    """
+    path = Path(path_to_jsonl)
+    api_key = load_together_credentials(api_key_path)
+
+    questions = []
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                questions.append(json.loads(line))
+
+    model_safe = model_id.replace(":", "_").replace("/", "_")
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    json_report_path = path.parent / f"eval_results_mcq_{model_safe}_{timestamp}.json"
+    md_report_path = path.parent / f"eval_report_mcq_{model_safe}_{timestamp}.md"
+
+    total = len(questions)
+    try:
+        from tqdm import tqdm
+        question_iter = tqdm(enumerate(questions, 1), total=total, desc=model_id)
+        _tqdm_active = True
+    except ImportError:
+        question_iter = enumerate(questions, 1)
+        _tqdm_active = False
+
+    correct_total = 0
+    no_response_total = 0
+    category_results = {}
+    category_no_response = {}
+    all_skill_scores = []
+    category_skill = {}
+    per_question_blocks = []
+    all_mcq_results = []
+
+    for i, question in question_iter:
+        if not _tqdm_active and i % 50 == 0:
+            print(f"  Processed {i} of {total} questions...")
+
+        prompt_text, answer_order, correct_letter = _build_mcq_prompt(
+            question, use_metadata=True, include_negation=include_negation
+        )
+        response_text = _generate_together(prompt_text, model_id, api_key)
+        chosen_letter = _parse_mcq_response(response_text)
+
+        if chosen_letter is None:
+            no_response_total += 1
+            category = question.get("question_category", "unknown")
+            print(f"  WARNING: no parseable letter in response for question {i} "
+                  f"(category: {category}) — "
+                  f"raw response: {repr(response_text)}")
+
+        is_correct = chosen_letter == correct_letter
+        if is_correct:
+            correct_total += 1
+
+        category = question.get("question_category", "unknown")
+        if category not in category_results:
+            category_results[category] = [0, 0]
+        if is_correct:
+            category_results[category][0] += 1
+        category_results[category][1] += 1
+        if chosen_letter is None:
+            category_no_response[category] = category_no_response.get(category, 0) + 1
+
+        k = len(answer_order)
+        r = sum(1 for _, _, p in answer_order if p == 1.0)
+        skill = calculate_mcq_skill_score(is_correct, k, r)
+        all_skill_scores.append(skill)
+        category_skill.setdefault(category, []).append(skill)
+        all_mcq_results.append({"is_correct": is_correct, "k": k})
+
+        result_str = "TRUE" if is_correct else "FALSE"
+        no_resp_str = "  ⚠ NO RESPONSE" if chosen_letter is None else ""
+
+        block = []
+        block.append(f"## Question {i}\n")
+        block.append(f"**Metadata:** {question.get('metadata_frame', '')}\n")
+        block.append(f"**Question:** {question.get('main_question', '')}\n")
+        block.append(f"**Category:** {category}\n")
+        block.append("**Choices:**")
+        for letter, ans_str, prob in answer_order:
+            markers = []
+            if letter == chosen_letter:
+                markers.append("←")
+            if prob == 1.0:
+                markers.append("(ground truth)")
+            marker_str = " ".join(markers)
+            block.append(f"- {letter}) {ans_str} {marker_str}".strip())
+        block.append(f"\n**Model response:** `{response_text.strip()}`")
+        block.append(
+            f"**Chosen:** {chosen_letter}  **Correct:** {correct_letter}  "
+            f"**Result:** {result_str}{no_resp_str}"
+        )
+        block.append(f"**Skill Score:** {skill:.4f}\n")
+        per_question_blocks.append("\n".join(block))
+
+    overall_accuracy = correct_total / total if total > 0 else 0.0
+    no_response_rate = no_response_total / total if total > 0 else 0.0
+    overall_mean_skill = sum(all_skill_scores) / len(all_skill_scores) if all_skill_scores else 0.0
+
+    correct_vector = [r["is_correct"] for r in all_mcq_results]
+    per_question_results = [
+        {"model_probs": None, "chosen_letter": None, "correct": r["is_correct"]}
+        for r in all_mcq_results
+    ]
+
+    gt_probs_list = [q["answer_probabilities"] for q in questions]
+    subset_index = build_subset_index(questions)
+    confidence_intervals = bootstrap_evaluate(
+        gt_probs_list, all_mcq_results, subset_index,
+        mode="mcq", n_bootstrap=n_bootstrap,
+    )
+
+    meta = {
+        "model_id": model_id,
+        "benchmark_file": str(path),
+        "eval_mode": "mcq",
+        "api": "together",
+        "timestamp": timestamp,
+        "n_questions": total,
+        "n_bootstrap": n_bootstrap,
+    }
+    write_json_report(json_report_path, meta, per_question_results,
+                      confidence_intervals, correct_vector)
+
     if verbose_report:
         by_category = {
             cat: counts[0] / counts[1] if counts[1] > 0 else 0.0
@@ -1809,6 +2429,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description=(
             "Evaluate a model on benchmark questions (Brier score or MCQ accuracy).\n\n"
+            "Together AI: use --api together for probabilistic (--full-eval) or MCQ.\n"
             "OpenAI models (gpt-4.1-*, gpt-5*, ft:gpt-4.1-*, ft:gpt-5*) are detected\n"
             "automatically when --mcq is set and routed to the Responses API.\n"
             "Credentials are read from evalcode/credentials.txt (or --credentials)."
@@ -1816,13 +2437,23 @@ if __name__ == "__main__":
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("model_id",      help="HF model ID or local path (HF mode); "
+                                              "Together AI model name (--api together); "
                                               "OpenAI model name (OpenAI mode); "
                                               "vLLM model name (--vllm mode)")
     parser.add_argument("path_to_jsonl", help="Path to benchmark questions JSONL")
+    parser.add_argument("--api",         default=None, choices=["together"],
+                        help="API backend: 'together' routes to Together AI's API "
+                             "for probabilistic (--full-eval) or MCQ (--mcq) eval")
+    parser.add_argument("--together-key", default=None, metavar="PATH",
+                        help="Path to Together AI API key file "
+                             "(default: evalcode/TogetherAPIKey.txt)")
     parser.add_argument("--vllm",        action="store_true",
                         help="Use legacy vLLM endpoint instead of HuggingFace")
     parser.add_argument("--device",      default=None,
                         help="Device override: mps | cuda | cpu (HF mode only)")
+    parser.add_argument("--device-map",  default=None,
+                        help="HF Accelerate device_map (e.g. 'auto') for multi-GPU "
+                             "inference. Mutually exclusive with --device.")
     parser.add_argument("--quantize",    default=None, choices=["int4", "int8"],
                         help="Quantize model weights via torchao (HF mode only). "
                              "int4 (~4GB for 7B, ~12GB for 24B) works on MPS and CUDA. "
@@ -1864,7 +2495,28 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.vllm:
+    if args.device is not None and args.device_map is not None:
+        parser.error("--device and --device-map are mutually exclusive")
+
+    if args.api == "together":
+        if args.full_eval:
+            report = full_eval_together(
+                args.model_id, args.path_to_jsonl,
+                api_key_path=args.together_key,
+                verbose_report=args.verbose_report,
+                n_bootstrap=args.n_bootstrap,
+            )
+        elif args.mcq:
+            report = mcq_eval_together(
+                args.model_id, args.path_to_jsonl,
+                api_key_path=args.together_key,
+                include_negation=args.include_negation,
+                verbose_report=args.verbose_report,
+                n_bootstrap=args.n_bootstrap,
+            )
+        else:
+            parser.error("--api together requires --full-eval or --mcq")
+    elif args.vllm:
         report = test_five_questions(args.model_id, args.path_to_jsonl)
     elif args.full_eval:
         if is_openai_model(args.model_id):
@@ -1876,6 +2528,7 @@ if __name__ == "__main__":
         report = full_eval_hf(
             args.model_id, args.path_to_jsonl,
             device=args.device,
+            device_map=args.device_map,
             trust_remote_code=args.trust_remote_code,
             verbose_report=args.verbose_report,
             n_bootstrap=args.n_bootstrap,
@@ -1898,6 +2551,7 @@ if __name__ == "__main__":
             report = mcq_eval_hf(
                 args.model_id, args.path_to_jsonl,
                 device=args.device,
+                device_map=args.device_map,
                 trust_remote_code=args.trust_remote_code,
                 include_negation=args.include_negation,
                 verbose_report=args.verbose_report,
@@ -1909,6 +2563,7 @@ if __name__ == "__main__":
         report = test_five_questions_hf(
             args.model_id, args.path_to_jsonl,
             device=args.device,
+            device_map=args.device_map,
             trust_remote_code=args.trust_remote_code,
             n_bootstrap=args.n_bootstrap,
             quantize=args.quantize,
