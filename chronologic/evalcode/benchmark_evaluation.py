@@ -834,7 +834,7 @@ def write_json_report(report_path, metadata, per_question_results,
         json.dump(report, f, indent=2)
 
 
-def test_five_questions(model_name, path_to_jsonl, base_url=VLLM_BASE_URL):
+def test_five_questions(model_name, path_to_jsonl, base_url=VLLM_BASE_URL, output_dir=None):
     """Run probabilistic evaluation on 5 randomly sampled questions and write a markdown report.
 
     For each selected question the function calls get_answer_lls(),
@@ -863,7 +863,9 @@ def test_five_questions(model_name, path_to_jsonl, base_url=VLLM_BASE_URL):
     # Build a filesystem-safe model name for the report filename
     model_safe = model_name.replace(":", "_").replace("/", "_")
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    report_path = path.parent / f"eval_report_{model_safe}_{timestamp}.md"
+    out_dir = Path(output_dir) if output_dir else path.parent
+    out_dir.mkdir(parents=True, exist_ok=True)
+    report_path = out_dir / f"eval_report_{model_safe}_{timestamp}.md"
 
     lines = [f"# {model_name}\n"]
 
@@ -901,7 +903,7 @@ def test_five_questions(model_name, path_to_jsonl, base_url=VLLM_BASE_URL):
 def test_five_questions_hf(model_id, path_to_jsonl, device=None,
                            trust_remote_code=False, verbose_report=True,
                            n_bootstrap=1000, quantize=None, lora_adapter=None,
-                           device_map=None):
+                           device_map=None, output_dir=None):
     """Run probabilistic evaluation on 5 randomly sampled questions.
 
     Uses the HuggingFace path. Loads the model once, then scores each question.
@@ -938,8 +940,10 @@ def test_five_questions_hf(model_id, path_to_jsonl, device=None,
     if lora_adapter is not None:
         model_safe += "_" + Path(lora_adapter).name
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    json_report_path = path.parent / f"eval_results_{model_safe}_{timestamp}.json"
-    md_report_path = path.parent / f"eval_report_{model_safe}_{timestamp}.md"
+    out_dir = Path(output_dir) if output_dir else path.parent
+    out_dir.mkdir(parents=True, exist_ok=True)
+    json_report_path = out_dir / f"eval_results_{model_safe}_{timestamp}.json"
+    md_report_path = out_dir / f"eval_report_{model_safe}_{timestamp}.md"
 
     total = len(selected)
     all_brier_scores = []
@@ -1052,7 +1056,7 @@ def test_five_questions_hf(model_id, path_to_jsonl, device=None,
 
 def full_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
                  verbose_report=False, n_bootstrap=1000, quantize=None, lora_adapter=None,
-                 device_map=None):
+                 device_map=None, output_dir=None):
     """Score every question in a JSONL; write JSON report and optional markdown.
 
     For each question: get_answer_lls_hf() → lls_to_probabilities() →
@@ -1094,8 +1098,10 @@ def full_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
     if lora_adapter is not None:
         model_safe += "_" + Path(lora_adapter).name
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    json_report_path = path.parent / f"eval_results_full_{model_safe}_{timestamp}.json"
-    md_report_path = path.parent / f"eval_report_full_{model_safe}_{timestamp}.md"
+    out_dir = Path(output_dir) if output_dir else path.parent
+    out_dir.mkdir(parents=True, exist_ok=True)
+    json_report_path = out_dir / f"eval_results_full_{model_safe}_{timestamp}.json"
+    md_report_path = out_dir / f"eval_report_full_{model_safe}_{timestamp}.md"
 
     total = len(questions)
     try:
@@ -1223,7 +1229,7 @@ def full_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
 
 def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
                 include_negation=False, verbose_report=False, n_bootstrap=1000,
-                quantize=None, lora_adapter=None, device_map=None):
+                quantize=None, lora_adapter=None, device_map=None, output_dir=None):
     """Evaluate a model on multiple-choice questions; write JSON and optional markdown.
 
     For each question: build a lettered MCQ prompt, generate a response, parse
@@ -1260,8 +1266,10 @@ def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
     if lora_adapter is not None:
         model_safe += "_" + Path(lora_adapter).name
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    json_report_path = path.parent / f"eval_results_mcq_{model_safe}_{timestamp}.json"
-    md_report_path = path.parent / f"eval_report_mcq_{model_safe}_{timestamp}.md"
+    out_dir = Path(output_dir) if output_dir else path.parent
+    out_dir.mkdir(parents=True, exist_ok=True)
+    json_report_path = out_dir / f"eval_results_mcq_{model_safe}_{timestamp}.json"
+    md_report_path = out_dir / f"eval_report_mcq_{model_safe}_{timestamp}.md"
 
     total = len(questions)
     try:
@@ -1629,7 +1637,7 @@ def _generate_together(prompt, model_id, api_key, max_tokens=10):
 
 
 def full_eval_together(model_id, path_to_jsonl, api_key_path=None,
-                       verbose_report=False, n_bootstrap=1000):
+                       verbose_report=False, n_bootstrap=1000, output_dir=None):
     """Score every question via the Together AI API; write JSON and optional markdown.
 
     Uses Together AI's OpenAI-compatible completions endpoint with echo=True
@@ -1659,8 +1667,10 @@ def full_eval_together(model_id, path_to_jsonl, api_key_path=None,
 
     model_safe = model_id.replace(":", "_").replace("/", "_")
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    json_report_path = path.parent / f"eval_results_full_{model_safe}_{timestamp}.json"
-    md_report_path = path.parent / f"eval_report_full_{model_safe}_{timestamp}.md"
+    out_dir = Path(output_dir) if output_dir else path.parent
+    out_dir.mkdir(parents=True, exist_ok=True)
+    json_report_path = out_dir / f"eval_results_full_{model_safe}_{timestamp}.json"
+    md_report_path = out_dir / f"eval_report_full_{model_safe}_{timestamp}.md"
 
     total = len(questions)
     try:
@@ -1796,7 +1806,8 @@ def full_eval_together(model_id, path_to_jsonl, api_key_path=None,
 
 
 def mcq_eval_together(model_id, path_to_jsonl, api_key_path=None,
-                      include_negation=False, verbose_report=False, n_bootstrap=1000):
+                      include_negation=False, verbose_report=False, n_bootstrap=1000,
+                      output_dir=None):
     """Evaluate a Together AI model on multiple-choice questions.
 
     Uses Together AI's chat completions endpoint for generation. Runs bootstrap
@@ -1826,8 +1837,10 @@ def mcq_eval_together(model_id, path_to_jsonl, api_key_path=None,
 
     model_safe = model_id.replace(":", "_").replace("/", "_")
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    json_report_path = path.parent / f"eval_results_mcq_{model_safe}_{timestamp}.json"
-    md_report_path = path.parent / f"eval_report_mcq_{model_safe}_{timestamp}.md"
+    out_dir = Path(output_dir) if output_dir else path.parent
+    out_dir.mkdir(parents=True, exist_ok=True)
+    json_report_path = out_dir / f"eval_results_mcq_{model_safe}_{timestamp}.json"
+    md_report_path = out_dir / f"eval_report_mcq_{model_safe}_{timestamp}.md"
 
     total = len(questions)
     try:
@@ -2192,7 +2205,8 @@ def _generate_openai(prompt, model_id, client, valid_letters=None,
 def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
                     include_negation=False, trace=False,
                     verbose_report=False, n_bootstrap=1000,
-                    reasoning_effort="medium", use_json_schema=True):
+                    reasoning_effort="medium", use_json_schema=True,
+                    output_dir=None):
     """Evaluate an OpenAI-hosted model on multiple-choice questions.
 
     Uses the Responses API.  For each question the function builds a
@@ -2249,8 +2263,10 @@ def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
 
     model_safe = model_id.replace(":", "_").replace("/", "_")
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    json_report_path = path.parent / f"eval_results_mcq_{model_safe}_{timestamp}.json"
-    md_report_path = path.parent / f"eval_report_mcq_{model_safe}_{timestamp}.md"
+    out_dir = Path(output_dir) if output_dir else path.parent
+    out_dir.mkdir(parents=True, exist_ok=True)
+    json_report_path = out_dir / f"eval_results_mcq_{model_safe}_{timestamp}.json"
+    md_report_path = out_dir / f"eval_report_mcq_{model_safe}_{timestamp}.md"
 
     total = len(questions)
     try:
@@ -2492,6 +2508,9 @@ if __name__ == "__main__":
     parser.add_argument("--no-json-schema", action="store_true",
                         help="Skip JSON schema constraint; rely on instructions for "
                              "output format (OpenAI --mcq only)")
+    parser.add_argument("--output-dir", default=None, metavar="DIR",
+                        help="Directory for report files; default is the same directory "
+                             "as the input JSONL. Created if it does not exist.")
 
     args = parser.parse_args()
 
@@ -2505,6 +2524,7 @@ if __name__ == "__main__":
                 api_key_path=args.together_key,
                 verbose_report=args.verbose_report,
                 n_bootstrap=args.n_bootstrap,
+                output_dir=args.output_dir,
             )
         elif args.mcq:
             report = mcq_eval_together(
@@ -2513,6 +2533,7 @@ if __name__ == "__main__":
                 include_negation=args.include_negation,
                 verbose_report=args.verbose_report,
                 n_bootstrap=args.n_bootstrap,
+                output_dir=args.output_dir,
             )
         else:
             parser.error("--api together requires --full-eval or --mcq")
@@ -2534,6 +2555,7 @@ if __name__ == "__main__":
             n_bootstrap=args.n_bootstrap,
             quantize=args.quantize,
             lora_adapter=args.lora_adapter,
+            output_dir=args.output_dir,
         )
     elif args.mcq:
         if is_openai_model(args.model_id):
@@ -2546,6 +2568,7 @@ if __name__ == "__main__":
                 n_bootstrap=args.n_bootstrap,
                 reasoning_effort=args.reasoning_effort,
                 use_json_schema=not args.no_json_schema,
+                output_dir=args.output_dir,
             )
         else:
             report = mcq_eval_hf(
@@ -2558,6 +2581,7 @@ if __name__ == "__main__":
                 n_bootstrap=args.n_bootstrap,
                 quantize=args.quantize,
                 lora_adapter=args.lora_adapter,
+                output_dir=args.output_dir,
             )
     else:
         report = test_five_questions_hf(
@@ -2568,5 +2592,6 @@ if __name__ == "__main__":
             n_bootstrap=args.n_bootstrap,
             quantize=args.quantize,
             lora_adapter=args.lora_adapter,
+            output_dir=args.output_dir,
         )
     print(f"Report written to: {report}")

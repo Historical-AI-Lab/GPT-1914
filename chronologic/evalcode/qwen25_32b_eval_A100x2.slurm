@@ -29,7 +29,8 @@ python -u benchmark_evaluation.py \
     ../booksample/chronologic_en_0.1.jsonl \
     --device-map auto \
     --full-eval \
-    --verbose-report
+    --verbose-report \
+    --output-dir prob_results
 
 echo "Job completed"
 date
