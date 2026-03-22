@@ -51,12 +51,30 @@ from benchmark_evaluation import (
 # Constants
 # ---------------------------------------------------------------------------
 
-SYSTEM_PROMPT = (
+SYSTEM_PROMPT_A = (
     "You will be asked to answer a question in a way that fits the beliefs and "
     "expository style of a specific historical context. If the context described "
     "would not contain enough information to answer the question, respond simply "
-    "'insufficient information.' Otherwise, answer directly, in {length_spec}."
+    "'insufficient information.' Otherwise, answer in {length_spec}."
 )
+
+SYSTEM_PROMPT_B = (
+    "Answer the question in a way that fits the beliefs and expository style of "
+    "the historical context described. As a rough guideline, answer in {length_spec}."
+)
+
+_PROMPT_A_REASONING_TYPES = {"knowledge", "abstention", "inference"}
+
+
+def _select_system_prompt(reasoning_type, answer_strings):
+    if reasoning_type in _PROMPT_A_REASONING_TYPES:
+        return SYSTEM_PROMPT_A
+    for a in answer_strings:
+        if isinstance(a, str):
+            low = a.lower()
+            if "insufficient information" in low or "i don't know" in low:
+                return SYSTEM_PROMPT_A
+    return SYSTEM_PROMPT_B
 
 
 # ---------------------------------------------------------------------------
@@ -270,7 +288,11 @@ def build_prompts(question):
         question.get('answer_strings', []),
         question.get('question_category', ''),
     )
-    system_str = SYSTEM_PROMPT.format(length_spec=length_spec)
+    template = _select_system_prompt(
+        question.get('reasoning_type', ''),
+        question.get('answer_strings', []),
+    )
+    system_str = template.format(length_spec=length_spec)
     user_str = (
         "CONTEXT: " + question.get('metadata_frame', '')
         + "\nQUESTION: " + question.get('main_question', '')
