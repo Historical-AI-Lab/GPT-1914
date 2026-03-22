@@ -1,0 +1,4899 @@
+{
+  "metadata": {
+    "model_id": "Qwen/Qwen2.5-32B-Instruct",
+    "benchmark_file": "../booksample/chronologic_en_0.1.jsonl",
+    "eval_mode": "mcq",
+    "timestamp": "20260322_120756",
+    "n_questions": 709,
+    "n_bootstrap": 1000
+  },
+  "per_question_results": [
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    }
+  ],
+  "confidence_intervals": {
+    "overall_benchmark": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        0.11408027738598966,
+        0.15887400094029153,
+        0.20774036201222384
+      ],
+      "accuracy": [
+        0.3116713681241185,
+        0.3469675599435825,
+        0.38367418899858957
+      ]
+    },
+    "question_category:cloze_causalclause": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.1524411800936191,
+        0.006114202437731873,
+        0.18384391534391528
+      ],
+      "accuracy": [
+        0.09754130605822188,
+        0.2222222222222222,
+        0.36363636363636365
+      ]
+    },
+    "answer_length:phrase": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.01513117283950617,
+        0.07149272882805817,
+        0.15660087719298244
+      ],
+      "accuracy": [
+        0.20987654320987653,
+        0.27475084424676716,
+        0.34213696892834494
+      ]
+    },
+    "frame_type:passage_context": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        0.01340199556541021,
+        0.07816881613756614,
+        0.1481423495275986
+      ],
+      "accuracy": [
+        0.22805807622504537,
+        0.2785714285714286,
+        0.33443852827837645
+      ]
+    },
+    "reasoning_type:phrase_cloze": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.013358187134502915,
+        0.0719756565300771,
+        0.15798057259713702
+      ],
+      "accuracy": [
+        0.21081181011471034,
+        0.27564102564102566,
+        0.3400260115606936
+      ]
+    },
+    "question_category:parallax": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.05567514406028367,
+        0.13701851851851854,
+        0.3394912212419996
+      ],
+      "accuracy": [
+        0.18864976415094342,
+        0.3333333333333333,
+        0.4893725575336517
+      ]
+    },
+    "answer_length:sentence_plus": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        0.041191136006289326,
+        0.1010682629507931,
+        0.16008533542418682
+      ],
+      "accuracy": [
+        0.2622430320295658,
+        0.30788490705574145,
+        0.35142118863049093
+      ]
+    },
+    "frame_type:book_context": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        0.04475709909273009,
+        0.12864074905635825,
+        0.2172995352071439
+      ],
+      "accuracy": [
+        0.27225909013315125,
+        0.33495145631067963,
+        0.40405844155844156
+      ]
+    },
+    "reasoning_type:constrained_generation": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        0.05812567640692644,
+        0.1857013457556936,
+        0.3155135778275476
+      ],
+      "accuracy": [
+        0.2828227931488801,
+        0.37894736842105264,
+        0.4791973039215686
+      ]
+    },
+    "question_category:cloze_contrastclause": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        0.03393518518518519,
+        0.23701685556524266,
+        0.4626187258687259
+      ],
+      "accuracy": [
+        0.22727272727272727,
+        0.391304347826087,
+        0.5675675675675675
+      ]
+    },
+    "question_category:cloze_concessiveclause": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.14750409500409498,
+        0.026941930618401225,
+        0.22917279411764704
+      ],
+      "accuracy": [
+        0.09090909090909091,
+        0.23076923076923078,
+        0.391304347826087
+      ]
+    },
+    "question_category:cloze_effectclause": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.25210119047619045,
+        -0.08439824205544286,
+        0.11891049382716048
+      ],
+      "accuracy": [
+        0.05256578947368421,
+        0.17142857142857143,
+        0.32
+      ]
+    },
+    "question_category:cloze_effectsentence": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.03465896311291048,
+        0.1370694022289767,
+        0.3090369318181818
+      ],
+      "accuracy": [
+        0.18604651162790697,
+        0.3191489361702128,
+        0.45652173913043476
+      ]
+    },
+    "reasoning_type:sentence_cloze": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.011907999363867664,
+        0.08760162601626018,
+        0.19576530612244894
+      ],
+      "accuracy": [
+        0.2048338416571356,
+        0.2833989501312336,
+        0.36752136752136755
+      ]
+    },
+    "question_category:cloze_contrastsentence": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.14493464052287583,
+        -0.007961309523809513,
+        0.14697048611111102
+      ],
+      "accuracy": [
+        0.1,
+        0.20689655172413793,
+        0.3274242424242423
+      ]
+    },
+    "question_category:textbook": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        0.05509259259259262,
+        0.2387626262626263,
+        0.4102462121212121
+      ],
+      "accuracy": [
+        0.26828179442508715,
+        0.4112394957983193,
+        0.5435276679841896
+      ]
+    },
+    "answer_length:short_answer": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        0.2927160014781966,
+        0.3998333194432869,
+        0.4965720027644405
+      ],
+      "accuracy": [
+        0.43749064371257484,
+        0.5232173109502541,
+        0.6
+      ]
+    },
+    "frame_type:world_context": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        0.2101927570093458,
+        0.2966289198606271,
+        0.382824245597079
+      ],
+      "accuracy": [
+        0.3811761823390461,
+        0.44941707827170385,
+        0.5154679445876288
+      ]
+    },
+    "reasoning_type:inference": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        0.015080946450809492,
+        0.16178513071895426,
+        0.30078125
+      ],
+      "accuracy": [
+        0.22218992248062014,
+        0.3373493975903614,
+        0.4473684210526316
+      ]
+    },
+    "question_category:character_modeling_with_summary": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.06666666666666665,
+        0.054557943283289195,
+        0.1729957805907173
+      ],
+      "accuracy": [
+        0.2,
+        0.2909184574624669,
+        0.379746835443038
+      ]
+    },
+    "reasoning_type:character_modeling": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.0728062797869358,
+        0.04761904761904763,
+        0.16666666666666666
+      ],
+      "accuracy": [
+        0.19539529015979817,
+        0.2857142857142857,
+        0.375
+      ]
+    },
+    "question_category:topic_sentence": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.00841911764705881,
+        0.20850000000000002,
+        0.46817230273752014
+      ],
+      "accuracy": [
+        0.17391304347826086,
+        0.35,
+        0.5625679347826086
+      ]
+    },
+    "reasoning_type:topic_sentence": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.00841911764705881,
+        0.20850000000000002,
+        0.46817230273752014
+      ],
+      "accuracy": [
+        0.17391304347826086,
+        0.35,
+        0.5625679347826086
+      ]
+    },
+    "question_category:refusal": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.058929055519410085,
+        0.09856215213358072,
+        0.2597543238993711
+      ],
+      "accuracy": [
+        0.1891891891891892,
+        0.3093073593073593,
+        0.4318560606060606
+      ]
+    },
+    "reasoning_type:abstention": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.058929055519410085,
+        0.09856215213358072,
+        0.2597543238993711
+      ],
+      "accuracy": [
+        0.1891891891891892,
+        0.3093073593073593,
+        0.4318560606060606
+      ]
+    },
+    "question_category:knowledge": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        0.37056915413763597,
+        0.5103448275862069,
+        0.6331453097670993
+      ],
+      "accuracy": [
+        0.49411764705882355,
+        0.6076254826254825,
+        0.7058823529411765
+      ]
+    },
+    "reasoning_type:knowledge": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        0.4019761904761905,
+        0.5415988638446032,
+        0.675968992248062
+      ],
+      "accuracy": [
+        0.524984756097561,
+        0.6354653426791277,
+        0.7441860465116279
+      ]
+    },
+    "question_category:constrained_generation": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        0.04751190476190478,
+        0.3368055555555556,
+        0.6190476190476192
+      ],
+      "accuracy": [
+        0.2855714285714286,
+        0.5,
+        0.7142857142857143
+      ]
+    },
+    "question_category:poetic_form": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.27225000000000005,
+        -0.1148148148148148,
+        0.20933238636363613
+      ],
+      "accuracy": [
+        0.0,
+        0.1111111111111111,
+        0.3685855263157893
+      ]
+    },
+    "question_category:cloze_conditionalclause": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.10908658008658005,
+        0.10845959595959596,
+        0.35781547619047605
+      ],
+      "accuracy": [
+        0.14285714285714285,
+        0.3103448275862069,
+        0.5
+      ]
+    },
+    "question_category:cloze_causalsentence": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.07018692564745192,
+        0.17591666666666667,
+        0.414708605664488
+      ],
+      "accuracy": [
+        0.16666666666666666,
+        0.3605555555555555,
+        0.5454545454545454
+      ]
+    },
+    "question_category:handcrafted": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.02564102564102562,
+        0.265625,
+        0.6014492753623187
+      ],
+      "accuracy": [
+        0.23076923076923078,
+        0.4444444444444444,
+        0.6957608695652173
+      ]
+    },
+    "question_category:poetry_generation": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.24479932598039214,
+        0.11111111111111113,
+        0.5229166666666665
+      ],
+      "accuracy": [
+        0.062408088235294125,
+        0.3333333333333333,
+        0.6363636363636364
+      ]
+    },
+    "question_category:inference": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.13596491228070173,
+        0.11762820512820515,
+        0.4445652173913042
+      ],
+      "accuracy": [
+        0.10526315789473684,
+        0.30434782608695654,
+        0.5601304347826086
+      ]
+    },
+    "question_category:character_modeling_without_summary": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.3333333333333333,
+        -0.09090909090909088,
+        0.49999999999999994
+      ],
+      "accuracy": [
+        0.0,
+        0.16666666666666666,
+        0.625
+      ]
+    },
+    "question_category:attribution": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.291875,
+        0.23333333333333334,
+        1.0
+      ],
+      "accuracy": [
+        0.0,
+        0.4,
+        1.0
+      ]
+    },
+    "question_category:contrastclause": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        0.0,
+        1.0,
+        1.0
+      ],
+      "accuracy": [
+        0.0,
+        1.0,
+        1.0
+      ]
+    }
+  },
+  "correct_vector": [
+    true,
+    false,
+    false,
+    true,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    true,
+    false,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    true,
+    true,
+    true,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    true,
+    false,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    true,
+    false,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    false,
+    false,
+    true,
+    false,
+    false,
+    true,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    true,
+    true,
+    false,
+    true,
+    false,
+    true,
+    false,
+    true,
+    true,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    true,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    true,
+    false,
+    true,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    true,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    false,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    true,
+    false,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    true,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    true,
+    true,
+    false,
+    true,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    false,
+    false,
+    true,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    true,
+    false,
+    false,
+    true,
+    true,
+    false,
+    true,
+    true,
+    false,
+    true,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    true,
+    true,
+    false,
+    true,
+    false,
+    true,
+    false,
+    true,
+    true,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    false,
+    true,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    true,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    true,
+    true,
+    false,
+    true,
+    true,
+    false,
+    true,
+    true,
+    true,
+    false,
+    true,
+    false,
+    false,
+    true,
+    false,
+    true,
+    false,
+    true,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false,
+    true,
+    false,
+    true,
+    true,
+    true,
+    false,
+    true,
+    false,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    true,
+    true,
+    true,
+    false,
+    true,
+    true,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    true,
+    false,
+    false,
+    true,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    true,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    true,
+    false,
+    false,
+    true,
+    false,
+    true,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    true,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    true,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true
+  ]
+}
