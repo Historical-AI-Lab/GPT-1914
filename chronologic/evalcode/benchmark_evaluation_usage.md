@@ -8,7 +8,7 @@ python benchmark_evaluation.py MODEL_ID PATH_TO_JSONL [options]
 
 | Argument | Description |
 |----------|-------------|
-| `model_id` | HF model ID or local path (HF mode); Together AI model name (`--api together`); OpenAI model name (auto-detected with `--mcq`); vLLM model name (`--vllm`) |
+| `model_id` | HF model ID or local path (HF mode); Together AI model name (`--api together`); OpenAI model name (auto-detected with `--mcq`); OpenRouter model name (`--api openrouter`); vLLM model name (`--vllm`) |
 | `path_to_jsonl` | Path to benchmark questions JSONL file |
 
 ---
@@ -20,7 +20,7 @@ If none of these flags is given, the script runs a **five-question smoke test** 
 | Flag | Description |
 |------|-------------|
 | `--full-eval` | Score every question in the JSONL via log-likelihood (Brier score). HF and Together AI paths only. Not supported for OpenAI models. |
-| `--mcq` | Present each question as a lettered multiple-choice prompt and score top-1 accuracy. Supported on all paths. OpenAI models are auto-detected and routed to the Responses API. |
+| `--mcq` | Present each question as a lettered multiple-choice prompt and score top-1 accuracy. Supported on all paths (HF, Together AI, OpenRouter, OpenAI). OpenAI models are auto-detected and routed to the Responses API. |
 
 `--full-eval` and `--mcq` are mutually exclusive.
 
@@ -31,11 +31,13 @@ If none of these flags is given, the script runs a **five-question smoke test** 
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--api together` | — | Route to Together AI's OpenAI-compatible API. Requires `evalcode/TogetherAPIKey.txt`. Use with `--full-eval` or `--mcq`. |
+| `--api openrouter` | — | Route to OpenRouter's chat completions API. Requires `bertclassify/OpenRouterCredentials.txt`. Use with `--mcq` only. Reasoning suppressed automatically for thinking models. |
 | `--vllm` | — | Use the legacy vLLM endpoint (OpenAI-compatible, requires a running vLLM server on port 9011). Runs the five-question smoke test only. |
 | `--together-key PATH` | `evalcode/TogetherAPIKey.txt` | Path to Together AI API key file. |
+| `--openrouter-key PATH` | `bertclassify/OpenRouterCredentials.txt` | Path to OpenRouter credentials file (`password: sk-or-v1-...` format). |
 | `--credentials PATH` | `evalcode/credentials.txt` | Path to OpenAI credentials file (line 1: org ID, line 2: API key). |
 
-If neither `--api together` nor `--vllm` is set, and the model ID does not match an OpenAI pattern, the **HuggingFace path** is used (default).
+If neither `--api together`, `--api openrouter`, nor `--vllm` is set, and the model ID does not match an OpenAI pattern, the **HuggingFace path** is used (default).
 
 OpenAI model IDs are auto-detected by prefix (`gpt-4.1`, `gpt-5`, `ft:gpt-4.1-`, `ft:gpt-5-`). When detected with `--mcq`, the Responses API is used automatically — no extra flag needed.
 
@@ -133,5 +135,17 @@ python benchmark_evaluation.py gpt-4.1-2025-04-14 \
 python benchmark_evaluation.py gpt-5.4 \
     booksample/chronologic_en_0.1.jsonl \
     --mcq --reasoning-effort medium \
+    --output-dir mcq_results
+
+# MCQ eval via OpenRouter
+python benchmark_evaluation.py qwen/qwen3-8b \
+    booksample/chronologic_en_0.1.jsonl \
+    --api openrouter --mcq --verbose-report \
+    --output-dir mcq_results
+
+# OpenRouter with custom credentials file
+python benchmark_evaluation.py meta-llama/llama-4-scout-17b-16e-instruct \
+    booksample/chronologic_en_0.1.jsonl \
+    --api openrouter --mcq --openrouter-key /path/to/key.txt \
     --output-dir mcq_results
 ```

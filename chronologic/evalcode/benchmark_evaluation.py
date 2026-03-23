@@ -27,6 +27,7 @@ Requires (OpenAI path):  pip install openai  +  evalcode/credentials.txt
 
 import json
 import math
+import os
 import random
 import re
 import datetime
@@ -43,6 +44,9 @@ MODEL = "gpt-oss:20b"
 
 # Together AI path
 TOGETHER_BASE_URL = "https://api.together.xyz/v1"
+
+# OpenRouter path
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 # OpenAI API path
 # Model ID prefixes that indicate an OpenAI-hosted model (including fine-tunes).
@@ -1991,6 +1995,297 @@ def mcq_eval_together(model_id, path_to_jsonl, api_key_path=None,
 
 
 # ---------------------------------------------------------------------------
+# OpenRouter API path
+# ---------------------------------------------------------------------------
+
+def load_openrouter_credentials(cred_path=None):
+    """Return the OpenRouter API key.
+
+    Resolution order:
+    1. ``OPENROUTER_API_KEY`` environment variable (if set).
+    2. ``password:`` line in *cred_path*
+       (default: ``bertclassify/OpenRouterCredentials.txt``, resolved relative
+       to this script's parent directory).
+
+    Args:
+        cred_path: path to credentials file, or None to use the default.
+
+    Returns:
+        str: the API key string.
+
+    Raises:
+        FileNotFoundError: if *cred_path* does not exist.
+        ValueError: if the credentials file has no ``password:`` line.
+    """
+    env_key = os.environ.get("OPENROUTER_API_KEY")
+    if env_key:
+        return env_key
+
+    if cred_path is None:
+        cred_path = Path(__file__).parent.parent / "bertclassify" / "OpenRouterCredentials.txt"
+
+    path = Path(cred_path)
+    if not path.exists():
+        raise FileNotFoundError(f"OpenRouter credentials file not found: {cred_path}")
+
+    text = path.read_text(encoding="utf-8")
+    for line in text.splitlines():
+        if line.strip().lower().startswith("password:"):
+            return line.split(":", 1)[1].strip()
+
+    raise ValueError(f"No 'password:' line found in {cred_path}")
+
+
+def _generate_openrouter(prompt, model_id, api_key, max_tokens=4096, max_retries=3):
+    """Generate text from a prompt via OpenRouter chat completions.
+
+    Designed for reasoning models (QwQ-32b, DeepSeek-R1, etc.) that emit
+    chain-of-thought before their final answer.  The default max_tokens is
+    set high enough to accommodate full reasoning traces.  Retries on
+    rate-limit errors with exponential back-off.
+
+    Args:
+        prompt:      the input prompt string (MCQ format).
+        model_id:    OpenRouter model identifier (e.g. ``qwen/qwen3-8b``).
+        api_key:     OpenRouter API key string.
+        max_tokens:  maximum tokens to generate.
+        max_retries: number of attempts before re-raising.
+
+    Returns:
+        str: the generated text (empty string if content is None/empty).
+
+    Raises:
+        ImportError: if the 'openai' package is not installed.
+    """
+    try:
+        from openai import OpenAI
+    except ImportError as e:
+        raise ImportError(
+            "The 'openai' package is required for OpenRouter evaluation. "
+            "Install it with: pip install openai"
+        ) from e
+
+    client = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=api_key)
+    messages = [{"role": "user", "content": prompt}]
+
+    for attempt in range(max_retries):
+        try:
+            response = client.chat.completions.create(
+                model=model_id,
+                messages=messages,
+                max_tokens=max_tokens,
+            )
+            if not response.choices:
+                print(f"  WARNING: OpenRouter returned no choices — {response}")
+                return ""
+            content = response.choices[0].message.content
+            if content is None:
+                msg = response.choices[0].message
+                fallback = getattr(msg, "reasoning", None) or getattr(msg, "text", None)
+                print(
+                    f"  WARNING: content=None from OpenRouter "
+                    f"(finish_reason={response.choices[0].finish_reason!r}); "
+                    f"fallback field={'found' if fallback else 'not found'}."
+                )
+                return fallback or ""
+            return content
+        except Exception as exc:
+            if attempt < max_retries - 1 and "rate" in str(exc).lower():
+                import time as _time
+                _time.sleep(2 ** attempt)
+                continue
+            raise
+
+
+def mcq_eval_openrouter(model_id, path_to_jsonl, cred_path=None,
+                        include_negation=False, verbose_report=False,
+                        n_bootstrap=1000, output_dir=None):
+    """Evaluate an OpenRouter model on multiple-choice questions.
+
+    Uses OpenRouter's chat completions endpoint for generation with reasoning
+    suppressed. Runs bootstrap evaluation for confidence intervals. Always
+    writes a JSON report; writes a verbose markdown report only if
+    verbose_report is True.
+
+    Args:
+        model_id:          OpenRouter model identifier (e.g. ``qwen/qwen3-8b``).
+        path_to_jsonl:     path to a JSONL file of benchmark questions.
+        cred_path:         path to credentials file; None uses the default
+                           (``bertclassify/OpenRouterCredentials.txt``).
+        include_negation:  if True, include negation-type answers as distractors.
+        verbose_report:    if True, also write the detailed markdown report.
+        n_bootstrap:       number of bootstrap iterations for confidence intervals.
+        output_dir:        directory for report files; default is next to the JSONL.
+
+    Returns:
+        str: absolute path to the written JSON report.
+    """
+    path = Path(path_to_jsonl)
+    api_key = load_openrouter_credentials(cred_path)
+
+    questions = []
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                questions.append(json.loads(line))
+
+    model_safe = model_id.replace(":", "_").replace("/", "_")
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    out_dir = Path(output_dir) if output_dir else path.parent
+    out_dir.mkdir(parents=True, exist_ok=True)
+    json_report_path = out_dir / f"eval_results_mcq_{model_safe}_{timestamp}.json"
+    md_report_path = out_dir / f"eval_report_mcq_{model_safe}_{timestamp}.md"
+
+    total = len(questions)
+    try:
+        from tqdm import tqdm
+        question_iter = tqdm(enumerate(questions, 1), total=total, desc=model_id)
+        _tqdm_active = True
+    except ImportError:
+        question_iter = enumerate(questions, 1)
+        _tqdm_active = False
+
+    correct_total = 0
+    no_response_total = 0
+    category_results = {}
+    category_no_response = {}
+    all_skill_scores = []
+    category_skill = {}
+    per_question_blocks = []
+    all_mcq_results = []
+
+    for i, question in question_iter:
+        if not _tqdm_active and i % 50 == 0:
+            print(f"  Processed {i} of {total} questions...")
+
+        prompt_text, answer_order, correct_letter = _build_mcq_prompt(
+            question, use_metadata=True, include_negation=include_negation
+        )
+        response_text = _generate_openrouter(prompt_text, model_id, api_key)
+        chosen_letter = _parse_mcq_response(response_text)
+
+        if chosen_letter is None:
+            no_response_total += 1
+            category = question.get("question_category", "unknown")
+            print(f"  WARNING: no parseable letter in response for question {i} "
+                  f"(category: {category}) — "
+                  f"raw response: {repr(response_text)}")
+
+        is_correct = chosen_letter == correct_letter
+        if is_correct:
+            correct_total += 1
+
+        category = question.get("question_category", "unknown")
+        if category not in category_results:
+            category_results[category] = [0, 0]
+        if is_correct:
+            category_results[category][0] += 1
+        category_results[category][1] += 1
+        if chosen_letter is None:
+            category_no_response[category] = category_no_response.get(category, 0) + 1
+
+        k = len(answer_order)
+        r = sum(1 for _, _, p in answer_order if p == 1.0)
+        skill = calculate_mcq_skill_score(is_correct, k, r)
+        all_skill_scores.append(skill)
+        category_skill.setdefault(category, []).append(skill)
+        all_mcq_results.append({"is_correct": is_correct, "k": k})
+
+        result_str = "TRUE" if is_correct else "FALSE"
+        no_resp_str = "  ⚠ NO RESPONSE" if chosen_letter is None else ""
+
+        block = []
+        block.append(f"## Question {i}\n")
+        block.append(f"**Metadata:** {question.get('metadata_frame', '')}\n")
+        block.append(f"**Question:** {question.get('main_question', '')}\n")
+        block.append(f"**Category:** {category}\n")
+        block.append("**Choices:**")
+        for letter, ans_str, prob in answer_order:
+            markers = []
+            if letter == chosen_letter:
+                markers.append("←")
+            if prob == 1.0:
+                markers.append("(ground truth)")
+            marker_str = " ".join(markers)
+            block.append(f"- {letter}) {ans_str} {marker_str}".strip())
+        block.append(f"\n**Model response:** `{response_text.strip()}`")
+        block.append(
+            f"**Chosen:** {chosen_letter}  **Correct:** {correct_letter}  "
+            f"**Result:** {result_str}{no_resp_str}"
+        )
+        block.append(f"**Skill Score:** {skill:.4f}\n")
+        per_question_blocks.append("\n".join(block))
+
+    overall_accuracy = correct_total / total if total > 0 else 0.0
+    no_response_rate = no_response_total / total if total > 0 else 0.0
+    overall_mean_skill = sum(all_skill_scores) / len(all_skill_scores) if all_skill_scores else 0.0
+
+    correct_vector = [r["is_correct"] for r in all_mcq_results]
+    per_question_results = [
+        {"model_probs": None, "chosen_letter": None, "correct": r["is_correct"]}
+        for r in all_mcq_results
+    ]
+
+    gt_probs_list = [q["answer_probabilities"] for q in questions]
+    subset_index = build_subset_index(questions)
+    confidence_intervals = bootstrap_evaluate(
+        gt_probs_list, all_mcq_results, subset_index,
+        mode="mcq", n_bootstrap=n_bootstrap,
+    )
+
+    meta = {
+        "model_id": model_id,
+        "benchmark_file": str(path),
+        "eval_mode": "mcq",
+        "api": "openrouter",
+        "timestamp": timestamp,
+        "n_questions": total,
+        "n_bootstrap": n_bootstrap,
+    }
+    write_json_report(json_report_path, meta, per_question_results,
+                      confidence_intervals, correct_vector)
+
+    if verbose_report:
+        by_category = {
+            cat: counts[0] / counts[1] if counts[1] > 0 else 0.0
+            for cat, counts in category_results.items()
+        }
+        by_category_skill = {cat: sum(s) / len(s) for cat, s in category_skill.items()}
+
+        summary_lines = [
+            f"# MCQ Eval — {model_id}\n",
+            "## Summary\n",
+            f"**No-response rate:** {no_response_rate:.1%} "
+            f"({no_response_total} of {total} questions returned no parseable letter)\n",
+            "| Metric | Accuracy | Skill Score | No Response |",
+            "|--------|----------|-------------|-------------|",
+            f"| **Overall** | {overall_accuracy:.1%} | {overall_mean_skill:.4f} "
+            f"| {no_response_total} / {total} |",
+        ]
+        for cat in sorted(by_category.keys()):
+            acc = by_category[cat]
+            skill_avg = by_category_skill.get(cat, 0.0)
+            cat_total = category_results[cat][1]
+            cat_no_resp = category_no_response.get(cat, 0)
+            summary_lines.append(
+                f"| {cat} | {acc:.1%} | {skill_avg:.4f} | {cat_no_resp} / {cat_total} |"
+            )
+        summary_lines.append("")
+
+        report_text = "\n".join(summary_lines) + "\n" + "\n\n".join(per_question_blocks)
+        with open(md_report_path, "w", encoding="utf-8") as f:
+            f.write(report_text)
+
+    print(f"Overall MCQ accuracy: {overall_accuracy:.1%}")
+    print(f"Overall MCQ skill score: {overall_mean_skill:.4f}")
+    print(f"No-response rate: {no_response_rate:.1%} "
+          f"({no_response_total} of {total} questions returned no parseable letter)")
+    print(f"JSON report: {json_report_path}")
+    return str(json_report_path)
+
+
+# ---------------------------------------------------------------------------
 # OpenAI API path
 # ---------------------------------------------------------------------------
 
@@ -2446,6 +2741,7 @@ if __name__ == "__main__":
         description=(
             "Evaluate a model on benchmark questions (Brier score or MCQ accuracy).\n\n"
             "Together AI: use --api together for probabilistic (--full-eval) or MCQ.\n"
+            "OpenRouter: use --api openrouter for MCQ via OpenRouter's chat API.\n"
             "OpenAI models (gpt-4.1-*, gpt-5*, ft:gpt-4.1-*, ft:gpt-5*) are detected\n"
             "automatically when --mcq is set and routed to the Responses API.\n"
             "Credentials are read from evalcode/credentials.txt (or --credentials)."
@@ -2455,14 +2751,19 @@ if __name__ == "__main__":
     parser.add_argument("model_id",      help="HF model ID or local path (HF mode); "
                                               "Together AI model name (--api together); "
                                               "OpenAI model name (OpenAI mode); "
+                                              "OpenRouter model name (--api openrouter); "
                                               "vLLM model name (--vllm mode)")
     parser.add_argument("path_to_jsonl", help="Path to benchmark questions JSONL")
-    parser.add_argument("--api",         default=None, choices=["together"],
+    parser.add_argument("--api",         default=None, choices=["together", "openrouter"],
                         help="API backend: 'together' routes to Together AI's API "
-                             "for probabilistic (--full-eval) or MCQ (--mcq) eval")
+                             "for probabilistic (--full-eval) or MCQ (--mcq) eval; "
+                             "'openrouter' routes to OpenRouter for MCQ (--mcq) eval")
     parser.add_argument("--together-key", default=None, metavar="PATH",
                         help="Path to Together AI API key file "
                              "(default: evalcode/TogetherAPIKey.txt)")
+    parser.add_argument("--openrouter-key", default=None, metavar="PATH",
+                        help="Path to OpenRouter credentials file "
+                             "(default: bertclassify/OpenRouterCredentials.txt)")
     parser.add_argument("--vllm",        action="store_true",
                         help="Use legacy vLLM endpoint instead of HuggingFace")
     parser.add_argument("--device",      default=None,
@@ -2537,6 +2838,17 @@ if __name__ == "__main__":
             )
         else:
             parser.error("--api together requires --full-eval or --mcq")
+    elif args.api == "openrouter":
+        if not args.mcq:
+            parser.error("--api openrouter requires --mcq")
+        report = mcq_eval_openrouter(
+            args.model_id, args.path_to_jsonl,
+            cred_path=args.openrouter_key,
+            include_negation=args.include_negation,
+            verbose_report=args.verbose_report,
+            n_bootstrap=args.n_bootstrap,
+            output_dir=args.output_dir,
+        )
     elif args.vllm:
         report = test_five_questions(args.model_id, args.path_to_jsonl)
     elif args.full_eval:
