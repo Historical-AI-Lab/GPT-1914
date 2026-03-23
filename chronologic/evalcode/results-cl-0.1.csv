@@ -1,0 +1,15 @@
+﻿Model,scoretype,score_low,score_mid,score_high,color,marker,xpos
+Qwen-2.5-7B-ft,mcq,0.2934,0.3258,0.3611,maize,square,2
+Qwen-2.5-7B-i,gen-prob,0.1721,0.2017,0.2313,blue,square,1
+Qwen-2.5-32B-i,gen-prob,0.2073,0.2398,0.2708,blue,square,4
+Qwen-2.5-72B-i,mcq,0.426,0.4626,0.5007,maize,square,6
+Qwen-2.5-72B-i,gen-prob,0.2087,0.2412,0.2737,blue,square,6
+Qwen-2.5-32B-i,mcq,0.3117,0.347,0.3837,maize,square,4
+Qwen-2.5-7B-i,mcq,0.2623,0.2934,0.3272,maize,square,1
+GPT-4.1-i,mcq,0.6051,0.6403,0.6785,maize,square,7
+GPT-4.1-i,free-gen,0.2285,0.261,0.2934,lightblue,square,7
+Qwen-2.5-7B-ft,gen-prob,0.3202,0.354,0.3921,blue,square,2
+GPT-5.4,free-gen,0.6037,0.639,0.6756,lightblue,triangle,8
+GPT-5.4,mcq,0.8858,0.9069,0.9267,maize,triangle,8
+Gemma-3-27b-pt,gen-prob,0.2821,0.3131,0.3441,blue,circle,3
+QwQ-32b,mcq,0.38,0.4,0.42,gray,triangle,5
