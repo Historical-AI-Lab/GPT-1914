@@ -1,0 +1,101 @@
+{"question_number": 693, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 279, "metadata_frame": "", "main_question": "", "comments": "Consider how to handle unknown metadata fields. Here \"... an unknown unknown.\""}
+{"question_number": 646, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 178, "metadata_frame": "", "main_question": "", "comments": "Remove \"[ 27 ]\" from the first (correct) answer."}
+{"question_number": 512, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 40, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 368, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 261, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 89, "metadata_frame": "", "main_question": "", "comments": "Check the main body of the question. I think it's a series of descriptions of the character, but it reads confusedly."}
+{"question_number": 692, "metadata_frame": "", "main_question": "", "comments": "I'm not sure how best to separate metadata from question here. I thought of moving the author and title into the metadata (as our rules would seem to suggest), but then there's almost nothing left of the question. If we did change this, the metadata frame might best be unchanged, with the question becoming \"Provide a hypothetical condition in which it might be justly claimed that men were the actual political representatives of women.\""}
+{"question_number": 681, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 648, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 492, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 144, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 250, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 382, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 0, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 127, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 356, "metadata_frame": "The following passage comes from A Slave's Adventures Toward Freedom, an autobiography published in 1918 by Peter Bruner, an American soldier and writer.", "main_question": "", "comments": ""}
+{"question_number": 185, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 125, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 687, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 375, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 669, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 213, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 697, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 578, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 365, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 38, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 384, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 315, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 180, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 473, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 453, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 294, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 232, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 16, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 102, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 134, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 572, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 327, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 532, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 428, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 554, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 46, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 544, "metadata_frame": "", "main_question": "According to the author, \"A loose sentence is one whose meaning is clear, and whose grammatical structure is complete, at one or more places before the end of the sentence. A periodic sentence is one in which modifying phrases and clauses are so arranged as to keep the meaning and the grammatical structure incomplete until the end of the sentence.\" Change the following loose sentence into a periodic one: \"Mrs. Linnet, to be sure, is somewhat tiresome because of the shrillness of her note, which she repeats over and over; she is a loving mother to her numerous brood, and works faithfully for the family interests; we admire her, although we are tempted to ask her to retire to some faraway spot and cultivate her voice.\"", "comments": "Edited to remove author's name from question."}
+{"question_number": 576, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 228, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 586, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 340, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 148, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 409, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 449, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 239, "metadata_frame": "", "main_question": "", "comments": "Probably doesn't matter, but maybe cut the extraneous line break(s) in the same_book answer."}
+{"question_number": 459, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 117, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 418, "metadata_frame": "", "main_question": "", "comments": "Typo in manual_negation answer. Should read \"so as to escape a willing attention to his representations\""}
+{"question_number": 442, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 664, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 461, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 335, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 291, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 533, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 205, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 550, "metadata_frame": "", "main_question": "", "comments": "Do we need to rephase this as \"insuficient information\" or whatever it was that we agreed for absention?"}
+{"question_number": 667, "metadata_frame": "", "main_question": "", "comments": "Do we need to rephase this as \"insuficient information\" or whatever it was that we agreed for absention?"}
+{"question_number": 112, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 48, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 514, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 344, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 53, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 531, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 369, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 357, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 316, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 542, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 511, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 63, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 630, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 452, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 367, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 7, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 101, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 567, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 200, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 661, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 59, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 541, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 174, "metadata_frame": "The following passage comes from Ethics for children : a guide for teachers and parents, a textbook published in 1910 by Ella Lyman Cabot, an American philosopher, teacher, and writer.", "main_question": "", "comments": ""}
+{"question_number": 655, "metadata_frame": "", "main_question": "", "comments": "Likely fine, but flagging for sonsistency with wording of other absention questions"}
+{"question_number": 183, "metadata_frame": "", "main_question": "", "comments": "remove \"[51]\" from the body of the question"}
+{"question_number": 70, "metadata_frame": "This question asks you to provide dialogue for a character in a book. The book in this case is a story for children published in 1873 by Pansy, an American writer born in 1841.", "main_question": "", "comments": ""}
+{"question_number": 553, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 235, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 535, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 109, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 501, "metadata_frame": "", "main_question": "", "comments": "Manual distractors maybe too easy when not answering in HP?"}
+{"question_number": 151, "metadata_frame": "", "main_question": "", "comments": "Checking on line breaks. I know tokenization will mess this up anyway, but are breaks mainatined in the question in a way that could possibly lead to the correct answer?"}
+{"question_number": 41, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 434, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 412, "metadata_frame": "", "main_question": "", "comments": ""}
