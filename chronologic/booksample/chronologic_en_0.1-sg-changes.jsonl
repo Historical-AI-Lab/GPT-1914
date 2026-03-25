@@ -1,0 +1,101 @@
+{"question_number": 498, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 476, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 477, "metadata_frame": "", "main_question": "", "comments": "Replace \"What might she affirm about women\" with \"What might the author affirm about women\" in the question."}
+{"question_number": 120, "metadata_frame": "This question asks you to provide dialogue for a character in a book.\n                 The book in this case is a novel published in 1915 by Ellen\n                 Thorneycroft Fowler, an English writer born in 1860.", "main_question": "", "comments": ""}
+{"question_number": 163, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 110, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 430, "metadata_frame": "", "main_question": "", "comments": "It looks like the question is pulled from a section that might contain a list (I see \"(B)\" in the question, but no \"(A)\"). And part of the question looks like a title of a section in the book. Without the formatting from the book, it is a bit confusing to read. I'd recommend either editing out everything before \"Title to land or rights...\" or even possibly throwing out the question."}
+{"question_number": 248, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 74, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 362, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 490, "metadata_frame": "", "main_question": "How would the author likely define a \"muscle-curve\"?", "comments": ""}
+{"question_number": 249, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 349, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 177, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 451, "metadata_frame": "", "main_question": "", "comments": "May want to move \"The topic sentence has been masked\" from the metadata to the question itself, depending on how the metadata permutation experiment is set up (i.e., within question groups or across the whole set of questions)"}
+{"question_number": 380, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 36, "metadata_frame": "", "main_question": "", "comments": "Maybe change the \"I don't know\" option to \"Insufficient information\""}
+{"question_number": 229, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 132, "metadata_frame": "", "main_question": "", "comments": "Move \"This question asks you to provide dialogue for a character in a book\" down to the question itself, if the metadata permutation will span the entire corpus of questions (rather than just within question type)"}
+{"question_number": 304, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 159, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 584, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 679, "metadata_frame": "", "main_question": "", "comments": "Maybe change the ground truth to \"Insufficient information\" ?"}
+{"question_number": 424, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 305, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 176, "metadata_frame": "The following passage comes from Ethics for children : a guide for teachers and parents, a manual published in 1910 by Ella Lyman Cabot, a US educator, lecturer, and writer.", "main_question": "", "comments": ""}
+{"question_number": 363, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 486, "metadata_frame": "", "main_question": "", "comments": "Change \"I don't know\" to \"Insufficient information\""}
+{"question_number": 145, "metadata_frame": "", "main_question": "", "comments": "Maybe move \"This question asks you to provide dialogue for a character in a book\" tfrom the metadata to the question itself, depending on how the metadata permutation is handled (within question type or across all questions)."}
+{"question_number": 558, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 245, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 87, "metadata_frame": "", "main_question": "", "comments": "Possibly move \"This question asks you to provide dialogue for a character in a book\" from the metadata to the question itself."}
+{"question_number": 138, "metadata_frame": "", "main_question": "", "comments": "Possibly move \"This question asks you to provide dialogue for a character in a book\" from the metadata to the question itself."}
+{"question_number": 670, "metadata_frame": "", "main_question": "", "comments": "Change the ground truth answer to \"Insufficient information\""}
+{"question_number": 651, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 218, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 76, "metadata_frame": "", "main_question": "", "comments": "Possibly move \"This question asks you to provide dialogue for a character in a book\" out of metadata and into question itself, depending on how metadata permutation is structured."}
+{"question_number": 607, "metadata_frame": "", "main_question": "The author poses the question: \u2018If the connection between Mind and Language is so vital, why do not Birds, many of which apparently speak, emulate Man in mental power?\u2019 How might the author answer this question?", "comments": ""}
+{"question_number": 290, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 662, "metadata_frame": "", "main_question": "", "comments": "Change the ground truth answer to \"Insufficient information\""}
+{"question_number": 601, "metadata_frame": "", "main_question": "", "comments": "Change the ground truth to \"Insufficient information\""}
+{"question_number": 475, "metadata_frame": "", "main_question": "The author identifies a fundamental question: \"How it is that portions of matter can interact on each other which seem to have no means of connexion between them?\" Given the historical context, how might the author plausibly answer?", "comments": ""}
+{"question_number": 1, "metadata_frame": "", "main_question": "", "comments": "Change the manual (incorrect) response to \"Insufficient information\" instead of \"I don't know\""}
+{"question_number": 111, "metadata_frame": "", "main_question": "", "comments": "Maybe move \"This question asks you to provide dialogue for a character in a book\" from the metadata to the question itself, depending on the structure of the metadata permutation."}
+{"question_number": 602, "metadata_frame": "", "main_question": "The author writes, \"Who that is breakfastless and dinnerless can write an article on 'The Need of a Christmas Feast for the Poor'? The journalist writes of the need of the feast and receives as payment [masked amount]. That is what the hungry journalist writes it for -- the fee; and, if she is honest, she will admit it.\" What would be a plausible [masked amount] in this historical context?", "comments": ""}
+{"question_number": 244, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 329, "metadata_frame": "", "main_question": "", "comments": "I'm not sure if this is an issue, but there doesn't seem to be a profession listed in the metadata for the author. I can't find one easily online, but maybe \"educator\" or \"writer\" would fit?"}
+{"question_number": 341, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 157, "metadata_frame": "", "main_question": "", "comments": "It looks like the profession of the author isn't present in the metadata. Maybe add \"writer\" as the profession?"}
+{"question_number": 199, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 566, "metadata_frame": "", "main_question": "", "comments": "Change the manual (incorrect) response of \"I don't know\" to \"Insufficient information\""}
+{"question_number": 52, "metadata_frame": "", "main_question": "", "comments": "Change the manual (incorrect) response of \"I don't know\" to \"Insufficient information\""}
+{"question_number": 216, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 44, "metadata_frame": "", "main_question": "", "comments": "Change the manual (incorrect) response of \"I don't know\" to \"Insufficient information\""}
+{"question_number": 202, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 494, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 116, "metadata_frame": "", "main_question": "", "comments": "Perhaps move \"This question asks you to provide dialogue for a character in a book\" from the metadata to the question itself, depending on how metadata permutation is structured."}
+{"question_number": 287, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 27, "metadata_frame": "", "main_question": "", "comments": "Change the manual (incorrect) response of \"I don't know\" to \"Insufficient information\""}
+{"question_number": 388, "metadata_frame": "", "main_question": "", "comments": "The metadata seems to be missing a profession. Perhaps use \"writer\" or \"deaf writer\" as the profession/author details?"}
+{"question_number": 3, "metadata_frame": "", "main_question": "", "comments": "Change the manual (incorrect) response of \"I don't know\" to \"Insufficient information\""}
+{"question_number": 346, "metadata_frame": "The following passage comes from Treaty of Peace, a treaty published in 1920 by Allied and Associated Powers.", "main_question": "", "comments": ""}
+{"question_number": 397, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 441, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 220, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 706, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 593, "metadata_frame": "", "main_question": "", "comments": "Change the manual (incorrect) response of \"I don't know\" to \"Insufficient information\""}
+{"question_number": 175, "metadata_frame": "The following passage comes from Ethics for children : a guide for teachers and parents, a manual published in 1910 by Ella Lyman Cabot, a US educator, lecturer, and writer.", "main_question": "", "comments": ""}
+{"question_number": 406, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 35, "metadata_frame": "c", "main_question": "c", "comments": "Change the manual (incorrect) response of \"I don't know\" to \"Insufficient information\""}
+{"question_number": 171, "metadata_frame": "The following passage comes from Ethics for children : a guide for teachers and parents, a manual published in 1910 by Ella Lyman Cabot, a US educator, lecturer, and writer.", "main_question": "", "comments": "I think the ground truth answer here is actually incorrect; \"So\" is not being used to in introduce an effect (e.g., \"therefore\"), but rather it is being used as an intensifier"}
+{"question_number": 79, "metadata_frame": "", "main_question": "", "comments": "Perhaps move \"This question asks you to provide dialogue for a character in a book\" from the metadata to the question itself, depending on how the metadata permutation is structured."}
+{"question_number": 105, "metadata_frame": "", "main_question": "", "comments": "Perhaps move \"This question asks you to provide dialogue for a character in a book\" from the metadata to the question itself, depending on how the metadata permutation is structured."}
+{"question_number": 480, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 671, "metadata_frame": "", "main_question": "", "comments": "Perhaps update the ground truth answer to \"Insufficient information\""}
+{"question_number": 5, "metadata_frame": "", "main_question": "", "comments": "Change the manual (incorrect) response of \"I don't know\" to \"Insufficient information\""}
+{"question_number": 198, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 579, "metadata_frame": "", "main_question": "", "comments": "Change the manual (incorrect) response of \"I don't know\" to \"Insufficient information\""}
+{"question_number": 450, "metadata_frame": "", "main_question": "", "comments": "Perhaps move \"The topic sentence has been masked\" from the metadata to the question itself, depending on how the metadata permutation task is structured."}
+{"question_number": 588, "metadata_frame": "", "main_question": "", "comments": "Change the manual (incorrect) response of \"I don't know\" to \"Insufficient information\""}
+{"question_number": 253, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 72, "metadata_frame": "", "main_question": "", "comments": "Perhaps move \"This question asks you to provide dialogue for a character in a book\" from the metadata to the question itself, depending on how the metadata permutation is structured."}
+{"question_number": 672, "metadata_frame": "", "main_question": "", "comments": "Maybe change the ground truth to just \"Insufficient information\""}
+{"question_number": 467, "metadata_frame": "", "main_question": "", "comments": "Perhaps move \"The topic sentence has been masked\" from the metadata to the question itself, depending on how the metadata permutation task is structured."}
+{"question_number": 694, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 708, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 238, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 332, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 559, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 103, "metadata_frame": "", "main_question": "", "comments": "Perhaps move \"This question asks you to provide dialogue for a character in a book\" from the metadata to the question itself, depending on how the metadata permutation is structured."}
+{"question_number": 80, "metadata_frame": "", "main_question": "", "comments": "Perhaps move \"This question asks you to provide dialogue for a character in a book\" from the metadata to the question itself, depending on how the metadata permutation is structured."}
+{"question_number": 56, "metadata_frame": "", "main_question": "", "comments": "Perhaps move \"This question asks you to provide dialogue for a character in a book\" from the metadata to the question itself, depending on how the metadata permutation is structured."}
+{"question_number": 604, "metadata_frame": "", "main_question": "In London, the author takes their black poodle out for a walk on Regent Street and meets a woman named Dinah. Here's the passage where Dinah introduces herself: \"Judge was wearing a necktie of American fllag ribbon. [roughly twenty words of masked dialogue from Dinah] I felt a jerk of the chain by which I held Judge, and turning, beheld, there on Regent street, the United States of America in the shape of a stout, middle-aged negro woman showering pats and endearments on the head of my dog.\" Provide some plausible dialogue Dinah might have spoken:", "comments": ""}
+{"question_number": 581, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 686, "metadata_frame": "", "main_question": "", "comments": "Change the ground truth \"I don't know\" to \"Insufficient information\""}
+{"question_number": 637, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 264, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 481, "metadata_frame": "", "main_question": "", "comments": ""}
+{"question_number": 460, "metadata_frame": "", "main_question": "", "comments": "Perhaps move \"the topic sentence has been masked\" from the metadata to the question itself, depending on how the metadata permutation task is structured."}
+{"question_number": 574, "metadata_frame": "", "main_question": "", "comments": "Possibly change the ground truth to \"Insufficient information\" to keep all the abstention questions standardized."}
+{"question_number": 6, "metadata_frame": "", "main_question": "", "comments": "Change \"I don't know\" to \"Insufficient information\""}
