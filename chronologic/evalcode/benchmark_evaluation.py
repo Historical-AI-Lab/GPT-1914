@@ -69,6 +69,51 @@ OPENAI_MODEL_PREFIXES = (
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Abstention-aware prompt selection
+# ---------------------------------------------------------------------------
+# Questions whose reasoning_type is knowledge, abstention, or inference may
+# have "insufficient information" as the correct answer.  For these questions
+# we add an explicit hint so the model knows that option is legitimate.
+# For MCQ evaluation this appears both in the system-level instructions
+# (OpenAI Responses API) and in the prompt text itself (all other backends).
+# For probabilistic evaluation a short reminder is inserted between the
+# metadata frame and the question text.
+
+_ABSTENTION_REASONING_TYPES = {"knowledge", "abstention", "inference"}
+
+MCQ_INSTRUCTIONS_A = (
+    "Choose the best answer. Respond with only the letter of the correct answer. "
+    "If the historical context described would not have known how to answer, "
+    "choose the letter for 'insufficient information'."
+)
+MCQ_INSTRUCTIONS_B = (
+    "Choose the best answer. Respond with only the letter of the correct answer."
+)
+
+_PROB_ABSTENTION_REMINDER = (
+    "If the author(s) of this text would not have been able to answer "
+    "the question, reply 'insufficient information'."
+)
+
+
+def _is_abstention_question(question):
+    """Return True if this question should get the abstention prompt variant.
+
+    Checks reasoning_type first, then falls back to scanning answer_strings
+    for 'insufficient information' or 'i don't know'.
+    """
+    rt = question.get("reasoning_type", "")
+    if rt in _ABSTENTION_REASONING_TYPES:
+        return True
+    for a in question.get("answer_strings", []):
+        if isinstance(a, str):
+            low = a.lower()
+            if "insufficient information" in low or "i don't know" in low:
+                return True
+    return False
+
+
 def _build_question_text(question, use_metadata=True):
     """Compose the prompt prefix for a question.
 
@@ -79,15 +124,14 @@ def _build_question_text(question, use_metadata=True):
     Returns:
         str ending with 'ANSWER: ' ready for answer concatenation.
     """
+    parts = []
     if use_metadata:
-        return (
-            question["metadata_frame"]
-            + "\nQUESTION: "
-            + question["main_question"]
-            + "\nANSWER: "
-        )
-    else:
-        return "QUESTION: " + question["main_question"] + "\nANSWER: "
+        parts.append(question["metadata_frame"])
+    if _is_abstention_question(question):
+        parts.append(_PROB_ABSTENTION_REMINDER)
+    parts.append("QUESTION: " + question["main_question"])
+    parts.append("ANSWER: ")
+    return "\n".join(parts)
 
 
 def _build_mcq_prompt(question, use_metadata=True, include_negation=False):
@@ -133,7 +177,14 @@ def _build_mcq_prompt(question, use_metadata=True, include_negation=False):
     lines.append(f"QUESTION: {question['main_question']}")
     for letter, s, p in answer_order:
         lines.append(f"{letter}) {s}")
-    lines.append("Respond only with the letter of the correct answer:")
+    if _is_abstention_question(question):
+        lines.append(
+            "If the historical context described would not have known how to "
+            "answer, choose the letter for 'insufficient information'. "
+            "Respond only with the letter of the correct answer:"
+        )
+    else:
+        lines.append("Respond only with the letter of the correct answer:")
 
     prompt_text = "\n".join(lines)
     return prompt_text, answer_order, correct_letter
@@ -2036,7 +2087,7 @@ def load_openrouter_credentials(cred_path=None):
     raise ValueError(f"No 'password:' line found in {cred_path}")
 
 
-def _generate_openrouter(prompt, model_id, api_key, max_tokens=4096, max_retries=3):
+def _generate_openrouter(prompt, model_id, api_key, max_tokens=4096, max_retries=5):
     """Generate text from a prompt via OpenRouter chat completions.
 
     Designed for reasoning models (QwQ-32b, DeepSeek-R1, etc.) that emit
@@ -2090,9 +2141,14 @@ def _generate_openrouter(prompt, model_id, api_key, max_tokens=4096, max_retries
                 return fallback or ""
             return content
         except Exception as exc:
-            if attempt < max_retries - 1 and "rate" in str(exc).lower():
+            retryable = any(kw in str(exc).lower()
+                            for kw in ("rate", "json", "502", "503", "connection", "timeout"))
+            if attempt < max_retries - 1 and retryable:
                 import time as _time
-                _time.sleep(2 ** attempt)
+                wait = 2 ** attempt
+                print(f"  WARNING: transient error (attempt {attempt + 1}/{max_retries}), "
+                      f"retrying in {wait}s: {exc}")
+                _time.sleep(wait)
                 continue
             raise
 
@@ -2439,7 +2495,7 @@ def _parse_mcq_response_openai(response_text):
 
 def _generate_openai(prompt, model_id, client, valid_letters=None,
                      max_output_tokens=25000, reasoning_effort="medium",
-                     use_json_schema=True):
+                     use_json_schema=True, question=None):
     """Generate a Responses API completion for an MCQ prompt.
 
     Sends the prompt as input with a concise instructions string.  Reasoning
@@ -2470,7 +2526,7 @@ def _generate_openai(prompt, model_id, client, valid_letters=None,
         str: the model's raw response text (JSON string when structured outputs
              are active, e.g. '{"choice":"C"}'; plain text otherwise).
     """
-    instructions = "Choose the best answer. Respond with only the letter of the correct answer."
+    instructions = MCQ_INSTRUCTIONS_A if _is_abstention_question(question or {}) else MCQ_INSTRUCTIONS_B
 
     text_format = None
     if use_json_schema and valid_letters:
@@ -2592,6 +2648,7 @@ def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
         response_text = _generate_openai(
             prompt_text, model_id, client, valid_letters=valid_letters,
             reasoning_effort=reasoning_effort, use_json_schema=use_json_schema,
+            question=question,
         )
         chosen_letter = _parse_mcq_response_openai(response_text)
 
@@ -2744,6 +2801,8 @@ if __name__ == "__main__":
             "OpenRouter: use --api openrouter for MCQ via OpenRouter's chat API.\n"
             "OpenAI models (gpt-4.1-*, gpt-5*, ft:gpt-4.1-*, ft:gpt-5*) are detected\n"
             "automatically when --mcq is set and routed to the Responses API.\n"
+            "OpenAI (forced): use --api openai --mcq to route any model name to the\n"
+            "OpenAI Responses API (e.g. gpt-oss-20b).\n"
             "Credentials are read from evalcode/credentials.txt (or --credentials)."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -2754,10 +2813,12 @@ if __name__ == "__main__":
                                               "OpenRouter model name (--api openrouter); "
                                               "vLLM model name (--vllm mode)")
     parser.add_argument("path_to_jsonl", help="Path to benchmark questions JSONL")
-    parser.add_argument("--api",         default=None, choices=["together", "openrouter"],
+    parser.add_argument("--api",         default=None, choices=["together", "openrouter", "openai"],
                         help="API backend: 'together' routes to Together AI's API "
                              "for probabilistic (--full-eval) or MCQ (--mcq) eval; "
-                             "'openrouter' routes to OpenRouter for MCQ (--mcq) eval")
+                             "'openrouter' routes to OpenRouter for MCQ (--mcq) eval; "
+                             "'openai' forces OpenAI Responses API for MCQ (--mcq) eval, "
+                             "allowing any model name (e.g. gpt-oss-20b)")
     parser.add_argument("--together-key", default=None, metavar="PATH",
                         help="Path to Together AI API key file "
                              "(default: evalcode/TogetherAPIKey.txt)")
@@ -2847,6 +2908,20 @@ if __name__ == "__main__":
             include_negation=args.include_negation,
             verbose_report=args.verbose_report,
             n_bootstrap=args.n_bootstrap,
+            output_dir=args.output_dir,
+        )
+    elif args.api == "openai":
+        if not args.mcq:
+            parser.error("--api openai requires --mcq")
+        report = mcq_eval_openai(
+            args.model_id, args.path_to_jsonl,
+            credentials_path=args.credentials,
+            include_negation=args.include_negation,
+            trace=args.trace,
+            verbose_report=args.verbose_report,
+            n_bootstrap=args.n_bootstrap,
+            reasoning_effort=args.reasoning_effort,
+            use_json_schema=not args.no_json_schema,
             output_dir=args.output_dir,
         )
     elif args.vllm:
