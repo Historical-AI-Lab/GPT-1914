@@ -10,7 +10,7 @@
 #SBATCH --output=talkie-eval-%j.out
 #SBATCH --gpus-per-node=1
 #SBATCH --gpu-bind=closest
-#SBATCH --mem=64g
+#SBATCH --mem=128g
 #SBATCH --constraint="scratch"
 
 echo "Job starting on $(hostname)"
@@ -21,6 +21,9 @@ module load cudatoolkit/25.3_12.8
 module list
 
 source "$SLURM_SUBMIT_DIR/talkie-eval-env/bin/activate"
+
+export HF_HOME=/work/nvme/bdfx/.cache/huggingface
+export HF_HUB_OFFLINE=1
 
 SCRIPT_DIR="$SLURM_SUBMIT_DIR"
 cd "$SCRIPT_DIR"
