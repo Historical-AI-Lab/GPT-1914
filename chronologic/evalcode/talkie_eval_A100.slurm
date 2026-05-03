@@ -20,7 +20,7 @@ module reset
 module load cudatoolkit/25.3_12.8
 module list
 
-source /projects/bdfx/talkie-eval-env/bin/activate
+source "$SLURM_SUBMIT_DIR/talkie-eval-env/bin/activate"
 
 export HF_HOME=/projects/bdfx/hf_cache
 
