@@ -217,6 +217,11 @@ def _generate_hf(prompt, model, tokenizer, max_new_tokens=10):
     """
     import torch
 
+    # Allow tokenizers (e.g. Talkie-IT) to apply a chat template before encoding.
+    fmt = getattr(tokenizer, "format_context", None)
+    if fmt is not None:
+        prompt = fmt(prompt)
+
     inputs = tokenizer(prompt, return_tensors="pt")
     device = _input_device(model)
     input_ids = inputs.input_ids.to(device)
@@ -340,6 +345,11 @@ def _score_answer_ll_hf(context_text, answer_text, model, tokenizer):
 
     import torch
 
+    # Allow tokenizers (e.g. Talkie-IT) to apply a chat template to the context.
+    fmt = getattr(tokenizer, "format_context", None)
+    if fmt is not None:
+        context_text = fmt(context_text)
+
     full_ids    = tokenizer(context_text + answer_text, return_tensors="pt").input_ids
     context_ids = tokenizer(context_text,               return_tensors="pt").input_ids
     answer_start = context_ids.shape[1]
@@ -398,6 +408,21 @@ def load_model(model_id, device=None, device_map=None, trust_remote_code=False, 
         tuple: (model, tokenizer)
     """
     import torch
+
+    # Talkie custom model — handled before HF transformers loading.
+    import importlib, os as _os, sys as _sys
+    _here = _os.path.dirname(_os.path.abspath(__file__))
+    if _here not in _sys.path:
+        _sys.path.insert(0, _here)
+    try:
+        _talkie = importlib.import_module("talkie_backend")
+        if _talkie.is_talkie_model(model_id):
+            return _talkie.load_talkie_model(
+                model_id, device=device, device_map=device_map
+            )
+    except ImportError:
+        pass
+
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     if device_map is not None and quantize is not None:
