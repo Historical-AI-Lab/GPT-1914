@@ -416,12 +416,11 @@ def load_model(model_id, device=None, device_map=None, trust_remote_code=False, 
         _sys.path.insert(0, _here)
     try:
         _talkie = importlib.import_module("talkie_backend")
-        if _talkie.is_talkie_model(model_id):
-            return _talkie.load_talkie_model(
-                model_id, device=device, device_map=device_map
-            )
     except ImportError:
-        pass
+        _talkie = None
+    if _talkie is not None and _talkie.is_talkie_model(model_id):
+        # Call outside the try/except so errors (e.g. talkie not installed) propagate.
+        return _talkie.load_talkie_model(model_id, device=device, device_map=device_map)
 
     from transformers import AutoModelForCausalLM, AutoTokenizer
 

@@ -20,10 +20,7 @@ module reset
 module load cudatoolkit/25.3_12.8
 module list
 
-source ../qwentuning/qlora-env/bin/activate
-
-# Install talkie package if not already in the env (idempotent).
-pip install -q -e ../../talkie
+source /projects/bdfx/talkie-eval-env/bin/activate
 
 export HF_HOME=/projects/bdfx/hf_cache
 
