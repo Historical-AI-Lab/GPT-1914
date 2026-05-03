@@ -22,8 +22,6 @@ module list
 
 source "$SLURM_SUBMIT_DIR/talkie-eval-env/bin/activate"
 
-export HF_HOME=/projects/bdfx/hf_cache
-
 SCRIPT_DIR="$SLURM_SUBMIT_DIR"
 cd "$SCRIPT_DIR"
 
