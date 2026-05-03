@@ -33,14 +33,14 @@ cd "$SCRIPT_DIR"
 
 # python -u benchmark_evaluation.py \
 #     talkie-1930-13b-base \
-#     ../booksample/chronologic_en_0.1.jsonl \
+#     ../booksample/chronologic_en_0.2.jsonl \
 #     --full-eval \
 #     --verbose-report \
 #     --output-dir prob_results
 #
 # python -u benchmark_evaluation.py \
 #     talkie-1930-13b-it \
-#     ../booksample/chronologic_en_0.1.jsonl \
+#     ../booksample/chronologic_en_0.2.jsonl \
 #     --full-eval \
 #     --verbose-report \
 #     --output-dir prob_results
@@ -50,14 +50,14 @@ cd "$SCRIPT_DIR"
 
 python -u benchmark_evaluation.py \
     talkie-1930-13b-base \
-    ../booksample/chronologic_en_0.1.jsonl \
+    ../booksample/chronologic_en_0.2.jsonl \
     --mcq \
     --verbose-report \
     --output-dir mcq_results
 
 python -u benchmark_evaluation.py \
     talkie-1930-13b-it \
-    ../booksample/chronologic_en_0.1.jsonl \
+    ../booksample/chronologic_en_0.2.jsonl \
     --mcq \
     --verbose-report \
     --output-dir mcq_results
@@ -70,7 +70,7 @@ date
 #
 #   python -u benchmark_evaluation.py \
 #       /projects/bdfx/models/my-talkie-ft-v1 \
-#       ../booksample/chronologic_en_0.1.jsonl \
+#       ../booksample/chronologic_en_0.2.jsonl \
 #       --full-eval \
 #       --verbose-report \
 #       --output-dir prob_results
