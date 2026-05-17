@@ -8,6 +8,7 @@ are written to a JSON file for evaluation by a separate scoring script.
 Supported backends:
   HuggingFace transformers (local models, Apple Silicon / CUDA / CPU)
   OpenAI Responses API (GPT-4.1, GPT-5, fine-tuned variants)
+  OpenRouter chat completions API (reasoning models, e.g. DeepSeek-R1)
 
 Usage:
   # Print formatted prompts before running (recommended first step):
@@ -22,8 +23,12 @@ Usage:
   # Run on local HF model (5 questions for testing):
   python benchmark_free_generation.py Qwen/Qwen2.5-7B-Instruct path.jsonl -n 5
 
-Requires (HF path):     pip install torch transformers
-Requires (OpenAI path): pip install openai  +  evalcode/credentials.txt
+  # Run on OpenRouter model:
+  python benchmark_free_generation.py deepseek/deepseek-r1 path.jsonl --api openrouter
+
+Requires (HF path):         pip install torch transformers
+Requires (OpenAI path):     pip install openai  +  evalcode/credentials.txt
+Requires (OpenRouter path): pip install openai  +  bertclassify/OpenRouterCredentials.txt
 """
 
 import json
@@ -43,8 +48,10 @@ from benchmark_evaluation import (
     load_model,
     is_openai_model,
     load_openai_credentials,
+    load_openrouter_credentials,
     _call_responses_with_retry,
     _generate_hf,
+    OPENROUTER_BASE_URL,
 )
 
 # ---------------------------------------------------------------------------
@@ -351,6 +358,82 @@ def generate_answer_hf(question, model, tokenizer):
     return answer.strip(), length_spec
 
 
+def _decode_bpe_artifacts(text):
+    """Replace GPT-2 BPE tokenizer characters leaked into API responses.
+
+    Some distilled reasoning models (e.g. DeepSeek-R1-distill) served via
+    OpenRouter emit raw BPE token characters instead of decoded text:
+      Ġ (U+0120) → space   (marks a space preceding a token)
+      Ċ (U+010A) → newline
+    """
+    return text.replace('Ġ', ' ').replace('Ċ', '\n')
+
+
+def generate_answer_openrouter(question, model_id, api_key, max_retries=5):
+    """Generate a free-text answer via OpenRouter chat completions.
+
+    Passes system and user prompts as separate messages.  Uses a high
+    max_tokens ceiling to accommodate reasoning-model traces; the length_spec
+    in the system prompt still constrains the visible answer length.
+
+    Args:
+        question:    benchmark question dict.
+        model_id:    OpenRouter model identifier (e.g. ``deepseek/deepseek-r1``).
+        api_key:     OpenRouter API key string.
+        max_retries: attempts before re-raising on transient errors.
+
+    Returns:
+        tuple: (answer_str, length_spec_str)
+    """
+    try:
+        from openai import OpenAI
+    except ImportError as e:
+        raise ImportError(
+            "The 'openai' package is required for OpenRouter evaluation. "
+            "Install it with: pip install openai"
+        ) from e
+
+    system_str, user_str, _max_tokens, length_spec = build_prompts(question)
+    client = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=api_key)
+    messages = [
+        {"role": "system", "content": system_str},
+        {"role": "user",   "content": user_str},
+    ]
+
+    import time as _time
+    for attempt in range(max_retries):
+        try:
+            response = client.chat.completions.create(
+                model=model_id,
+                messages=messages,
+                max_tokens=4096,
+            )
+            if not response.choices:
+                print(f"  WARNING: OpenRouter returned no choices — {response}")
+                return "", length_spec
+            content = response.choices[0].message.content
+            if content is None:
+                msg = response.choices[0].message
+                fallback = getattr(msg, "reasoning", None) or getattr(msg, "text", None)
+                print(
+                    f"  WARNING: content=None from OpenRouter "
+                    f"(finish_reason={response.choices[0].finish_reason!r}); "
+                    f"fallback field={'found' if fallback else 'not found'}."
+                )
+                return _decode_bpe_artifacts(fallback or "").strip(), length_spec
+            return _decode_bpe_artifacts(content).strip(), length_spec
+        except Exception as exc:
+            retryable = any(kw in str(exc).lower()
+                            for kw in ("rate", "json", "502", "503", "connection", "timeout"))
+            if attempt < max_retries - 1 and retryable:
+                wait = 2 ** attempt
+                print(f"  WARNING: transient error (attempt {attempt + 1}/{max_retries}), "
+                      f"retrying in {wait}s: {exc}")
+                _time.sleep(wait)
+                continue
+            raise
+
+
 # ---------------------------------------------------------------------------
 # Output normalization
 # ---------------------------------------------------------------------------
@@ -475,7 +558,9 @@ def run_free_generation(
     model_id,
     path_to_jsonl,
     output_path=None,
+    api=None,
     credentials_path=None,
+    openrouter_key=None,
     reasoning_effort="none",
     quantize=None,
     lora_adapter=None,
@@ -484,15 +569,18 @@ def run_free_generation(
 ):
     """Generate free-text answers for benchmark questions and write a JSON report.
 
-    Detects HuggingFace vs OpenAI backend from model_id.  Resumes automatically
-    if the output file already exists (skips already-answered question_numbers).
-    Writes the output JSON after every answer so a crash loses at most one answer.
+    Detects HuggingFace vs OpenAI vs OpenRouter backend from model_id and api.
+    Resumes automatically if the output file already exists (skips
+    already-answered question_numbers).  Writes the output JSON after every
+    answer so a crash loses at most one answer.
 
     Args:
-        model_id:          HF model path/ID or OpenAI model ID.
+        model_id:          HF model path/ID, OpenAI model ID, or OpenRouter model ID.
         path_to_jsonl:     path to benchmark JSONL file.
         output_path:       output JSON path; auto-named if None.
+        api:               'openrouter' to force OpenRouter backend; None = auto-detect.
         credentials_path:  path to OpenAI credentials file; None = default.
+        openrouter_key:    path to OpenRouter credentials file; None = default.
         reasoning_effort:  OpenAI Responses API reasoning effort.
         quantize:          'int4' or 'int8' for HF torchao quantization; None = off.
         lora_adapter:      path to LoRA adapter; None = off.
@@ -527,13 +615,18 @@ def run_free_generation(
     output_data = {"model": model_id, "answers": answers}
 
     # Set up backend
-    use_openai = is_openai_model(model_id)
+    use_openrouter = (api == "openrouter")
+    use_openai = (not use_openrouter) and is_openai_model(model_id)
 
-    if use_openai:
+    if use_openrouter:
+        or_api_key = load_openrouter_credentials(openrouter_key)
+        hf_model = hf_tokenizer = client = None
+        print(f"Using OpenRouter backend: {model_id}")
+    elif use_openai:
         org_id, api_key = load_openai_credentials(credentials_path)
         from openai import OpenAI
         client = OpenAI(organization=org_id, api_key=api_key)
-        hf_model = hf_tokenizer = None
+        hf_model = hf_tokenizer = or_api_key = None
     else:
         print(f"Loading model: {model_id}")
         hf_model, hf_tokenizer = load_model(
@@ -542,7 +635,7 @@ def run_free_generation(
             quantize=quantize,
             lora_adapter=lora_adapter,
         )
-        client = None
+        client = or_api_key = None
 
     # Generate answers
     total = len(questions)
@@ -553,7 +646,9 @@ def run_free_generation(
 
         print(f"  [{idx + 1}/{total}] question_number={qnum}", end=' ', flush=True)
 
-        if use_openai:
+        if use_openrouter:
+            answer, length_spec = generate_answer_openrouter(q, model_id, or_api_key)
+        elif use_openai:
             answer, length_spec = generate_answer_openai(
                 q, model_id, client, reasoning_effort=reasoning_effort
             )
@@ -609,12 +704,21 @@ def main():
         help="Print full formatted prompts for 5 random questions and exit.",
     )
     parser.add_argument(
+        '--api', default=None, choices=['openrouter'],
+        help="Force a specific backend: 'openrouter' routes to OpenRouter chat API.",
+    )
+    parser.add_argument(
         '--output', metavar='PATH',
         help="Override output JSON file path.",
     )
     parser.add_argument(
         '--credentials', metavar='PATH',
         help="Path to OpenAI credentials file (default: evalcode/credentials.txt).",
+    )
+    parser.add_argument(
+        '--openrouter-key', metavar='PATH',
+        help="Path to OpenRouter credentials file "
+             "(default: bertclassify/OpenRouterCredentials.txt).",
     )
     parser.add_argument(
         '--reasoning-effort',
@@ -656,7 +760,9 @@ def main():
         model_id=args.model_id,
         path_to_jsonl=args.path_to_jsonl,
         output_path=args.output,
+        api=args.api,
         credentials_path=args.credentials,
+        openrouter_key=args.openrouter_key,
         reasoning_effort=args.reasoning_effort,
         quantize=args.quantize,
         lora_adapter=args.lora_adapter,
