@@ -358,18 +358,60 @@ def generate_answer_hf(question, model, tokenizer):
     return answer.strip(), length_spec
 
 
+def _build_gpt2_unicode_to_byte():
+    """Build the reverse of the GPT-2 bytes_to_unicode mapping (char → byte)."""
+    bs = (list(range(ord('!'), ord('~') + 1))
+          + list(range(ord('¡'), ord('¬') + 1))
+          + list(range(ord('®'), ord('ÿ') + 1)))
+    cs = bs[:]
+    n = 0
+    for b in range(256):
+        if b not in bs:
+            bs.append(b)
+            cs.append(256 + n)
+            n += 1
+    return {chr(c): b for b, c in zip(bs, cs)}
+
+_GPT2_UNICODE_TO_BYTE = _build_gpt2_unicode_to_byte()
+
+
 def _decode_bpe_artifacts(text):
-    """Replace GPT-2 BPE tokenizer characters leaked into API responses.
+    """Decode GPT-2 BPE tokenizer artifacts in API responses.
 
-    Some distilled reasoning models (e.g. DeepSeek-R1-distill) served via
-    OpenRouter emit raw BPE token characters instead of decoded text:
-      Ġ (U+0120) → space   (marks a space preceding a token)
-      Ċ (U+010A) → newline
+    Processes runs of consecutive non-ASCII characters.  Each run is mapped
+    back to bytes via the GPT-2 reverse mapping, then decoded as UTF-8.  If
+    the bytes form valid UTF-8 the decoded string replaces the run; otherwise
+    the original characters are kept unchanged.  This correctly handles spaces
+    (Ġ -> 0x20), newlines (Ck -> 0x0A), em dashes (aGK -> -), curly quotes,
+    accented letters (A(c) -> e-acute), and leaves legitimate Unicode untouched.
     """
-    return text.replace('Ġ', ' ').replace('Ċ', '\n')
+    if text.isascii():
+        return text
+    result = []
+    i = 0
+    while i < len(text):
+        c = text[i]
+        if ord(c) < 0x80:
+            result.append(c)
+            i += 1
+        else:
+            j = i
+            while j < len(text) and ord(text[j]) >= 0x80:
+                j += 1
+            run = text[i:j]
+            if all(ch in _GPT2_UNICODE_TO_BYTE for ch in run):
+                raw_bytes = bytes(_GPT2_UNICODE_TO_BYTE[ch] for ch in run)
+                try:
+                    result.append(raw_bytes.decode('utf-8', errors='strict'))
+                except UnicodeDecodeError:
+                    result.append(run)
+            else:
+                result.append(run)
+            i = j
+    return ''.join(result)
 
 
-def generate_answer_openrouter(question, model_id, api_key, max_retries=5):
+def generate_answer_openrouter(question, model_id, api_key, max_retries=5, provider=None):
     """Generate a free-text answer via OpenRouter chat completions.
 
     Passes system and user prompts as separate messages.  Uses a high
@@ -400,6 +442,10 @@ def generate_answer_openrouter(question, model_id, api_key, max_retries=5):
         {"role": "user",   "content": user_str},
     ]
 
+    extra = {}
+    if provider:
+        extra["extra_body"] = {"provider": {"order": [provider], "allow_fallbacks": False}}
+
     import time as _time
     for attempt in range(max_retries):
         try:
@@ -407,6 +453,7 @@ def generate_answer_openrouter(question, model_id, api_key, max_retries=5):
                 model=model_id,
                 messages=messages,
                 max_tokens=4096,
+                **extra,
             )
             if not response.choices:
                 print(f"  WARNING: OpenRouter returned no choices — {response}")
@@ -427,6 +474,12 @@ def generate_answer_openrouter(question, model_id, api_key, max_retries=5):
                             for kw in ("rate", "json", "502", "503", "connection", "timeout"))
             if attempt < max_retries - 1 and retryable:
                 wait = 2 ** attempt
+                # Respect Retry-After hint if the provider supplies one
+                exc_str = str(exc)
+                import re as _re
+                m = _re.search(r"retry_after_seconds['\"]?\s*:\s*(\d+)", exc_str)
+                if m:
+                    wait = max(wait, int(m.group(1)))
                 print(f"  WARNING: transient error (attempt {attempt + 1}/{max_retries}), "
                       f"retrying in {wait}s: {exc}")
                 _time.sleep(wait)
@@ -561,6 +614,8 @@ def run_free_generation(
     api=None,
     credentials_path=None,
     openrouter_key=None,
+    openrouter_provider=None,
+    request_delay=0.0,
     reasoning_effort="none",
     quantize=None,
     lora_adapter=None,
@@ -581,6 +636,8 @@ def run_free_generation(
         api:               'openrouter' to force OpenRouter backend; None = auto-detect.
         credentials_path:  path to OpenAI credentials file; None = default.
         openrouter_key:    path to OpenRouter credentials file; None = default.
+        openrouter_provider: pin routing to a specific OpenRouter provider; None = auto.
+        request_delay:     seconds to sleep between requests (float); 0 = no delay.
         reasoning_effort:  OpenAI Responses API reasoning effort.
         quantize:          'int4' or 'int8' for HF torchao quantization; None = off.
         lora_adapter:      path to LoRA adapter; None = off.
@@ -647,7 +704,9 @@ def run_free_generation(
         print(f"  [{idx + 1}/{total}] question_number={qnum}", end=' ', flush=True)
 
         if use_openrouter:
-            answer, length_spec = generate_answer_openrouter(q, model_id, or_api_key)
+            answer, length_spec = generate_answer_openrouter(
+                q, model_id, or_api_key, provider=openrouter_provider
+            )
         elif use_openai:
             answer, length_spec = generate_answer_openai(
                 q, model_id, client, reasoning_effort=reasoning_effort
@@ -670,6 +729,10 @@ def run_free_generation(
         # Write after every answer (crash-safe)
         with open(output_path, 'w', encoding='utf-8') as fh:
             json.dump(output_data, fh, indent=2, ensure_ascii=False)
+
+        if request_delay > 0:
+            import time as _time
+            _time.sleep(request_delay)
 
     print(f"\nDone. Results written to: {output_path.resolve()}")
     return str(output_path.resolve())
@@ -721,6 +784,16 @@ def main():
              "(default: bertclassify/OpenRouterCredentials.txt).",
     )
     parser.add_argument(
+        '--openrouter-provider', metavar='NAME',
+        help="Pin routing to a specific OpenRouter provider (e.g. 'DeepSeek'). "
+             "Disables fallbacks. Useful when you have a BYOK key for that provider.",
+    )
+    parser.add_argument(
+        '--request-delay', type=float, default=0.0, metavar='SECONDS',
+        help="Sleep this many seconds between requests (default: 0). "
+             "Use ~12 to stay under NextBit's rate limit for distill models.",
+    )
+    parser.add_argument(
         '--reasoning-effort',
         choices=['none', 'minimal', 'low', 'medium', 'high'],
         default='none',
@@ -763,6 +836,8 @@ def main():
         api=args.api,
         credentials_path=args.credentials,
         openrouter_key=args.openrouter_key,
+        openrouter_provider=args.openrouter_provider,
+        request_delay=args.request_delay,
         reasoning_effort=args.reasoning_effort,
         quantize=args.quantize,
         lora_adapter=args.lora_adapter,
