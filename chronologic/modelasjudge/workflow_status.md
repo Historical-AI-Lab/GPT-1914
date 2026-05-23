@@ -5,6 +5,55 @@ lists the script, its status, canonical input/output paths, and open work items.
 
 ---
 
+## Module inventory
+
+The pipeline separates **shared library modules** (no `__main__`, imported by
+multiple stage scripts) from **stage scripts** (each runs as a CLI tool).
+
+### Shared library modules
+
+| Module | Role | Imported by |
+|---|---|---|
+| `naming.py` | Filesystem-safe tag helpers (`candidate_tag`, `judge_tag`, `benchmark_version`, `sanitize`). Every script that reads or writes `generated_answers/` or `scored_answers/` imports this so filenames are consistent. | `free_generation`, `judge_scoring`, `judge_reliability`, `discriminative_scoring`, `human_scoring`, `score_calculation`, `bootstrap_confidence`, `bayes_correction`, `free_gen_adapter` |
+| `judge_prompts.py` | Pure prompt-building module: `build_judge_prompt`, `parse_judge_response`, `assign_positions`, `score_one_comparison`. No network calls or file I/O. Centralises prompt strings and scoring logic so they're never duplicated. | `judge_scoring`, `judge_reliability`, `inspect_judge_prompts` |
+| `openrouter_client.py` | OpenRouter API wrapper: `is_openrouter_model`, `load_openrouter_api_key`, `make_openrouter_client`, `call_openrouter_chat`. Also used for direct Anthropic and OpenAI calls via the OpenRouter unified endpoint. | `free_generation`, `judge_scoring`, `judge_reliability` |
+
+### External dependencies (outside this directory)
+
+Two modules from other parts of the repo are imported directly:
+
+- **`../bertclassify/filter_balance_clean.py`** — `normalize_text` used by
+  `discriminative_scoring.py` to normalise text before DeBERTa inference.
+- **`../evalcode/benchmark_evaluation.py`** — benchmark-loading utilities used
+  by `free_generation.py`.
+
+Both must be on `sys.path` (or the scripts run from `modelasjudge/` with the
+repo root also on the path) for the imports to resolve.
+
+### Stage scripts (one per pipeline stage)
+
+`free_generation`, `judge_reliability`, `judge_scoring`, `discriminative_scoring`,
+`human_scoring`, `score_calculation`, `bootstrap_confidence`, `bayes_correction`.
+
+Calibration sub-pipeline (run once per benchmark version, not per candidate model):
+`build_benchmark_data`, `build_anachronic_pairs`, `build_ground_truth_pairs`,
+`run_deberta_pairs`, `train_logistic`, `compute_per_question_reliability`.
+
+---
+
+## Relationship between Stage 5 scripts
+
+For the most part, `bayes_correction.py` should be understood as a substitute for the largely deprecated `bootstrap_confidence.py`. The bootstrap part of `bootstrap_confidence.py` is valid, but it also does other things that are iffy and should not be relied upon. Probably would be a good idea to move its functions over to the current script (`bayes_correction.py`) entirely.
+
+But at present, `bayes_correction.py` imports three data-loading helpers from
+`bootstrap_confidence` (`SCORED_DIR`, `compute_raw_observed`, `load_inputs`) to
+avoid duplicating I/O logic, but otherwise runs an independent PyMC hierarchical
+model. The README describes the Bayesian approach as the preferred method for the
+paper; bootstrap CIs are retained as a fast cross-check that requires no PyMC
+installation.
+
+---
+
 ## File-naming conventions
 
 All per-candidate output files share the suffix `{candidate}__{version}` so they
@@ -240,29 +289,74 @@ python bootstrap_confidence.py --candidate gpt-5.4 --version 0.2 --include-r-unc
 
 ## Quick-start commands (run from `modelasjudge/`)
 
+### One-time prerequisites: LLM-judge reliability (once per judge model)
+
 ```bash
-# Prerequisites: judge reliability (once per judge)
 python judge_reliability.py --judge anthropic/claude-opus-4-7
+# Output: llm_reliability/anthropic_claude-opus-4-7__0.2.json
+```
 
-# Prerequisites: discriminative calibration (once)
+### One-time prerequisites: discriminative calibration (once per benchmark version)
+
+This sub-pipeline is documented in detail in `discriminative_calibration.md`.
+Run the steps in order:
+
+```bash
+# 1. Extract per-question benchmark data (reasoning types, answer lengths, distractors)
+python build_benchmark_data.py
+# Output: calibration/benchmark_data_for_discrim_calibration.jsonl
+
+# 2. Build GT-vs-anachronic pairs and GT-vs-GT pairs
+python build_anachronic_pairs.py
+python build_ground_truth_pairs.py
+# Output: calibration/anachronic_pairs.jsonl, calibration/ground_truth_pairs.jsonl
+
+# 3. Score both pair sets with DeBERTa
+python run_deberta_pairs.py calibration/anachronic_pairs.jsonl \
+    calibration/anachronic_pairs_scored.jsonl
+python run_deberta_pairs.py calibration/ground_truth_pairs.jsonl \
+    calibration/ground_truth_pairs_scored.jsonl
+
+# 4. Train the logistic calibrator (--tag embeds a label in the pickle)
 python train_logistic.py --tag deberta-baseline-2026-04
+# Output: calibration/logistic_calibrator.pkl (with "tag" field),
+#         calibration/logistic_calibrator.json
 
-# Per model being evaluated:
+# 5. Compute per-question reliability (stratified by reasoning_type × length_decile)
+python compute_per_question_reliability.py
+# Output: calibration/per_question_reliability_chronologic-0.2.jsonl
+```
 
-# 1. Generate answers
+### Per candidate model
+
+```bash
+# 1. Generate free answers
 python free_generation.py gpt-4.1-2025-04-14 ../booksample/chronologic_en_0.2.jsonl
+# Output: generated_answers/free_gen_gpt-4.1-2025-04-14__0.2.json
 
-# 2a. LLM judge
+# 2a. LLM judge scoring
 python judge_scoring.py generated_answers/free_gen_gpt-4.1-2025-04-14__0.2.json \
     --judge anthropic/claude-opus-4-7
+# Output: scored_answers/judge_anthropic_claude-opus-4-7__gpt-4.1-2025-04-14__0.2.json
 
-# 2b. Discriminative judge
+# 2b. Discriminative judge scoring
 python discriminative_scoring.py generated_answers/free_gen_gpt-4.1-2025-04-14__0.2.json
+# Output: scored_answers/discrim_<tag>__gpt-4.1-2025-04-14__0.2.json
 
-# 3. (If needs_human non-empty) Human scoring
+# 3. (Only if needs_human is non-empty in the judge output) Human scoring
 python human_scoring.py \
     scored_answers/judge_anthropic_claude-opus-4-7__gpt-4.1-2025-04-14__0.2.json
+# Output: scored_answers/judge_anthropic_claude-opus-4-7__gpt-4.1-2025-04-14__0.2_human.json
 
-# 4. Final scores
+# 4. Aggregated binary scores
 python score_calculation.py --candidate gpt-4.1-2025-04-14 --version 0.2
+# Output: scored_answers/final_gpt-4.1-2025-04-14__0.2.json
+
+# 5a. Bootstrap confidence intervals (fast, no PyMC required)
+python bootstrap_confidence.py --candidate gpt-4.1-2025-04-14 --version 0.2
+# Output: scored_answers/bootstrap_gpt-4.1-2025-04-14__0.2.json
+
+# 5b. Hierarchical Bayesian correction (preferred for paper; requires PyMC)
+python bayes_correction.py --candidate gpt-4.1-2025-04-14 --version 0.2
+# Output: scored_answers/bayes_gpt-4.1-2025-04-14__0.2.json
 ```
