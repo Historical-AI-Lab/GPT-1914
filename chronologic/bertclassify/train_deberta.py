@@ -108,6 +108,8 @@ def parse_args(argv=None):
                         help="Training TSV filename relative to script dir (default: train.tsv)")
     parser.add_argument("--val-file", default="val.tsv", dest="val_file",
                         help="Validation TSV filename relative to script dir (default: val.tsv)")
+    parser.add_argument("--model-name", default="microsoft/deberta-v3-base", dest="model_name",
+                        help="HuggingFace model name (default: microsoft/deberta-v3-base)")
     return parser.parse_args(argv)
 
 
@@ -386,8 +388,8 @@ def main(argv=None):
           f"(micro={args.batch_size}, effective={grad_accum_steps * args.batch_size})")
 
     # Tokenizer + datasets
-    print(f"\nLoading tokenizer: {MODEL_NAME}")
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    print(f"\nLoading tokenizer: {args.model_name}")
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 
     train_tsv = SCRIPT_DIR / args.train_file
     val_tsv = SCRIPT_DIR / args.val_file
@@ -404,8 +406,8 @@ def main(argv=None):
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size * 2, shuffle=False)
 
     # Model
-    print(f"\nLoading model: {MODEL_NAME}")
-    model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=1)
+    print(f"\nLoading model: {args.model_name}")
+    model = AutoModelForSequenceClassification.from_pretrained(args.model_name, num_labels=1)
     model = model.to(device)
 
     # Optimizer (exclude bias + LayerNorm from weight decay)
