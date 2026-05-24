@@ -104,6 +104,10 @@ def parse_args(argv=None):
                         help="Sub-directory name; timestamp used if omitted")
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed (default: 42)")
+    parser.add_argument("--train-file", default="train.tsv", dest="train_file",
+                        help="Training TSV filename relative to script dir (default: train.tsv)")
+    parser.add_argument("--val-file", default="val.tsv", dest="val_file",
+                        help="Validation TSV filename relative to script dir (default: val.tsv)")
     return parser.parse_args(argv)
 
 
@@ -385,8 +389,8 @@ def main(argv=None):
     print(f"\nLoading tokenizer: {MODEL_NAME}")
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
-    train_tsv = SCRIPT_DIR / "train.tsv"
-    val_tsv = SCRIPT_DIR / "val.tsv"
+    train_tsv = SCRIPT_DIR / args.train_file
+    val_tsv = SCRIPT_DIR / args.val_file
     for p in (train_tsv, val_tsv):
         if not p.exists():
             print(f"ERROR: {p} not found. Run filter_balance_clean.py first.", file=sys.stderr)
