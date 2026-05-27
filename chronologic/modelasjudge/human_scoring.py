@@ -1,17 +1,22 @@
 """
 human_scoring.py — Interactive human judging for questions flagged by judge_scoring.
 
-When judge_scoring.py finds that the LLM judge's per-question reliability is
-below the threshold (0.65) for question_fit or context_fit, it records those
-questions in a `needs_human` list.  This script works through that list
-interactively, replacing each low-reliability LLM score with a human judgment.
+This script handles two kinds of human judgment:
 
-Judgment vocabulary mirrors judge_scoring: the human is asked whether the
-model answer ties the ground truth.
+1. **Question fit re-judging**: when judge_scoring_nocontext.py finds the LLM
+   judge's per-question reliability is below 0.65 for question_fit, it records
+   those questions in `needs_human`.  This script replaces the low-reliability
+   LLM score with a human judgment.
+
+2. **Context fit judging**: all questions with frame_type "book_context" need a
+   human context judgment regardless of reliability.  judge_scoring_nocontext.py
+   records them in needs_human with aspect "context_fit".  The human judges
+   whether the candidate answer is something the specified source might say.
+
+Judgment vocabulary:
   - "y" / yes  → judgment "tie",  score 1
   - "n" / no   → judgment "GT",   score 0
-There is no "model wins" outcome: the human knows which answer is ground truth
-and has no reason to prefer anything over it.
+There is no "model wins" outcome: the human knows which answer is ground truth.
 
 Every judgment is appended to a cumulative cross-model log
 (human_judgments.jsonl) so future sessions can show precedents for the same
@@ -222,10 +227,17 @@ def _prompt_score(aspect_label: str) -> tuple[int, str]:
 # ---------------------------------------------------------------------------
 
 def _rebuild_needs_human(data: dict) -> None:
+    """Recompute needs_human mirroring judge_scoring_nocontext logic.
+
+    question_fit: re-judge if LLM r_q is missing or below threshold, unless
+                  already replaced by a human.
+    context_fit:  collect for every book_context qnum not yet judged by a human.
+    """
     q_thresh = data.get("thresholds", {}).get("question_fit", 0.65)
-    ctx_thresh = data.get("thresholds", {}).get("context_fit", 0.65)
+    book_ctx = set(data.get("book_context_qnums", []))
+
     needs = []
-    all_qnums = set(data.get("question_fit", {})) | set(data.get("context_fit", {}))
+    all_qnums = set(data.get("question_fit", {})) | book_ctx
     for qnum in sorted(all_qnums):
         aspects = []
         qf = data.get("question_fit", {}).get(qnum, {})
@@ -234,10 +246,8 @@ def _rebuild_needs_human(data: dict) -> None:
             if r is None or r <= q_thresh:
                 aspects.append("question_fit")
         ctx = data.get("context_fit", {}).get(qnum, {})
-        if ctx.get("judge") != "human":
-            r = ctx.get("r_q")
-            if r is None or r <= ctx_thresh:
-                aspects.append("context_fit")
+        if qnum in book_ctx and ctx.get("judge") != "human":
+            aspects.append("context_fit")
         if aspects:
             needs.append({"qnum": qnum, "aspects": aspects})
     data["needs_human"] = needs

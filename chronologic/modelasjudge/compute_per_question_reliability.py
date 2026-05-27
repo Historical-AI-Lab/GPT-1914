@@ -204,9 +204,12 @@ def main(argv=None):
     # Write output
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
+        from naming import benchmark_version
+        bversion = benchmark_version(args.out)
+        model_tag = artifact.get("tag") or Path(args.calibrator).stem
         meta_line = {
-            "_meta": "discriminative-judge reliability for chronologic-0.2",
-            "model_dir": str(BERTCLASSIFY_DIR / "baseline"),
+            "_meta": f"discriminative-judge reliability for chronologic-{bversion}",
+            "model_dir": model_tag,
             "created": datetime.now(timezone.utc).isoformat(),
             "calibrator": str(calib_path),
         }

@@ -4,10 +4,8 @@ judge_prompts_nocontext.py — Question-only judging primitives (no context fit)
 For use by judge_scoring_nocontext.py, judge_alpha_reliability_nocontext.py,
 and judge_beta_reliability_nocontext.py.
 
-Identical public API to judge_prompts.py but evaluates only question fit.
-The prompt does not show the source/context to the judge, preserving calibrated
-question-accuracy behavior (the ~0.92 reliability was measured without it).
-The context parameter is accepted for signature compatibility but ignored.
+Identical public API to judge_prompts.py but evaluates only question fit. 
+Context is still passed to the prompt for reference, but not judged separately.
 
 Public API
 ----------
@@ -33,28 +31,57 @@ _ABSTENTION_CLAUSE = (
     "It is also acceptable to explain why the question could not be answered.\n\n"
 )
 
+# _QUALIFICATIONS = {
+#     "character_modeling": "Which fits the character and situation described?",
+#     "topic_sentence": (
+#         "Which provides a more appropriate introduction to the paragraph "
+#         "and better conveys its meaning?"
+#     ),
+#     "knowledge": "Which is more accurate?",
+#     "abstention": "Which is more accurate?",
+#     "inference": (
+#         "Which reasons more accurately and better fulfills any specified conditions?"
+#     ),
+#     "sentence_cloze": "Which better completes the passage?",
+#     "phrase_cloze": "Which better completes the passage?",
+#     "constrained_generation": (
+#         "Which makes more sense, and better fulfills any specified constraints?"
+#     ),
+# }
+
+# _QUALIFICATIONS = {
+#     "character_modeling": "Which fits the character and situation described?",
+#     "topic_sentence": (
+#         "Which provides a more appropriate introduction to the paragraph "
+#         "and better conveys its meaning?"
+#     ),
+#     "knowledge": "Which is more accurate?",
+#     "abstention": "Which is more accurate?",
+#     "inference": (
+#         "Which reasons more accurately and better fulfills any specified conditions?"
+#     ),
+#     "sentence_cloze": "Which better completes the passage?",
+#     "phrase_cloze": "Which better completes the passage?",
+#     "constrained_generation": (
+#         "Which makes more sense, and better fulfills any specified constraints?"
+#     ),
+# }
+
 _QUALIFICATIONS = {
-    "character_modeling": "Which fits the character and situation described?",
-    "topic_sentence": (
-        "Which provides a more appropriate introduction to the paragraph "
-        "and better conveys its meaning?"
-    ),
-    "knowledge": "Which is more accurate?",
-    "abstention": "Which is more accurate?",
-    "inference": (
-        "Which reasons more accurately and better fulfills any specified conditions?"
-    ),
-    "sentence_cloze": "Which better completes the passage?",
-    "phrase_cloze": "Which better completes the passage?",
-    "constrained_generation": (
-        "Which makes more sense, and better fulfills any specified constraints?"
-    ),
+    "character_modeling": "The only thing the character could say in that situation?",
+    "topic_sentence": "The only appropriate introduction to the paragraph?",
+    "knowledge": "More accurate?",
+    "abstention": "More accurate?",
+    "inference": "More accurate?",
+    "sentence_cloze": "The only logical completion of the passage?",
+    "phrase_cloze": "The only logical completion of the passage?",
+    "constrained_generation": "The only match for the source and constraints?"
 }
 
-_DEFAULT_QUALIFICATION = "Which better fits the question?"
+_DEFAULT_QUALIFICATION = ""
 
 _PROMPT_TEMPLATE = """\
-You will be asked to evaluate two answers to a question. Focus on the substantive content of the answers rather than style.
+You will receive a question and two answers to evaluate. The criteria for evaluation are factual accuracy (in the specified historical context) and relevance to the question (correctly following instructions). Do not try to judge whether the style fits the period. At least one answer is a valid response; both may be valid.
 
 Context: {context}
 Question: {question}
@@ -63,8 +90,7 @@ Answer A: {answer_a}
 
 Answer B: {answer_b}
 
-Which answer is a better substantive fit for the question? {added_qualification}
-- Choose A or B if one answer is more accurate or more relevant.
+- Choose A or B if only one answer is accurate and relevant.
 - Choose C if both answers are accurate and relevant to the question.
 
 {abstention_clause}\

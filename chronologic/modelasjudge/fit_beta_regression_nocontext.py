@@ -14,9 +14,11 @@ k[i]        ~ Binomial(n_valid_trials[i], p[i])
 
 where p[i] is the per-trial probability of declaring a winner on a GT-vs-GT pair
 (i.e. p = 2β under position symmetry) and z_loglen is standardized
-log(original-GT character length).  u_frame is a partially-pooled (shrunk)
+log(original-GT character length).  u_frame is a fixed weakly-informative
 intercept per frame_type (world_context / book_context / passage_context) with
-prior u_frame ~ Normal(0, sigma_frame), sigma_frame ~ HalfNormal(1).
+prior u_frame ~ Normal(0, 0.5) — a regularizing prior that shrinks frame offsets
+toward the global mean without estimating a between-group variance (partial pooling
+buys little with only 3 groups and introduces funnel geometry).
 
 Post-stratification
 -------------------
@@ -63,7 +65,6 @@ beta_reliability/beta_regression_{judge}__{version}.json:
   "coefficients": {
     "b0":          {"mean":-1.2,"ci":[-1.8,-0.6]},
     "b_len":       {"mean": 0.3,"ci":[ 0.0, 0.6]},
-    "sigma_frame": {"mean": 0.4},
     "u_frame": {
       "world_context":   {"mean":-0.1,"ci":[-0.4,0.2]},
       "book_context":    {"mean": 0.1,"ci":[-0.2,0.4]},
@@ -312,9 +313,7 @@ def fit_model(data, draws=2000, tune=1000, chains=4, target_accept=0.9, seed=17)
     with pm.Model(coords={"frame": FRAME_TYPES}) as model:  # noqa: F841
         b0 = pm.Normal("b0", mu=0, sigma=1.5)
 
-        sigma_frame  = pm.HalfNormal("sigma_frame", sigma=1.0)
-        u_frame_raw  = pm.Normal("u_frame_raw", mu=0, sigma=1, shape=n_frames)
-        u_frame      = pm.Deterministic("u_frame", u_frame_raw * sigma_frame)
+        u_frame = pm.Normal("u_frame", mu=0, sigma=0.5, shape=n_frames)
 
         b_len = pm.Normal("b_len", mu=0, sigma=1.0)
 
@@ -452,10 +451,8 @@ def post_stratify(trace, data):
                 "ci":  _ci(vals)}
 
     coeff = {
-        "b0":          _coef_summary("b0"),
-        "b_len":       _coef_summary("b_len"),
-        "sigma_frame": {"mean": round(float(np.mean(
-            trace.posterior["sigma_frame"].values.flatten())), 4)},
+        "b0":    _coef_summary("b0"),
+        "b_len": _coef_summary("b_len"),
         "u_frame": {
             fname: _coef_summary("u_frame")  # overridden below
             for fname in FRAME_TYPES
@@ -485,7 +482,7 @@ def compute_diagnostics(trace):
     rhat_ds = az.rhat(trace)
     ess_ds  = az.ess(trace)
 
-    watch_vars = ["b0", "b_len", "sigma_frame"]
+    watch_vars = ["b0", "b_len"]
     rhat_vals, ess_vals = [], []
     for v in watch_vars:
         rhat_vals.append(float(np.max(rhat_ds[v].values)))

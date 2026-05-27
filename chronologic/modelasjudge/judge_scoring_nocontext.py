@@ -229,6 +229,24 @@ def _load_benchmark_frame_types(benchmark_path):
     return book_context
 
 
+def _load_benchmark_frames(benchmark_path):
+    """Return {qnum: substantive_metadata_frame or metadata_frame}."""
+    frames = {}
+    with open(benchmark_path, encoding="utf-8") as fh:
+        for i, line in enumerate(fh):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            qnum = str(rec.get("question_number", i))
+            frames[qnum] = (rec.get("substantive_metadata_frame")
+                            or rec.get("metadata_frame", ""))
+    return frames
+
+
 def _write_output(path, data):
     path.parent.mkdir(exist_ok=True)
     with open(path, "w", encoding="utf-8") as fh:
@@ -278,6 +296,7 @@ def run_panel(
     limit=None,
     on_progress=None,
     debug=False,
+    frame_overrides=None,
 ):
     """Score answers against ground truth using an LLM judge (question fit only).
 
@@ -316,7 +335,7 @@ def run_panel(
 
         ground_truths = entry.get("ground_truths") or [entry.get("ground_truth", "")]
         candidate = entry.get("answer", "")
-        context = entry.get("metadata_frame", "")
+        context = (frame_overrides or {}).get(qnum) or entry.get("metadata_frame", "")
         question = entry.get("main_question", "")
         reasoning_type = entry.get("reasoning_type", "")
 
@@ -458,10 +477,11 @@ def main():
 
     benchmark_version = _parse_benchmark_version(args.benchmark)
 
-    # Load frame_type map to determine book_context questions.
+    # Load frame_type map to determine book_context questions, and substantive frames.
     print(f"Loading benchmark for frame_type: {args.benchmark}")
     book_context_qnums = sorted(_load_benchmark_frame_types(args.benchmark))
     print(f"  {len(book_context_qnums)} book_context questions found.")
+    bench_frames = _load_benchmark_frames(args.benchmark)
 
     output_path = (
         Path(args.output) if args.output
@@ -542,6 +562,7 @@ def main():
         limit=args.limit,
         on_progress=on_progress,
         debug=args.debug,
+        frame_overrides=bench_frames,
     )
 
     _rebuild_needs_human(output_data)

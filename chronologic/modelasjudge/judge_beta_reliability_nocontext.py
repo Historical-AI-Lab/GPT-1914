@@ -165,7 +165,7 @@ def build_gt_pairs(main_records, alt_records):
         if len(gts) < 2:
             continue
         original_gt    = gts[0]
-        context        = r.get("metadata_frame", "")
+        context        = r.get("substantive_metadata_frame") or r.get("metadata_frame", "")
         question       = r.get("main_question", "")
         reasoning_type = r.get("reasoning_type", "")
         frame_type     = r.get("frame_type") or _infer_frame_type(reasoning_type)
@@ -190,7 +190,10 @@ def build_gt_pairs(main_records, alt_records):
             continue
         qnum       = str(alt.get("question_number", ""))
         main_rec   = main_index.get(qnum, {})
-        context    = main_rec.get("metadata_frame") or alt.get("metadata_frame", "")
+        context    = (main_rec.get("substantive_metadata_frame")
+                      or main_rec.get("metadata_frame")
+                      or alt.get("substantive_metadata_frame")
+                      or alt.get("metadata_frame", ""))
         question   = main_rec.get("main_question")  or alt.get("question", "")
         reasoning_type = main_rec.get("reasoning_type", "")
         frame_type = main_rec.get("frame_type") or _infer_frame_type(reasoning_type)
@@ -289,6 +292,8 @@ def collect_pair_outcomes(pairs, judge_call, limit=None, debug=False, on_pair_do
         pairs = pairs[:limit]
 
     total = len(pairs)
+    running_trials = 0
+    running_failures = 0
     for idx, pair in enumerate(pairs):
         k_nontie = k_A = k_B = invalid = n_valid = 0
 
@@ -335,9 +340,12 @@ def collect_pair_outcomes(pairs, judge_call, limit=None, debug=False, on_pair_do
         outcome_records.append(rec)
         completed.append(pair["pair_id"])
 
+        running_trials += n_valid
+        running_failures += k_nontie
         print(
             f"  [{idx + 1}/{total}] {pair['pair_id']!r:35s} "
             f"fail={k_nontie}/{n_valid}  "
+            f"running={running_failures}/{running_trials}  "
             f"frame={pair.get('frame_type', '?')} len={pair['orig_len']}"
         )
 

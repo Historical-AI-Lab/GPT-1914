@@ -227,11 +227,13 @@ def compute_reliability(questions, judge_call, distractor_penalties=None,
     unknown_types = set()
 
     total = len(questions)
+    running_q_r_sum = 0.0
+    running_q_r_count = 0
     for i, q in enumerate(questions):
         qnum = str(q.get("question_number", i))
         answer_strings = q.get("answer_strings", [])
         answer_types = q.get("answer_types", [])
-        context = q.get("metadata_frame", "")
+        context = q.get("substantive_metadata_frame") or q.get("metadata_frame", "")
         question_text = q.get("main_question", "")
         reasoning_type = q.get("reasoning_type", "")
 
@@ -296,10 +298,17 @@ def compute_reliability(questions, judge_call, distractor_penalties=None,
         }
         per_question[qnum] = entry
 
+        running_q_r_sum += q_r
+        running_q_r_count += 1
+
         invalid_note = f" q_invalid={q_invalid}" if q_invalid else ""
         print(f"  [{i+1}/{total}] qnum={qnum} "
               f"q_r={q_r:.3f} ({q_correct}/{q_total})"
               + invalid_note)
+
+        if running_q_r_count % 10 == 0:
+            print(f"  --- mean q_r so far ({running_q_r_count} questions): "
+                  f"{running_q_r_sum / running_q_r_count:.3f} ---")
 
         if on_progress:
             on_progress(qnum, entry)

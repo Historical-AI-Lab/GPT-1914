@@ -1,9 +1,14 @@
 """
 score_calculation.py — Compute weighted aspect scores and overall binary accuracy.
 
-Combines the LLM judge file (question_fit, context_fit) with the discriminative
-judge file (style) to produce three weighted aspect means plus an overall binary
-accuracy score.
+Combines the LLM judge file with the discriminative judge file (style) to produce
+weighted aspect means plus an overall binary accuracy score.
+
+question_fit is scored by the LLM judge for all questions.
+context_fit is scored by a human judge for book_context questions only; it is
+absent (None) for world_context and passage_context questions, which count as a
+pass on context (NA).
+style is scored by the discriminative judge for all questions.
 
 Two weighting schemes are reported for the aspect means:
   squared  — max(2*r_q − 1, 0)²   (inverse-variance under noisy-channel model)
