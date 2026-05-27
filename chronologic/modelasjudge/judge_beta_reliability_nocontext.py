@@ -1,21 +1,20 @@
 """
-judge_beta_reliability_nocontext.py — Measure type-II (tie-blindness) error for
-ChronoLogic judges (question fit only).
+judge_beta_reliability_nocontext.py — Collect GT-vs-GT judge comparison outcomes
+for the ChronoLogic β (tie-blindness) reliability estimation pipeline.
 
 For each pair of equally-valid ground truths, asks the LLM judge to compare them
 in both orderings (GT1-vs-GT2 and GT2-vs-GT1).  Any declared winner is a failure;
 only "C" (tie) counts as a correct judgment.
 
-The observed failure rate is 2β (symmetric: failures preferring slot A + slot B);
-β itself = failure_rate / 2.  Results are stratified into two length bins by the
-original-ground-truth character length, balanced by rank-based median split.
+The observed per-trial failure rate is 2β (symmetric: failures preferring slot A
++ slot B); β itself = failure_rate / 2.  Results are written as a per-pair JSONL
+for downstream analysis by fit_beta_regression_nocontext.py, which fits a PyMC
+hierarchical logistic regression and post-stratifies over the full benchmark
+population to produce per-question 2β estimates.
 
 GT-vs-GT pairs are drawn from two sources:
   1. Questions in the main benchmark with ≥2 answer_strings typed "ground_truth".
   2. Records in the companion *_alternateGT.jsonl file (original_gt / alternate_gt).
-
-Results feed the per-stratum (n_tie_trials, k_nontie) arrays consumed by the
-Bayesian bias-correction model in bayesian_correction_spec_with_gt_ties.md.
 
 Usage
 -----
@@ -29,42 +28,41 @@ Usage
   --openrouter-credentials PATH (default: ../bertclassify/OpenRouterCredentials.txt)
   --openai-credentials PATH     (default: ../evalcode/credentials.txt)
   --reasoning-effort LEVEL      none|low|medium|high (default: none)
-  --output PATH                 Override output file path.
-  --limit N                     Process only first N pairs (bins still computed from
-                                the full pool so they stay consistent).
+  --output PATH                 Override output JSONL path.
+  --limit N                     Process only first N pairs.
   --seed INT                    RNG seed (default: 17; positions are forced so has
                                 minimal effect in practice).
   --debug                       Print raw judge responses.
-  --dry-run                     Build pairs, print counts and length split, then exit
-                                without making any judge calls.
+  --dry-run                     Build pairs, print counts and frame_type distribution,
+                                then exit without making any judge calls.
 
 Output
 ------
-Written to beta_reliability/{judge}__{version}.json:
+Written to beta_reliability/gt_pairs_{judge}__{version}.jsonl, one JSON per line:
 {
-  "judge_model": "...",
+  "pair_id": "alt:7",
+  "question_number": "7",
+  "source": "alt",
+  "frame_type": "world_context",
+  "reasoning_type": "knowledge",
+  "orig_len": 17,
+  "n_valid_trials": 2,
+  "k_nontie": 1,
+  "k_A": 1,
+  "k_B": 0,
+  "invalid": 0,
+  "judge_model": "anthropic/claude-opus-4-7",
   "reasoning_effort": "none",
-  "benchmark_version": "0.3",
-  "length_threshold_chars": 33,
-  "n_pairs": 84,
-  "sources": {"main": 16, "alt": 68},
-  "completed_pair_ids": [...],
-  "overall": {
-    "question_fit": {"n_tie_trials": 168, "k_nontie": 47, "two_beta": 0.28, "beta": 0.14,
-                     "k_A": 24, "k_B": 23, "invalid": 0}
-  },
-  "by_length_bin": {
-    "short": {"n_pairs": 42,
-              "question_fit": {"n_tie_trials": ..., "k_nontie": ..., ...}},
-    "long":  {"n_pairs": 42, ...}
-  }
+  "benchmark_version": "0.3"
 }
 
-k_A + k_B == k_nontie always.  two_beta == k_nontie / n_tie_trials; beta == two_beta / 2.
+k_A + k_B == k_nontie always.  n_valid_trials + invalid == 2 (one per ordering).
+
+Feed this JSONL to fit_beta_regression_nocontext.py to infer per-question 2β.
 
 Examples
 --------
-  # Dry-run: confirm pair counts and length split (no judge calls):
+  # Dry-run: check pair counts and frame_type distribution
   python judge_beta_reliability_nocontext.py --judge anthropic/claude-opus-4-7 --dry-run
 
   # Smoke test (6 pairs):
@@ -89,15 +87,31 @@ from judge_alpha_reliability_nocontext import (
     _sanitize,
     _parse_benchmark_version,
     _load_benchmark,
-    _write_output,
 )
 
 BETA_RELIABILITY_DIR = SCRIPT_DIR / "beta_reliability"
 DEFAULT_BENCHMARK = SCRIPT_DIR.parent / "booksample" / "chronologic_en_0.3.jsonl"
 
+# Derived deterministically from reasoning_type; mirrors QuestionCategorizer.py.
+_REASONING_TO_FRAME = {
+    "knowledge":             "world_context",
+    "refusal":               "world_context",
+    "inference":             "world_context",
+    "character_modeling":    "book_context",
+    "constrained_generation":"book_context",
+    "topic_sentence":        "book_context",
+    "phrase_cloze":          "passage_context",
+    "sentence_cloze":        "passage_context",
+}
+
+
+def _infer_frame_type(reasoning_type):
+    """Return frame_type string from reasoning_type; empty string if unknown."""
+    return _REASONING_TO_FRAME.get(reasoning_type, "")
+
 
 # ---------------------------------------------------------------------------
-# Pair construction (unchanged from deprecated version)
+# Pair construction
 # ---------------------------------------------------------------------------
 
 def _derive_alt_gt_path(benchmark_path):
@@ -128,13 +142,13 @@ def build_gt_pairs(main_records, alt_records):
       - main_records: benchmark JSONL records; questions with >=2 answer_strings
         typed 'ground_truth' yield pairs (first GT as 'original').
       - alt_records: alternate-GT JSONL records (keys: original_gt, alternate_gt,
-        question_number, metadata_frame, question); metadata and reasoning_type
-        are joined from main_records by question_number.
+        question_number, metadata_frame, question); metadata, reasoning_type, and
+        frame_type are joined from main_records by question_number.
 
     Each returned dict has:
       pair_id, question_number, source ('main' or 'alt'),
       original_gt, other_gt, orig_len,
-      context, question, reasoning_type.
+      frame_type, context, question, reasoning_type.
     """
     main_index = {}
     for i, r in enumerate(main_records):
@@ -150,20 +164,22 @@ def build_gt_pairs(main_records, alt_records):
         gts = [s for s, t in zip(strings, types) if t == "ground_truth"]
         if len(gts) < 2:
             continue
-        original_gt = gts[0]
+        original_gt    = gts[0]
         context        = r.get("metadata_frame", "")
         question       = r.get("main_question", "")
         reasoning_type = r.get("reasoning_type", "")
+        frame_type     = r.get("frame_type") or _infer_frame_type(reasoning_type)
         for k, other_gt in enumerate(gts[1:], start=1):
             pairs.append({
-                "pair_id":       f"main:{qnum}:{k}",
+                "pair_id":        f"main:{qnum}:{k}",
                 "question_number": qnum,
-                "source":        "main",
-                "original_gt":   original_gt,
-                "other_gt":      other_gt,
-                "orig_len":      len(original_gt),
-                "context":       context,
-                "question":      question,
+                "source":         "main",
+                "original_gt":    original_gt,
+                "other_gt":       other_gt,
+                "orig_len":       len(original_gt),
+                "frame_type":     frame_type,
+                "context":        context,
+                "question":       question,
                 "reasoning_type": reasoning_type,
             })
 
@@ -172,20 +188,22 @@ def build_gt_pairs(main_records, alt_records):
         other_gt    = alt.get("alternate_gt") or alt.get("alternate_GT") or ""
         if not original_gt or not other_gt:
             continue
-        qnum = str(alt.get("question_number", ""))
-        main_rec = main_index.get(qnum, {})
-        context        = main_rec.get("metadata_frame") or alt.get("metadata_frame", "")
-        question       = main_rec.get("main_question")  or alt.get("question", "")
+        qnum       = str(alt.get("question_number", ""))
+        main_rec   = main_index.get(qnum, {})
+        context    = main_rec.get("metadata_frame") or alt.get("metadata_frame", "")
+        question   = main_rec.get("main_question")  or alt.get("question", "")
         reasoning_type = main_rec.get("reasoning_type", "")
+        frame_type = main_rec.get("frame_type") or _infer_frame_type(reasoning_type)
         pairs.append({
-            "pair_id":       f"alt:{qnum}",
+            "pair_id":        f"alt:{qnum}",
             "question_number": qnum,
-            "source":        "alt",
-            "original_gt":   original_gt,
-            "other_gt":      other_gt,
-            "orig_len":      len(original_gt),
-            "context":       context,
-            "question":      question,
+            "source":         "alt",
+            "original_gt":    original_gt,
+            "other_gt":       other_gt,
+            "orig_len":       len(original_gt),
+            "frame_type":     frame_type,
+            "context":        context,
+            "question":       question,
             "reasoning_type": reasoning_type,
         })
 
@@ -193,93 +211,78 @@ def build_gt_pairs(main_records, alt_records):
 
 
 # ---------------------------------------------------------------------------
-# Length binning (unchanged)
+# JSONL resume helpers
 # ---------------------------------------------------------------------------
 
-def assign_length_bins(pairs):
-    """Assign a 'bin' field ('short' or 'long') to each pair in-place.
-
-    Uses a rank-based median split so bins are always as balanced as possible.
-    Returns (pairs, threshold_chars).
-    """
-    n = len(pairs)
-    if n == 0:
-        return pairs, 0
-    n_short = n // 2
-    sorted_lens = sorted(p["orig_len"] for p in pairs)
-    threshold = sorted_lens[n_short - 1] if n_short > 0 else 0
-
-    indexed = sorted(
-        range(n),
-        key=lambda i: (pairs[i]["orig_len"], pairs[i]["pair_id"]),
-    )
-    for rank, pair_idx in enumerate(indexed):
-        pairs[pair_idx]["bin"] = "short" if rank < n_short else "long"
-
-    return pairs, threshold
-
-
-# ---------------------------------------------------------------------------
-# Tally helpers
-# ---------------------------------------------------------------------------
-
-def _make_empty_tally():
-    return {"n_tie_trials": 0, "k_nontie": 0, "k_A": 0, "k_B": 0, "invalid": 0}
+def _load_existing_pair_ids(path):
+    """Return (pair_ids_set, first_reasoning_effort_seen_or_None) from existing JSONL."""
+    path = Path(path)
+    if not path.exists():
+        return set(), None
+    pair_ids = set()
+    effort = None
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+                pair_ids.add(rec["pair_id"])
+                if effort is None:
+                    effort = rec.get("reasoning_effort")
+            except (json.JSONDecodeError, KeyError):
+                pass
+    return pair_ids, effort
 
 
-def _finalize_tally(t):
-    """Return a copy of a raw tally dict with two_beta and beta appended."""
-    d = {k: t.get(k, 0) for k in ("n_tie_trials", "k_nontie", "k_A", "k_B", "invalid")}
-    n = d["n_tie_trials"]
-    k = d["k_nontie"]
-    d["two_beta"] = round(k / n, 4) if n > 0 else None
-    d["beta"]     = round(k / (2 * n), 4) if n > 0 else None
-    return d
-
-
-def _merge_tallies(t1, t2):
-    """Sum the five integer fields from two tally dicts."""
+def _build_pair_record(pair, outcome, judge_model, reasoning_effort, benchmark_version):
+    """Merge pair metadata and outcome counts into a single JSONL record."""
     return {
-        field: t1.get(field, 0) + t2.get(field, 0)
-        for field in ("n_tie_trials", "k_nontie", "k_A", "k_B", "invalid")
+        "pair_id":         pair["pair_id"],
+        "question_number": pair["question_number"],
+        "source":          pair["source"],
+        "frame_type":      pair.get("frame_type", ""),
+        "reasoning_type":  pair.get("reasoning_type", ""),
+        "orig_len":        pair["orig_len"],
+        "n_valid_trials":  outcome["n_valid_trials"],
+        "k_nontie":        outcome["k_nontie"],
+        "k_A":             outcome["k_A"],
+        "k_B":             outcome["k_B"],
+        "invalid":         outcome["invalid"],
+        "judge_model":     judge_model,
+        "reasoning_effort":reasoning_effort,
+        "benchmark_version": benchmark_version,
     }
 
 
 # ---------------------------------------------------------------------------
-# Core tally
+# Core collection
 # ---------------------------------------------------------------------------
 
-def compute_beta_reliability(pairs, judge_call, limit=None, debug=False, on_progress=None):
-    """Run GT-vs-GT comparisons and return raw tally dicts (question fit only).
+def collect_pair_outcomes(pairs, judge_call, limit=None, debug=False, on_pair_done=None):
+    """Run GT-vs-GT comparisons and return per-pair outcome records.
 
     Each pair generates 2 judge calls (force_gt_position A then B).
-
-    Success (tie detected):    outcome == 'tie'       → n_tie_trials += 1
-    Failure (winner declared): outcome in {win,loss}  → k_nontie += 1;
-        winner slot recorded for k_A / k_B position-symmetry diagnostic.
-    Parse failure:             outcome == 'invalid'   → invalid += 1 (not in denominator).
+    Outcome per trial:
+      tie    → n_valid_trials += 1
+      win/loss → n_valid_trials += 1, k_nontie += 1, winner slot → k_A or k_B
+      invalid → invalid += 1 (not in n_valid_trials)
 
     Args:
-        pairs:      list of pair dicts with 'bin' field already set.
-        judge_call: callable(user_prompt: str) -> str.
-        limit:      process only first N pairs (None = all).
-        debug:      print raw judge responses.
-        on_progress: optional callback(pair_dict, overall_tallies, bin_tallies).
+        pairs:        list of pair dicts (from build_gt_pairs).
+        judge_call:   callable(user_prompt: str) -> str.
+        limit:        process only first N pairs (None = all).
+        debug:        print raw judge responses.
+        on_pair_done: optional callback(pair_dict, outcome_dict) called after each pair.
 
     Returns:
-        (overall_tallies, bin_tallies, completed_pair_ids)
-        overall_tallies:  {"question_fit": raw_tally}
-        bin_tallies:      {"short": {"n_pairs": int, "question_fit": raw_tally},
-                           "long": {...}}
+        (outcome_records, completed_pair_ids)
+        outcome_records:    list[dict] with n_valid_trials/k_nontie/k_A/k_B/invalid.
         completed_pair_ids: list[str] in processing order.
     """
     rng = random.Random(42)
-
-    overall = {"question_fit": _make_empty_tally()}
-    bin_tallies = {
-        "short": {"n_pairs": 0, "question_fit": _make_empty_tally()},
-        "long":  {"n_pairs": 0, "question_fit": _make_empty_tally()},
-    }
+    outcome_records = []
     completed = []
 
     if limit is not None:
@@ -287,8 +290,7 @@ def compute_beta_reliability(pairs, judge_call, limit=None, debug=False, on_prog
 
     total = len(pairs)
     for idx, pair in enumerate(pairs):
-        b = pair["bin"]
-        bin_tallies[b]["n_pairs"] += 1
+        k_nontie = k_A = k_B = invalid = n_valid = 0
 
         for force_pos in ("A", "B"):
             result = score_one_comparison(
@@ -307,44 +309,42 @@ def compute_beta_reliability(pairs, judge_call, limit=None, debug=False, on_prog
                 print(f"    other_gt={pair['other_gt'][:50]!r}")
                 print(f"    raw={result.get('raw', '')!r}")
 
-            gt_pos = result["gt_position"]
-
             outcome = result["question_outcome"]
-            t_ov  = overall["question_fit"]
-            t_bin = bin_tallies[b]["question_fit"]
-
             if outcome == "invalid":
-                t_ov["invalid"]  += 1
-                t_bin["invalid"] += 1
+                invalid += 1
             else:
-                t_ov["n_tie_trials"]  += 1
-                t_bin["n_tie_trials"] += 1
+                n_valid += 1
                 if outcome in ("win", "loss"):
-                    t_ov["k_nontie"]  += 1
-                    t_bin["k_nontie"] += 1
+                    k_nontie += 1
+                    gt_pos = result["gt_position"]
                     winner_slot = gt_pos if outcome == "loss" else (
                         "A" if gt_pos == "B" else "B"
                     )
                     if winner_slot == "A":
-                        t_ov["k_A"]  += 1
-                        t_bin["k_A"] += 1
+                        k_A += 1
                     else:
-                        t_ov["k_B"]  += 1
-                        t_bin["k_B"] += 1
+                        k_B += 1
 
+        rec = {
+            "n_valid_trials": n_valid,
+            "k_nontie":       k_nontie,
+            "k_A":            k_A,
+            "k_B":            k_B,
+            "invalid":        invalid,
+        }
+        outcome_records.append(rec)
         completed.append(pair["pair_id"])
 
-        q = overall["question_fit"]
         print(
             f"  [{idx + 1}/{total}] {pair['pair_id']!r:35s} "
-            f"q_fail={q['k_nontie']}/{q['n_tie_trials']}  "
-            f"bin={b} orig_len={pair['orig_len']}"
+            f"fail={k_nontie}/{n_valid}  "
+            f"frame={pair.get('frame_type', '?')} len={pair['orig_len']}"
         )
 
-        if on_progress:
-            on_progress(pair, overall, bin_tallies)
+        if on_pair_done:
+            on_pair_done(pair, rec)
 
-    return overall, bin_tallies, completed
+    return outcome_records, completed
 
 
 # ---------------------------------------------------------------------------
@@ -355,7 +355,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Measure type-II (tie-blindness) judge error (question fit only).",
+        description="Collect GT-vs-GT judge comparison outcomes (per-pair JSONL).",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
@@ -382,7 +382,7 @@ def main():
     alt_gt_path = args.alternate_gt or str(_derive_alt_gt_path(args.benchmark))
     output_path = (
         Path(args.output) if args.output
-        else BETA_RELIABILITY_DIR / f"{_sanitize(args.judge)}__{benchmark_version}.json"
+        else BETA_RELIABILITY_DIR / f"gt_pairs_{_sanitize(args.judge)}__{benchmark_version}.jsonl"
     )
 
     print(f"Loading benchmark: {args.benchmark}")
@@ -398,36 +398,31 @@ def main():
     n_alt  = sum(1 for p in pairs if p["source"] == "alt")
     print(f"GT-vs-GT pairs: {len(pairs)} total  ({n_main} from main, {n_alt} from alternate-GT)")
 
+    if pairs:
+        from collections import Counter
+        frame_counts = Counter(p.get("frame_type", "") for p in pairs)
+        print("  frame_type distribution:", dict(frame_counts))
+
     if len(pairs) == 0:
         sys.exit("No GT-vs-GT pairs found. Check benchmark and alternate-GT paths.")
 
-    pairs, threshold = assign_length_bins(pairs)
-    n_short = sum(1 for p in pairs if p["bin"] == "short")
-    n_long  = sum(1 for p in pairs if p["bin"] == "long")
-    print(f"Length split (threshold ≤ {threshold} chars): short={n_short}, long={n_long}")
-
     if args.dry_run:
         print("\n-- dry-run: no judge calls --")
-        print(f"Would process {min(len(pairs), args.limit) if args.limit else len(pairs)} pairs.")
+        n_to_process = min(len(pairs), args.limit) if args.limit else len(pairs)
+        print(f"Would process {n_to_process} pairs.")
         return
 
-    completed_ids_existing = set()
-    existing_overall = {}
-    existing_bins = {}
-    if output_path.exists():
-        with open(output_path, encoding="utf-8") as fh:
-            existing = json.load(fh)
-        completed_ids_existing = set(existing.get("completed_pair_ids", []))
-        existing_overall = existing.get("overall", {})
-        existing_bins    = existing.get("by_length_bin", {})
-        existing_effort  = existing.get("reasoning_effort")
+    BETA_RELIABILITY_DIR.mkdir(exist_ok=True)
+
+    completed_ids_existing, existing_effort = _load_existing_pair_ids(output_path)
+    if completed_ids_existing:
         if existing_effort is not None and existing_effort != args.reasoning_effort:
             sys.exit(
                 f"ERROR: {output_path} was produced with reasoning_effort={existing_effort!r} "
                 f"but this run uses {args.reasoning_effort!r}. "
                 "Pass --output PATH to write to a different file."
             )
-        print(f"Resuming: {len(completed_ids_existing)} pairs already done.")
+        print(f"Resuming: {len(completed_ids_existing)} pairs already written.")
 
     new_pairs = [p for p in pairs if p["pair_id"] not in completed_ids_existing]
     if not new_pairs:
@@ -439,98 +434,42 @@ def main():
         debug=args.debug, reasoning_effort=args.reasoning_effort,
     )
 
-    output_data = {
-        "judge_model": args.judge,
-        "reasoning_effort": args.reasoning_effort,
-        "benchmark_version": benchmark_version,
-        "length_threshold_chars": threshold,
-        "n_pairs": len(pairs),
-        "sources": {"main": n_main, "alt": n_alt},
-        "completed_pair_ids": list(completed_ids_existing),
-        "overall": {},
-        "by_length_bin": {},
-    }
+    out_fh = open(output_path, "a", encoding="utf-8")
 
-    def _recompute_and_write(new_overall, new_bin_tallies, new_completed):
-        merged_overall = {
-            "question_fit": _finalize_tally(
-                _merge_tallies(
-                    existing_overall.get("question_fit", _make_empty_tally()),
-                    new_overall.get("question_fit", _make_empty_tally()),
-                )
-            )
-        }
-        merged_bins = {}
-        for b in ("short", "long"):
-            ext_b = existing_bins.get(b, {})
-            new_b = new_bin_tallies.get(b, {})
-            merged_bins[b] = {
-                "n_pairs": ext_b.get("n_pairs", 0) + new_b.get("n_pairs", 0),
-                "question_fit": _finalize_tally(
-                    _merge_tallies(
-                        ext_b.get("question_fit", _make_empty_tally()),
-                        new_b.get("question_fit", _make_empty_tally()),
-                    )
-                ),
-            }
-        output_data["overall"] = merged_overall
-        output_data["by_length_bin"] = merged_bins
-        output_data["completed_pair_ids"] = (
-            list(completed_ids_existing) + new_completed
+    def on_pair_done(pair, outcome):
+        record = _build_pair_record(
+            pair, outcome, args.judge, args.reasoning_effort, benchmark_version
         )
-        _write_output(output_path, output_data)
+        out_fh.write(json.dumps(record) + "\n")
+        out_fh.flush()
 
-    def _save_and_exit(sig, frame):
-        print("\nInterrupted — saving partial results...")
-        _recompute_and_write(current_overall[0], current_bins[0], current_completed[0])
-        print(f"Saved to {output_path}")
+    def _sigint_handler(sig, frame):
+        print(f"\nInterrupted — partial results in {output_path}")
+        out_fh.close()
         sys.exit(0)
 
-    current_overall   = [{}]
-    current_bins      = [{}]
-    current_completed = [[]]
-    signal.signal(signal.SIGINT, _save_and_exit)
-
-    def on_progress(pair, ov, bins):
-        current_overall[0]   = ov
-        current_bins[0]      = bins
-        current_completed[0] = list(pair_completed_so_far)
-        n_done = len(completed_ids_existing) + len(pair_completed_so_far)
-        if n_done % 10 == 0:
-            _recompute_and_write(ov, bins, current_completed[0])
-
-    pair_completed_so_far = []
-
-    def _on_progress_wrapper(pair, ov, bins):
-        pair_completed_so_far.append(pair["pair_id"])
-        on_progress(pair, ov, bins)
+    signal.signal(signal.SIGINT, _sigint_handler)
 
     print(f"\nScoring {len(new_pairs)} pairs with judge: {args.judge}")
+    print(f"Output: {output_path}")
     try:
-        new_overall, new_bin_tallies, new_completed = compute_beta_reliability(
+        _, new_completed = collect_pair_outcomes(
             new_pairs, judge_call,
             limit=args.limit,
             debug=args.debug,
-            on_progress=_on_progress_wrapper,
+            on_pair_done=on_pair_done,
         )
     except Exception as exc:
         print(f"\nError: {type(exc).__name__}: {exc}")
-        _recompute_and_write(current_overall[0], current_bins[0], current_completed[0])
         print(f"Partial results saved to {output_path}. Re-run to resume.")
+        out_fh.close()
         raise
+    finally:
+        out_fh.close()
 
-    _recompute_and_write(new_overall, new_bin_tallies, new_completed)
-
-    final = output_data["overall"]
-    print(f"\nDone. {len(output_data['completed_pair_ids'])} pairs evaluated.")
-    t = final["question_fit"]
-    if t["n_tie_trials"]:
-        print(
-            f"  question_fit: n={t['n_tie_trials']}  k_nontie={t['k_nontie']}  "
-            f"2β={t['two_beta']:.3f}  β={t['beta']:.3f}  "
-            f"k_A={t['k_A']} k_B={t['k_B']}  invalid={t['invalid']}"
-        )
-    print(f"Output: {output_path.resolve()}")
+    total_done = len(completed_ids_existing) + len(new_completed)
+    print(f"\nDone. {total_done} pairs written to {output_path.resolve()}")
+    print("Run fit_beta_regression_nocontext.py on this file to infer per-question 2β.")
 
 
 if __name__ == "__main__":
