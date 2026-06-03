@@ -366,13 +366,14 @@ def generate_answer_hf(question, model, tokenizer):
     return answer.strip(), length_spec
 
 
-def generate_answer_openrouter(question, model_id, client):
+def generate_answer_openrouter(question, model_id, client, reasoning_effort="none"):
     """Generate a free-text answer via the OpenRouter API.
 
     Args:
-        question:  benchmark question dict.
-        model_id:  OpenRouter model identifier string (e.g. ``qwen/qwen3-8b``).
-        client:    openai.OpenAI instance pointed at OpenRouter base URL.
+        question:         benchmark question dict.
+        model_id:         OpenRouter model identifier string (e.g. ``qwen/qwen3-8b``).
+        client:           openai.OpenAI instance pointed at OpenRouter base URL.
+        reasoning_effort: one of "none", "low", "medium", "high".
 
     Returns:
         tuple: (answer_str, length_spec_str)
@@ -383,6 +384,7 @@ def generate_answer_openrouter(question, model_id, client):
         user_content=user_str,
         system_content=system_str,
         max_tokens=max_tokens,
+        reasoning_effort=reasoning_effort,
     )
     return answer.strip(), length_spec
 
@@ -614,7 +616,7 @@ def run_free_generation(
                 q, model_id, client, reasoning_effort=reasoning_effort
             )
         elif use_openrouter:
-            answer, length_spec = generate_answer_openrouter(q, model_id, client)
+            answer, length_spec = generate_answer_openrouter(q, model_id, client, reasoning_effort=reasoning_effort)
         else:
             answer, length_spec = generate_answer_hf(q, hf_model, hf_tokenizer)
 

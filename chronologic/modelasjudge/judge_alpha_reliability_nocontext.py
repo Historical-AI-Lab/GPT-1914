@@ -115,6 +115,7 @@ def _make_judge_call(judge_model, openrouter_cred=None, openai_cred=None, debug=
     if is_openrouter_model(judge_model):
         from openrouter_client import call_openrouter_chat
         client = make_openrouter_client(openrouter_cred)
+        # visible-answer caps; call_openrouter_chat adds +2048 thinking headroom when effort != "none"
         _max_tokens = {"none": 50, "low": 1024, "medium": 4096, "high": 16000}[reasoning_effort]
         def judge_call(prompt):
             return call_openrouter_chat(
