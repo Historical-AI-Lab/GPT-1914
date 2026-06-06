@@ -2,7 +2,7 @@
 """compute_per_question_reliability.py
 
 Compute per-question discriminative-judge reliability (r_q) and weight (w_q)
-for ChronoLogic 0.2, stratified by reasoning_type and length_decile.
+for ChronoLogic 0.2, stratified by the joint (reasoning_type, length_decile) cell.
 
 For each question, apply the logistic calibrator to gt/distractor pair deltas.
 A pair is "correctly rejected" if P(anachronic | delta_clamped) > 0.5.
@@ -10,15 +10,16 @@ A pair is "correctly rejected" if P(anachronic | delta_clamped) > 0.5.
 
 raw_acc_q = correct_pairs / total_pairs
 
-Stratified accuracies:
-  reasoning_type_acc[t] = mean(raw_acc_q) over questions with that type
-  length_decile_acc[d]  = mean(raw_acc_q) over questions in that decile
+Stratification: pool all (k, n) counts within each (reasoning_type, length_decile)
+cell and apply Laplace smoothing:
+  r_q = (cell_k + 1) / (cell_n + 2)
 
-Per-question:
-  r_q = min(reasoning_type_acc, length_decile_acc)
-  w_q = max(2 * r_q - 1, 0) ** 2
+This avoids the need to combine independent marginal estimates and naturally
+handles interactions between the two stratification variables. Sparse cells
+are regularised toward 0.5 by the Laplace prior.
 
 Questions with no anachronic pairs get r_q = 0, w_q = 0.
+  w_q = max(2 * r_q - 1, 0) ** 2
 
 Outputs:
   calibration/per_question_reliability_chronologic-0.2.jsonl
@@ -138,30 +139,32 @@ def main(argv=None):
         q_raw_acc[qnum] = correct / len(deltas)
         q_counts[qnum] = (correct, len(deltas))
 
-    # Stratify by reasoning_type — accumulate integer k/n per stratum for Beta posteriors
-    type_groups: dict[str, list[float]] = defaultdict(list)
-    type_kn: dict[str, list[tuple[int, int]]] = defaultdict(list)
-    for qnum, meta in q_meta.items():
-        if q_deltas.get(qnum):   # only questions with at least one pair
-            type_groups[meta["reasoning_type"]].append(q_raw_acc[qnum])
-            type_kn[meta["reasoning_type"]].append(q_counts[qnum])
-    type_acc: dict[str, float] = {t: float(np.mean(vs)) for t, vs in type_groups.items()}
-    type_stratum_kn: dict[str, tuple[int, int]] = {
-        t: (sum(k for k, _ in pairs), sum(n for _, n in pairs))
-        for t, pairs in type_kn.items()
-    }
-
-    # Stratify by length_decile
-    decile_groups: dict[int, list[float]] = defaultdict(list)
-    decile_kn: dict[int, list[tuple[int, int]]] = defaultdict(list)
+    # Stratify by joint (reasoning_type, length_decile) cell
+    # Accumulate integer k/n counts per cell for Laplace-smoothed posterior
+    Cell = tuple[str, int]
+    cell_kn: dict[Cell, tuple[int, int]] = defaultdict(lambda: (0, 0))
+    cell_n_questions: dict[Cell, int] = defaultdict(int)
     for qnum, meta in q_meta.items():
         if q_deltas.get(qnum):
-            decile_groups[meta["length_decile"]].append(q_raw_acc[qnum])
-            decile_kn[meta["length_decile"]].append(q_counts[qnum])
-    decile_acc: dict[int, float] = {d: float(np.mean(vs)) for d, vs in decile_groups.items()}
-    decile_stratum_kn: dict[int, tuple[int, int]] = {
-        d: (sum(k for k, _ in pairs), sum(n for _, n in pairs))
-        for d, pairs in decile_kn.items()
+            cell: Cell = (meta["reasoning_type"], meta["length_decile"])
+            k, n = q_counts[qnum]
+            ck, cn = cell_kn[cell]
+            cell_kn[cell] = (ck + k, cn + n)
+            cell_n_questions[cell] += 1
+
+    # Laplace-smoothed reliability per cell, pooling across adjacent deciles
+    # (width-3 sliding window along the ordered decile axis)
+    def smoothed_kn(rtype: str, decile: int) -> tuple[int, int]:
+        k = n = 0
+        for d in (decile - 1, decile, decile + 1):
+            ck, cn = cell_kn.get((rtype, d), (0, 0))
+            k += ck
+            n += cn
+        return k, n
+
+    cell_r: dict[Cell, float] = {
+        cell: (smoothed_kn(*cell)[0] + 1) / (smoothed_kn(*cell)[1] + 2)
+        for cell in cell_kn
     }
 
     # Compute r_q and w_q for each question
@@ -169,12 +172,15 @@ def main(argv=None):
     for qnum, meta in sorted(q_meta.items()):
         rtype = meta["reasoning_type"]
         decile = meta["length_decile"]
-        r_type = type_acc.get(rtype, 0.0)
-        r_decile = decile_acc.get(decile, 0.0)
-        r_q = min(r_type, r_decile)
+        cell = (rtype, decile)
+        has_pairs = bool(q_deltas.get(qnum))
+        if not has_pairs:
+            r_q = 0.0
+            cell_k, cell_n = 0, 0
+        else:
+            r_q = cell_r[cell]
+            cell_k, cell_n = smoothed_kn(rtype, decile)
         w_q = max(2 * r_q - 1, 0.0) ** 2
-        t_k, t_n = type_stratum_kn.get(rtype, (0, 0))
-        d_k, d_n = decile_stratum_kn.get(decile, (0, 0))
         results.append({
             "question_number": qnum,
             "reasoning_type": rtype,
@@ -182,24 +188,18 @@ def main(argv=None):
             "raw_acc_q": round(q_raw_acc[qnum], 6),
             "r_q": round(r_q, 6),
             "w_q": round(w_q, 6),
-            "reasoning_type_k": t_k,
-            "reasoning_type_n": t_n,
-            "length_decile_k": d_k,
-            "length_decile_n": d_n,
+            "cell_k": cell_k,
+            "cell_n": cell_n,
         })
 
-    # Print stratum tables
-    print("\nreliability by reasoning_type:")
-    print(f"  {'reasoning_type':30s}  {'r_q':>8s}  {'n_questions':>11s}")
-    for rtype in sorted(type_acc, key=lambda t: -type_acc[t]):
-        n = len(type_groups[rtype])
-        print(f"  {rtype:30s}  {type_acc[rtype]:8.4f}  {n:>11d}")
-
-    print("\nreliability by length_decile:")
-    print(f"  {'decile':>8s}  {'r_q':>8s}  {'n_questions':>11s}")
-    for d in sorted(decile_acc):
-        n = len(decile_groups[d])
-        print(f"  {d:>8d}  {decile_acc[d]:8.4f}  {n:>11d}")
+    # Print joint-cell table (k/n are smoothed pooled counts, matching r_q)
+    print("\nreliability by (reasoning_type, length_decile) cell:")
+    print(f"  {'reasoning_type':30s}  {'decile':>6s}  {'r_q':>8s}  {'k(smoothed)':>12s}  {'n(smoothed)':>12s}  {'n_q':>6s}")
+    for cell in sorted(cell_r, key=lambda c: (-cell_r[c], c)):
+        rtype, decile = cell
+        ck, cn = smoothed_kn(rtype, decile)
+        nq = cell_n_questions[cell]
+        print(f"  {rtype:30s}  {decile:>6d}  {cell_r[cell]:8.4f}  {ck:>12d}  {cn:>12d}  {nq:>6d}")
 
     # Write output
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -222,6 +222,9 @@ def main(argv=None):
     nonzero = sum(1 for w in all_w if w > 0)
     print(f"w_q > 0: {nonzero}/{len(all_w)} questions  "
           f"(mean w_q = {np.mean(all_w):.4f})")
+    above_cutoff = [r["raw_acc_q"] for r in results if r["r_q"] >= 0.7]
+    print(f"r_q >= 0.7: {len(above_cutoff)}/{len(results)} questions  "
+          f"(mean raw_acc_q = {np.mean(above_cutoff):.4f})" if above_cutoff else "r_q >= 0.7: 0 questions")
 
 
 if __name__ == "__main__":
