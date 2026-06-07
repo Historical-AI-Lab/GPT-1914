@@ -34,11 +34,11 @@ cd "$SCRIPT_DIR"
 
 python -u free_generation.py \
     talkie-1930-13b-base \
-    ../booksample/chronologic_en_0.2.jsonl
+    ../booksample/chronologic_en_0.4.jsonl
 
 python -u free_generation.py \
     talkie-1930-13b-it \
-    ../booksample/chronologic_en_0.2.jsonl
+    ../booksample/chronologic_en_0.4.jsonl
 
 echo "Job completed"
 date
