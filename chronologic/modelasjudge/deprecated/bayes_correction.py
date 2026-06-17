@@ -5,10 +5,11 @@ Estimates bias-corrected latent population proportions for the three ChronoLogic
 aspects (question_fit, context_fit, style) and overall binary accuracy, using a
 block-structured IRT-style model fit with PyMC.
 
-The model places two latent abilities on each question:
-  theta_qc ~ N(0, 1)  — drives question_fit and context_fit (induces the
-                         empirically observed correlation between them)
-  theta_s  ~ N(0, 1)  — drives style fit (independent by default)
+The model places three independent latent abilities on each question:
+  theta_q ~ N(0, 1)  — drives question_fit (LLM-judged, all 712 questions)
+  theta_c ~ N(0, 1)  — drives context_fit (human-judged, ~98 constrained_generation
+                        questions only; absent context_fit → automatic pass downstream)
+  theta_s ~ N(0, 1)  — drives style fit (independent)
 
 Per-aspect pass probabilities are
   p_{q,a} = sigmoid(alpha_a + beta_a * theta_{*})
@@ -57,7 +58,7 @@ SCRIPT_DIR = Path(__file__).parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from naming import candidate_tag as _candidate_tag
-from bootstrap_confidence import (
+from bayes_io import (
     SCORED_DIR,
     compute_raw_observed,
     load_inputs,
@@ -75,28 +76,32 @@ class PreparedData:
     n_questions: int
     qnums: list[str]
 
-    # question_fit + context_fit (aspect 0 / 1)
-    obs_question_idx: np.ndarray   # int64
-    obs_aspect_idx:   np.ndarray   # int64 in {0, 1}
-    obs_verdict:      np.ndarray   # int64 in {0, 1}
-    obs_r:            np.ndarray   # float64
+    # question_fit observations (LLM-judged; may carry r_uncertainty)
+    qf_obs_idx:     np.ndarray   # int64 — question index
+    qf_obs_verdict: np.ndarray   # int64 in {0, 1}
+    qf_obs_r:       np.ndarray   # float64
+
+    # context_fit observations (human-judged; r_q is reliable and fixed — no r_uncertainty)
+    cf_obs_idx:     np.ndarray   # int64
+    cf_obs_verdict: np.ndarray   # int64
+    cf_obs_r:       np.ndarray   # float64
 
     # style observations
-    style_obs_qidx:     np.ndarray  # int64
-    style_obs_logit:    np.ndarray  # float64 (only used in continuous mode)
-    style_obs_binary:   np.ndarray  # int64 in {0, 1} (only used in binary mode)
-    style_obs_r:        np.ndarray  # float64
-    style_na:           np.ndarray  # bool, shape (n_questions,)
+    style_obs_qidx:   np.ndarray  # int64
+    style_obs_logit:  np.ndarray  # float64 (only used in continuous mode)
+    style_obs_binary: np.ndarray  # int64 in {0, 1} (only used in binary mode)
+    style_obs_r:      np.ndarray  # float64
+    style_na:         np.ndarray  # bool, shape (n_questions,)
+    context_na:       np.ndarray  # bool, shape (n_questions,) — True when no context_fit obs
 
-    # Optional reliability-uncertainty bookkeeping (k, n per observation).
-    # When the user passes --include-r-uncertainty we put a Beta posterior on
-    # each *unique* (k, n) pair and index into it from each observation.
-    qc_kn:        np.ndarray  # int64 shape (n_unique_qc_r, 2) — (k, n)
-    qc_r_idx:     np.ndarray  # int64, observation -> row in qc_kn
-    style_kn_a:   np.ndarray  # int64 shape (n_unique_style_a, 2) — reasoning-type stratum
-    style_kn_b:   np.ndarray  # int64 shape (n_unique_style_b, 2) — length-decile stratum
-    style_a_idx:  np.ndarray  # int64, style obs -> row in style_kn_a
-    style_b_idx:  np.ndarray  # int64, style obs -> row in style_kn_b
+    # r_uncertainty bookkeeping for question_fit only.
+    # Context uses fixed human r_q; style has its own (style_kn_a/b) bookkeeping.
+    qf_kn:       np.ndarray  # int64 shape (n_unique_qf_r, 2) — (k, n)
+    qf_r_idx:    np.ndarray  # int64, qf obs -> row in qf_kn
+    style_kn_a:  np.ndarray  # int64 shape (n_unique_style_a, 2) — reasoning-type stratum
+    style_kn_b:  np.ndarray  # int64 shape (n_unique_style_b, 2) — length-decile stratum
+    style_a_idx: np.ndarray  # int64, style obs -> row in style_kn_a
+    style_b_idx: np.ndarray  # int64, style obs -> row in style_kn_b
 
 
 def _collapse_qc_block(scores: list[int]) -> int | None:
@@ -143,21 +148,28 @@ def prepare_data(
     # Per-question style NA flag
     style_na = np.array([q in below_threshold for q in qnums], dtype=bool)
 
-    obs_q_idx:  list[int]   = []
-    obs_a_idx:  list[int]   = []
-    obs_verdict: list[int]  = []
-    obs_r:      list[float] = []
+    # Per-question context NA flag — True when no context_fit observation exists
+    ctx_section = judge_data.get("context_fit", {})
+    context_na = np.array([q not in ctx_section for q in qnums], dtype=bool)
 
-    style_qidx:    list[int]   = []
-    style_logit:   list[float] = []
-    style_binary:  list[int]   = []
-    style_r:       list[float] = []
+    qf_q_idx:   list[int]   = []
+    qf_verdict: list[int]   = []
+    qf_r:       list[float] = []
+    cf_q_idx:   list[int]   = []
+    cf_verdict: list[int]   = []
+    cf_r:       list[float] = []
 
-    # (k, n) tracking for --include-r-uncertainty.  We key on the integer pair.
-    qc_kn_map:      dict[tuple[int, int], int] = {}
-    style_a_map:    dict[tuple[int, int], int] = {}
-    style_b_map:    dict[tuple[int, int], int] = {}
-    qc_r_idx:    list[int] = []
+    style_qidx:   list[int]   = []
+    style_logit:  list[float] = []
+    style_binary: list[int]   = []
+    style_r:      list[float] = []
+
+    # (k, n) tracking for question_fit --include-r-uncertainty only.
+    # Context is human-judged (r_q already reliable and fixed; no Beta posterior needed).
+    qf_kn_map:   dict[tuple[int, int], int] = {}
+    style_a_map: dict[tuple[int, int], int] = {}
+    style_b_map: dict[tuple[int, int], int] = {}
+    qf_r_idx:    list[int] = []
     style_a_idx: list[int] = []
     style_b_idx: list[int] = []
 
@@ -180,26 +192,24 @@ def prepare_data(
             for s, g in zip(scores, gt_indices):
                 blocks.setdefault(g, []).append(int(s))
 
+            r_clamped = float(np.clip(r_q, 0.501, 0.999))
             for block in blocks.values():
                 collapsed = _collapse_qc_block(block)
                 if collapsed is None:
                     continue
-                obs_q_idx.append(qi)
-                obs_a_idx.append(aspect_idx)
-                obs_verdict.append(collapsed)
-                # clamp r away from {0, 0.5, 1} to keep likelihoods finite
-                r_clamped = float(np.clip(r_q, 0.501, 0.999))
-                obs_r.append(r_clamped)
-
-                if include_r_uncertainty:
-                    pq = llm_rel.get("per_question", {}).get(qnum, {})
-                    if aspect_idx == 0:
+                if aspect_idx == 0:  # question_fit — LLM-judged
+                    qf_q_idx.append(qi)
+                    qf_verdict.append(collapsed)
+                    qf_r.append(r_clamped)
+                    if include_r_uncertainty:
+                        pq = llm_rel.get("per_question", {}).get(qnum, {})
                         k = int(pq.get("question_correct", 0))
                         n = int(pq.get("question_total",   1))
-                    else:
-                        k = int(pq.get("context_correct", 0))
-                        n = int(pq.get("context_total",   1))
-                    qc_r_idx.append(_intern(qc_kn_map, (k, n)))
+                        qf_r_idx.append(_intern(qf_kn_map, (k, n)))
+                else:                # context_fit — human-judged, r_q is fixed
+                    cf_q_idx.append(qi)
+                    cf_verdict.append(collapsed)
+                    cf_r.append(r_clamped)
 
         # ---- style observations ----
         if style_na[qi]:
@@ -257,17 +267,20 @@ def prepare_data(
     return PreparedData(
         n_questions=n_q,
         qnums=qnums,
-        obs_question_idx=np.asarray(obs_q_idx, dtype=np.int64),
-        obs_aspect_idx=np.asarray(obs_a_idx, dtype=np.int64),
-        obs_verdict=np.asarray(obs_verdict, dtype=np.int64),
-        obs_r=np.asarray(obs_r, dtype=np.float64),
+        qf_obs_idx=np.asarray(qf_q_idx, dtype=np.int64),
+        qf_obs_verdict=np.asarray(qf_verdict, dtype=np.int64),
+        qf_obs_r=np.asarray(qf_r, dtype=np.float64),
+        cf_obs_idx=np.asarray(cf_q_idx, dtype=np.int64),
+        cf_obs_verdict=np.asarray(cf_verdict, dtype=np.int64),
+        cf_obs_r=np.asarray(cf_r, dtype=np.float64),
         style_obs_qidx=np.asarray(style_qidx, dtype=np.int64),
         style_obs_logit=np.asarray(style_logit, dtype=np.float64),
         style_obs_binary=np.asarray(style_binary, dtype=np.int64),
         style_obs_r=np.asarray(style_r, dtype=np.float64),
         style_na=style_na,
-        qc_kn=_kn_array(qc_kn_map),
-        qc_r_idx=np.asarray(qc_r_idx, dtype=np.int64),
+        context_na=context_na,
+        qf_kn=_kn_array(qf_kn_map),
+        qf_r_idx=np.asarray(qf_r_idx, dtype=np.int64),
         style_kn_a=_kn_array(style_a_map),
         style_kn_b=_kn_array(style_b_map),
         style_a_idx=np.asarray(style_a_idx, dtype=np.int64),
@@ -307,40 +320,49 @@ def build_and_sample(
         alpha = pm.Normal("alpha", mu=0.0, sigma=2.0, dims="aspect")
         beta  = pm.HalfNormal("beta", sigma=2.0, dims="aspect")
 
-        # Non-centered latent abilities for sampler stability
-        theta_qc = pm.Normal("theta_qc", mu=0.0, sigma=1.0, dims="question")
-        theta_s  = pm.Normal("theta_s",  mu=0.0, sigma=1.0, dims="question")
+        # Independent latent abilities — question, context, and style are not coupled.
+        # Context is human-judged and covers only constrained_generation questions;
+        # there is no empirical basis for treating it as correlated with LLM question fit.
+        theta_q = pm.Normal("theta_q", mu=0.0, sigma=1.0, dims="question")
+        theta_c = pm.Normal("theta_c", mu=0.0, sigma=1.0, dims="question")
+        theta_s = pm.Normal("theta_s", mu=0.0, sigma=1.0, dims="question")
 
         p_q = pm.Deterministic("p_question",
-                               pm.math.sigmoid(alpha[0] + beta[0] * theta_qc),
+                               pm.math.sigmoid(alpha[0] + beta[0] * theta_q),
                                dims="question")
         p_c = pm.Deterministic("p_context",
-                               pm.math.sigmoid(alpha[1] + beta[1] * theta_qc),
+                               pm.math.sigmoid(alpha[1] + beta[1] * theta_c),
                                dims="question")
         p_s = pm.Deterministic("p_style",
                                pm.math.sigmoid(alpha[2] + beta[2] * theta_s),
                                dims="question")
 
-        # ---- reliability: fixed or Beta posterior ----
-        if include_r_uncertainty and data.qc_kn.shape[0] > 0:
-            qc_k = data.qc_kn[:, 0]
-            qc_n = data.qc_kn[:, 1]
-            r_qc_post = pm.Beta(
-                "r_qc",
-                alpha=1.0 + qc_k.astype(np.float64),
-                beta=1.0 + np.maximum(qc_n - qc_k, 0).astype(np.float64),
-                shape=data.qc_kn.shape[0],
-            )
-            obs_r_qc = pt.clip(r_qc_post[data.qc_r_idx], 0.501, 0.999)
-        else:
-            obs_r_qc = pt.as_tensor_variable(data.obs_r)
+        # ---- question_fit: Bernoulli with optional Beta r_uncertainty ----
+        if data.qf_obs_idx.size > 0:
+            if include_r_uncertainty and data.qf_kn.shape[0] > 0:
+                qf_k = data.qf_kn[:, 0]
+                qf_n = data.qf_kn[:, 1]
+                r_qf_post = pm.Beta(
+                    "r_qf",
+                    alpha=1.0 + qf_k.astype(np.float64),
+                    beta=1.0 + np.maximum(qf_n - qf_k, 0).astype(np.float64),
+                    shape=data.qf_kn.shape[0],
+                )
+                r_qf = pt.clip(r_qf_post[data.qf_r_idx], 0.501, 0.999)
+            else:
+                r_qf = pt.as_tensor_variable(data.qf_obs_r)
+            qf_p = p_q[data.qf_obs_idx]
+            pm.Bernoulli("obs_question",
+                         p=qf_p * r_qf + (1.0 - qf_p) * (1.0 - r_qf),
+                         observed=data.qf_obs_verdict)
 
-        # ---- question + context: Bernoulli with marginalized verdict ----
-        if data.obs_question_idx.size > 0:
-            p_qc_stack = pt.stack([p_q, p_c], axis=1)  # (N, 2)
-            obs_p = p_qc_stack[data.obs_question_idx, data.obs_aspect_idx]
-            obs_likelihood = obs_p * obs_r_qc + (1.0 - obs_p) * (1.0 - obs_r_qc)
-            pm.Bernoulli("obs_qc", p=obs_likelihood, observed=data.obs_verdict)
+        # ---- context_fit: Bernoulli with fixed human r_q (no r_uncertainty) ----
+        if data.cf_obs_idx.size > 0:
+            r_cf = pt.as_tensor_variable(data.cf_obs_r)
+            cf_p = p_c[data.cf_obs_idx]
+            pm.Bernoulli("obs_context",
+                         p=cf_p * r_cf + (1.0 - cf_p) * (1.0 - r_cf),
+                         observed=data.cf_obs_verdict)
 
         # ---- style ----
         if data.style_obs_qidx.size > 0:
@@ -386,11 +408,38 @@ def build_and_sample(
                 raise ValueError(f"unknown style_likelihood: {style_likelihood!r}")
 
         # ---- quantities of interest ----
-        style_na_t = pt.as_tensor_variable(style_na_arr)
-        style_eff = pt.where(pt.eq(style_na_t, 1.0), 1.0, p_s)
-        pm.Deterministic("binary_accuracy", pm.math.mean(p_q * p_c * style_eff))
+        style_na_t   = pt.as_tensor_variable(style_na_arr)
+        context_na_t = pt.as_tensor_variable(data.context_na.astype(np.float64))
+
+        # Threshold-AND binary accuracy (headline metric, matches compute_raw_observed).
+        # For each question, threshold each de-noised aspect posterior at 0.5 (hard
+        # pass/fail) then AND the three indicators and average over questions.  NA aspects
+        # (style below reliability threshold, or context not applicable) count as automatic
+        # passes, exactly as in the raw threshold-AND count.  This is the correct estimand
+        # for disattenuation upward away from the (0.5)³ noise floor; see
+        # pymc_bias_correction_brief_revised.md.
+        z_q = pt.ge(p_q, 0.5)
+        z_c = pt.where(pt.eq(context_na_t, 1.0), 1.0, pt.ge(p_c, 0.5))
+        z_s = pt.where(pt.eq(style_na_t,   1.0), 1.0, pt.ge(p_s, 0.5))
+        pm.Deterministic("binary_accuracy", pm.math.mean(z_q * z_c * z_s))
+
+        # Legacy product metric (retained for backward comparison with prior runs).
+        # Computes mean(p_q · p_c · p_s) — deflates because products of sub-1
+        # probabilities are always < any individual factor.
+        style_eff   = pt.where(pt.eq(style_na_t,   1.0), 1.0, p_s)
+        context_eff = pt.where(pt.eq(context_na_t, 1.0), 1.0, p_c)
+        pm.Deterministic("binary_accuracy_product", pm.math.mean(p_q * context_eff * style_eff))
         pm.Deterministic("accuracy_question", pm.math.mean(p_q))
-        pm.Deterministic("accuracy_context",  pm.math.mean(p_c))
+        # accuracy_context: average only over the questions that were actually
+        # context-scored (constrained_generation subset); the remaining questions
+        # have independent theta_c and a prior-only p_c — averaging them in would
+        # dilute the estimate toward 0.5 without adding information.
+        n_ctx = float((data.context_na == False).sum())  # noqa: E712
+        if n_ctx > 0:
+            pm.Deterministic(
+                "accuracy_context",
+                pm.math.sum(p_c * (1.0 - context_na_t)) / n_ctx,
+            )
         n_non_na = float((data.style_na == False).sum())  # noqa: E712
         if n_non_na > 0:
             pm.Deterministic(
@@ -415,10 +464,11 @@ def build_and_sample(
 # ---------------------------------------------------------------------------
 
 ASPECT_VAR_TO_RAW_KEY = {
-    "accuracy_question": "question_fit_quadratic",
-    "accuracy_context":  "context_fit_quadratic",
-    "accuracy_style":    "style_quadratic",
-    "binary_accuracy":   "binary_accuracy",
+    "accuracy_question":    "question_fit_quadratic",
+    "accuracy_context":     "context_fit_quadratic",
+    "accuracy_style":       "style_quadratic",
+    "binary_accuracy":      "binary_accuracy",
+    "binary_accuracy_product": "binary_accuracy",  # both compare against the raw AND-count
 }
 
 
@@ -444,10 +494,11 @@ def summarize(idata, raw_observed: dict, alpha: float = 0.05) -> dict:
         samples = idata.posterior[var].values.reshape(-1)
         summ = _percentile_summary(samples, alpha=alpha)
         out_key = {
-            "accuracy_question": "question_fit",
-            "accuracy_context":  "context_fit",
-            "accuracy_style":    "style",
-            "binary_accuracy":   "binary_accuracy",
+            "accuracy_question":       "question_fit",
+            "accuracy_context":        "context_fit",
+            "accuracy_style":          "style",
+            "binary_accuracy":         "binary_accuracy",
+            "binary_accuracy_product": "binary_accuracy_product",
         }[var]
         bias_corrected[out_key] = summ
         bias_estimate[out_key] = round(summ["mean"] - raw_observed.get(raw_key, float("nan")), 6)
@@ -523,7 +574,8 @@ def main(argv=None):
         style_likelihood=args.style_likelihood,
         include_r_uncertainty=args.include_r_uncertainty,
     )
-    print(f"  obs: {data.obs_question_idx.size} qc / {data.style_obs_qidx.size} style "
+    print(f"  obs: {data.qf_obs_idx.size} question_fit / {data.cf_obs_idx.size} context_fit / "
+          f"{data.style_obs_qidx.size} style "
           f"(after collapsing paired orderings; "
           f"{int(data.style_na.sum())} questions have style NA)")
 
@@ -575,21 +627,26 @@ def main(argv=None):
     print(header)
     print("-" * len(header))
     pairs = [
-        ("question_fit",    "question_fit_quadratic"),
-        ("context_fit",     "context_fit_quadratic"),
-        ("style",           "style_quadratic"),
-        ("binary_accuracy", "binary_accuracy"),
+        ("question_fit",            "question_fit_quadratic"),
+        ("context_fit",             "context_fit_quadratic"),
+        ("style",                   "style_quadratic"),
+        ("binary_accuracy",         "binary_accuracy"),
+        ("binary_accuracy_product", "binary_accuracy"),
     ]
     for out_key, raw_key in pairs:
         bc = summary["bias_corrected"].get(out_key)
         raw = raw_observed.get(raw_key)
         if bc is None or raw is None:
             continue
-        print(f"{out_key:18s}  {raw:7.3f}  {bc['mean']:9.3f}  "
+        label = out_key.replace("binary_accuracy_product", "binary_acc (product)")
+        print(f"{label:26s}  {raw:7.3f}  {bc['mean']:9.3f}  "
               f"[{bc['ci_lower']:.3f}, {bc['ci_upper']:.3f}]")
 
-    print(f"\nEstimated bias on binary_accuracy: "
-          f"{summary['estimated_bias'].get('binary_accuracy', float('nan')):+.3f}")
+    ba_bias = summary["estimated_bias"].get("binary_accuracy", float("nan"))
+    prod_bias = summary["estimated_bias"].get("binary_accuracy_product", float("nan"))
+    print(f"\nBias on binary_accuracy (threshold-AND): {ba_bias:+.3f}")
+    print(f"Bias on binary_acc (product, legacy):    {prod_bias:+.3f}"
+          f"  ← deflation from probability multiplication")
     d = summary["diagnostics"]
     print(f"Diagnostics: divergent={d['n_divergent']}  "
           f"max R̂={d['max_rhat']:.3f}  min ESS={d['min_ess']:.0f}")

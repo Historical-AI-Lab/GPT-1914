@@ -322,7 +322,7 @@ def compute_raw_observed(judge_data: dict, discrim_data: dict,
             s_lin.append((score_sf_raw, ws_lin))
 
         pass_qf = score_qf >= 0.5
-        pass_cf = score_cf >= 0.5
+        pass_cf = (not cf) or (score_cf >= 0.5)   # absent context_fit → NA pass
         pass_sf = (qnum in below_threshold) or (score_sf_raw >= 0.5)
         if pass_qf and pass_cf and pass_sf:
             binary_passes += 1
@@ -426,7 +426,7 @@ def run_bootstrap(
 
             # Binary AND — discrete Bernoulli draws per aspect
             zq = int(rng.random() < pq)
-            zc = int(rng.random() < pc)
+            zc = 1 if not cf else int(rng.random() < pc)   # absent context_fit → NA pass
             zs = 1 if is_na else int(rng.random() < ps)
             if zq and zc and zs:
                 binary_passes += 1

@@ -22,8 +22,8 @@ import re
 
 _ABSTENTION_CLAUSE = (
     "If the question could not be answered in the specified historical context "
-    "or makes no sense there, treat 'insufficient information' as the best "
-    "possible answer.\n\n"
+    "or makes no sense there, 'insufficient information' is a valid response. "
+    "It is also acceptable to explain why the question could not be answered.\n\n"
 )
 
 _QUALIFICATIONS = {
@@ -57,19 +57,19 @@ Answer B: {answer_b}
 
 1. Question fit.
 Which answer better fits the question itself? {added_qualification}
-- Choose A or B.
-- Choose C only if the two answers are equally accurate and relevant to the question.
+- Choose A or B if one answer is more appropriate.
+- Choose C if the two answers are both accurate and relevant to the question.
 
 2. Context fit.
 Now consider this historical context for the question:
 
-Context: {context}
+Source: {context}
 
 Ignore your previous decision. Now decide which answer is something the specified \
-source would be likely to say. An incorrect answer to the question could still be \
+source might say. An incorrect answer to the question could still be \
 typical of the source.
-- Choose A or B.
-- Choose C only if the two answers are equally typical of the source.
+- Choose A or B if one is more typical.
+- Choose C if either answer could be found in the source.
 
 {abstention_clause}\
 Respond in JSON: {{"question fit": "A"|"B"|"C", "context fit": "A"|"B"|"C"}}
