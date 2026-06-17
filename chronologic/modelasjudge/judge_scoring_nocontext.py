@@ -6,9 +6,11 @@ Pairs a free-generation output file (from free_generation.py) with an LLM judge 
 evaluate each candidate answer against the ground truth on question fit only.
 
 Context fit is NOT scored by the LLM judge.  Instead, context_fit judgments are
-collected by human_scoring.py for all questions whose benchmark frame_type is
-"book_context" (~216 questions).  Questions with frame_type "world_context" or
-"passage_context" get no context score (NA → treated as a pass downstream).
+collected by human_scoring.py for questions that are both frame_type "book_context"
+AND reasoning_type "constrained_generation" (~98 questions).  Other book_context
+reasoning types (character_modeling, topic_sentence) receive no context score
+(NA → treated as a pass downstream), as do "world_context" and "passage_context"
+questions.
 
 For questions with multiple ground truths the judge runs multiple comparisons:
   - Odd #GTs: each GT tested once (random A/B position).
@@ -19,8 +21,8 @@ For questions with multiple ground truths the judge runs multiple comparisons:
 Per-question LLM-judge reliability (q_r) is joined from the pre-computed
 reliability file in llm_reliability/.  Questions below the reliability threshold
 (0.65) are collected in a "needs_human" list so human_scoring.py knows which to
-re-judge.  All book_context questions also appear in needs_human with aspect
-"context_fit" so human_scoring.py requests context judgments for them.
+re-judge.  Constrained-generation book_context questions also appear in needs_human
+with aspect "context_fit" so human_scoring.py requests context judgments for them.
 
 Usage
 -----
@@ -64,8 +66,8 @@ Written to scored_answers/judge_{judge}__{candidate}__{version}.json:
       "gt_indices":  [0, 1, 1]
     }, ...
   },
-  "context_fit": {},          // populated later by human_scoring.py for book_context
-  "book_context_qnums": [...],// qnums with frame_type == "book_context"
+  "context_fit": {},          // populated later by human_scoring.py for constrained_generation
+  "book_context_qnums": [...],// qnums with frame_type == "book_context" AND reasoning_type == "constrained_generation"
   "needs_human": [
     {"qnum": "0123", "aspects": ["question_fit"]},
     {"qnum": "0456", "aspects": ["context_fit"]},
@@ -212,9 +214,19 @@ def _load_reliability(path):
     return data.get("per_question", {})
 
 
-def _load_benchmark_frame_types(benchmark_path):
-    """Return a set of qnums (str) whose frame_type is 'book_context'."""
-    book_context = set()
+def _load_context_scored_qnums(benchmark_path):
+    """Return qnums (str) that receive human context scoring.
+
+    A question is context-scored only when it is both:
+      - frame_type == 'book_context'  (has a book passage to evaluate against)
+      - reasoning_type == 'constrained_generation'
+
+    Other book_context reasoning types (character_modeling, topic_sentence) get no
+    context score; absent context_fit is treated as an automatic pass downstream.
+    world_context/constrained_generation is excluded because there is no book passage
+    to judge context against.
+    """
+    qnums = set()
     with open(benchmark_path, encoding="utf-8") as fh:
         for i, line in enumerate(fh):
             line = line.strip()
@@ -225,9 +237,10 @@ def _load_benchmark_frame_types(benchmark_path):
             except json.JSONDecodeError:
                 continue
             qnum = str(rec.get("question_number", i))
-            if rec.get("frame_type") == "book_context":
-                book_context.add(qnum)
-    return book_context
+            if (rec.get("frame_type") == "book_context"
+                    and rec.get("reasoning_type") == "constrained_generation"):
+                qnums.add(qnum)
+    return qnums
 
 
 def _load_benchmark_frames(benchmark_path):
@@ -448,8 +461,11 @@ def main():
     parser.add_argument("--judge", required=True, metavar="MODEL_ID",
                         help="Judge model ID (OpenRouter or OpenAI)")
     parser.add_argument("--benchmark", metavar="PATH",
-                        default=str(SCRIPT_DIR.parent / "booksample" / "chronologic_en_0.2.jsonl"),
-                        help="Benchmark JSONL (version string + frame_type per question)")
+                        default=None,
+                        help="Benchmark JSONL (version string + frame_type per question). "
+                             "If omitted, inferred from the version suffix in FREE_GEN_FILE "
+                             "(e.g. __0.4.json → chronologic_en_0.4.jsonl); "
+                             "falls back to chronologic_en_0.2.jsonl.")
     parser.add_argument("--reliability", metavar="PATH", default=None,
                         help="Pre-computed LLM reliability JSON; auto-located from "
                              "llm_reliability/{judge}__{version}.json if omitted")
@@ -476,12 +492,22 @@ def main():
     candidate_model = free_gen.get("model", "unknown")
     candidate_reasoning_effort = free_gen.get("reasoning_effort", "none")
 
+    if args.benchmark is None:
+        inferred_version = _parse_benchmark_version(args.free_gen_file)
+        candidate_path = SCRIPT_DIR.parent / "booksample" / f"chronologic_en_{inferred_version}.jsonl"
+        if candidate_path.exists():
+            args.benchmark = str(candidate_path)
+        else:
+            args.benchmark = str(SCRIPT_DIR.parent / "booksample" / "chronologic_en_0.2.jsonl")
+            print(f"Warning: could not find {candidate_path}; falling back to 0.2 benchmark.")
+
     benchmark_version = _parse_benchmark_version(args.benchmark)
 
-    # Load frame_type map to determine book_context questions, and substantive frames.
-    print(f"Loading benchmark for frame_type: {args.benchmark}")
-    book_context_qnums = sorted(_load_benchmark_frame_types(args.benchmark))
-    print(f"  {len(book_context_qnums)} book_context questions found.")
+    # Load benchmark to determine constrained_generation context-scored questions,
+    # and substantive frames.
+    print(f"Loading benchmark: {args.benchmark}")
+    book_context_qnums = sorted(_load_context_scored_qnums(args.benchmark))
+    print(f"  {len(book_context_qnums)} constrained_generation context-scored questions found.")
     bench_frames = _load_benchmark_frames(args.benchmark)
 
     output_path = (
