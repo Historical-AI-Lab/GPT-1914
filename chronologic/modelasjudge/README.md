@@ -1,6 +1,6 @@
-# ChronoLogic Judging Strategy: Executive Summary
+# ChronoLogic Free Generation Judging Strategy
 
-This describes the model-as-judge strategy I built in May. We might not have to use the whole thing, but I think our paper would profit at least from the general strategy of using judge reliability to turn upper bounds into a solid estimate.
+Allowing the model to freely generate an answer is in a sense the fairest judging strategy, since the model receives no help
 
 The model-as-judge workflow requires three separate judgments for each free-generated answer. First, an LLM judge (Claude Sonnet 4.6 for all non-Claude models; a GPT for Claude family models) evaluates two dimensions in a single forced-choice prompt: *question fit* — whether the answer is substantively correct — and *context fit* — whether the answer is consistent with the historical source (author, date, genre) specified in the metadata frame. It does this by comparing the model-generated answer to ground truth and deciding which is a better fit. If the model wins *or ties* the ground truth, it passes.
 
