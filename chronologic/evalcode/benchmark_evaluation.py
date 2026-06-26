@@ -1252,8 +1252,8 @@ def full_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
         for mp, gt in zip(all_model_probs, all_gt_probs)
     ]
     per_question_results = [
-        {"model_probs": mp, "chosen_letter": None, "correct": c}
-        for mp, c in zip(all_model_probs, correct_vector)
+        {"model_probs": mp, "model_logprobs": lp, "chosen_letter": None, "correct": c}
+        for mp, lp, c in zip(all_model_probs, all_model_logprobs, correct_vector)
     ]
 
     # Bootstrap evaluation
@@ -1832,8 +1832,8 @@ def full_eval_together(model_id, path_to_jsonl, api_key_path=None,
         for mp, gt in zip(all_model_probs, all_gt_probs)
     ]
     per_question_results = [
-        {"model_probs": mp, "chosen_letter": None, "correct": c}
-        for mp, c in zip(all_model_probs, correct_vector)
+        {"model_probs": mp, "model_logprobs": lp, "chosen_letter": None, "correct": c}
+        for mp, lp, c in zip(all_model_probs, all_model_logprobs, correct_vector)
     ]
 
     subset_index = build_subset_index(questions)
