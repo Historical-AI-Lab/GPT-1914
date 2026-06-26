@@ -25,6 +25,7 @@ source "$SLURM_SUBMIT_DIR/../qwentuning/qlora-env/bin/activate"
 pip install -q peft
 
 export HF_HOME=/work/nvme/bdfx/.cache/huggingface
+export TRANSFORMERS_CACHE=/work/nvme/bdfx/.cache/huggingface/hub
 export HF_HUB_OFFLINE=1
 
 SCRIPT_DIR="$SLURM_SUBMIT_DIR"
