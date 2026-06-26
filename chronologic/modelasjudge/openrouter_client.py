@@ -138,10 +138,11 @@ def _build_extra_body(model_id, reasoning_effort, max_tokens):
             "reasoning": {"max_tokens": thinking_budget},
         }
     else:
+        # OpenRouter rejects sending both "effort" and "max_tokens" together
+        # for non-Anthropic models; send only the effort knob.
         body = {
             "reasoning": {
                 "effort": reasoning_effort,
-                "max_tokens": thinking_budget,
             },
         }
     return body

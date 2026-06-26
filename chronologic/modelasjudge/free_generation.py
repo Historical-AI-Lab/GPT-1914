@@ -526,6 +526,7 @@ def run_free_generation(
     trust_remote_code=False,
     num_questions=None,
     device=None,
+    device_map=None,
 ):
     """Generate free-text answers for benchmark questions and write a JSON report.
 
@@ -547,6 +548,8 @@ def run_free_generation(
         lora_adapter:                path to LoRA adapter; None = off.
         trust_remote_code:           passed to HF from_pretrained.
         num_questions:               cap on questions to process (for testing).
+        device_map:                  passed to HF from_pretrained for multi-GPU sharding
+                                     (e.g. 'auto'); overrides device when set.
 
     Returns:
         str: absolute path to the written JSON output file.
@@ -596,6 +599,7 @@ def run_free_generation(
         hf_model, hf_tokenizer = load_model(
             model_id,
             device=device,
+            device_map=device_map,
             trust_remote_code=trust_remote_code,
             quantize=quantize,
             lora_adapter=lora_adapter,
@@ -721,6 +725,10 @@ def main():
         '--device', choices=['cpu', 'mps', 'cuda'],
         help="Device for local models (default: auto-detect cuda > mps > cpu).",
     )
+    parser.add_argument(
+        '--device-map', metavar='MAP', dest='device_map',
+        help="HF device_map for multi-GPU sharding (e.g. 'auto').",
+    )
 
     args = parser.parse_args()
 
@@ -749,6 +757,7 @@ def main():
         trust_remote_code=args.trust_remote_code,
         num_questions=args.num_questions,
         device=args.device,
+        device_map=args.device_map,
     )
 
 
