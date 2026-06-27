@@ -1,0 +1,457 @@
+{
+  "metadata": {
+    "model_id": "Qwen/Qwen2.5-7B-Instruct",
+    "benchmark_file": "diff_0.2_to_0.4/chronologic_diff_0.2_to_0.4.jsonl",
+    "eval_mode": "mcq",
+    "timestamp": "20260626_223630",
+    "n_questions": 14,
+    "n_bootstrap": 1000
+  },
+  "per_question_results": [
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": true
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    },
+    {
+      "model_probs": null,
+      "chosen_letter": null,
+      "correct": false
+    }
+  ],
+  "confidence_intervals": {
+    "overall_benchmark": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.2964285714285714,
+        -0.10595238095238094,
+        0.16666666666666666
+      ],
+      "accuracy": [
+        0.0,
+        0.14285714285714285,
+        0.35714285714285715
+      ]
+    },
+    "question_category:knowledge": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.19999999999999998,
+        0.4,
+        1.0
+      ],
+      "accuracy": [
+        0.0,
+        0.5,
+        1.0
+      ]
+    },
+    "answer_length:short_answer": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.25,
+        0.16666666666666666,
+        1.0
+      ],
+      "accuracy": [
+        0.0,
+        0.3333333333333333,
+        1.0
+      ]
+    },
+    "frame_type:world_context": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.25,
+        0.0625,
+        0.6875
+      ],
+      "accuracy": [
+        0.0,
+        0.25,
+        0.75
+      ]
+    },
+    "reasoning_type:knowledge": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        0.0,
+        1.0,
+        1.0
+      ],
+      "accuracy": [
+        0.0,
+        1.0,
+        1.0
+      ]
+    },
+    "question_category:character_modeling_with_summary": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.3333333333333333,
+        -0.3333333333333333,
+        -0.3333333333333333
+      ],
+      "accuracy": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "answer_length:sentence_plus": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.31945833333333334,
+        -0.16499999999999998,
+        0.14729166666666663
+      ],
+      "accuracy": [
+        0.0,
+        0.1,
+        0.3333333333333333
+      ]
+    },
+    "frame_type:book_context": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.3333333333333333,
+        -0.11111111111111109,
+        0.4666666666666667
+      ],
+      "accuracy": [
+        0.0,
+        0.16666666666666666,
+        0.6
+      ]
+    },
+    "reasoning_type:character_modeling": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.3333333333333333,
+        -0.3333333333333333,
+        -0.3333333333333333
+      ],
+      "accuracy": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "question_category:cloze_conditionalclause": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.25,
+        -0.25,
+        0.0
+      ],
+      "accuracy": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "answer_length:phrase": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.3333333333333333,
+        -0.29166666666666663,
+        0.0
+      ],
+      "accuracy": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "frame_type:passage_context": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.3333333333333333,
+        -0.2738095238095238,
+        -0.2248750000000001
+      ],
+      "accuracy": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "reasoning_type:phrase_cloze": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.3333333333333333,
+        -0.29166666666666663,
+        0.0
+      ],
+      "accuracy": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "question_category:cloze_effectclause": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.3333333333333333,
+        -0.3333333333333333,
+        0.0
+      ],
+      "accuracy": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "question_category:cloze_effectsentence": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.25,
+        -0.22499999999999998,
+        0.0
+      ],
+      "accuracy": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "reasoning_type:sentence_cloze": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.3333333333333333,
+        -0.2583333333333333,
+        0.0
+      ],
+      "accuracy": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "question_category:cloze_causalsentence": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.3333333333333333,
+        -0.3333333333333333,
+        0.0
+      ],
+      "accuracy": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "question_category:textbook": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.25,
+        0.375,
+        1.0
+      ],
+      "accuracy": [
+        0.0,
+        0.5,
+        1.0
+      ]
+    },
+    "reasoning_type:inference": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.25,
+        -0.2333333333333333,
+        0.0
+      ],
+      "accuracy": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "reasoning_type:constrained_generation": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        0.0,
+        1.0,
+        1.0
+      ],
+      "accuracy": [
+        0.0,
+        1.0,
+        1.0
+      ]
+    },
+    "question_category:inference": {
+      "brier_score": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "skill_score": [
+        -0.25,
+        -0.25,
+        0.0
+      ],
+      "accuracy": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "correct_vector": [
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false
+  ]
+}
