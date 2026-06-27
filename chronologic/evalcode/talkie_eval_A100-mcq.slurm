@@ -33,17 +33,17 @@ cd "$SCRIPT_DIR"
 
 # python -u benchmark_evaluation.py \
 #     talkie-1930-13b-base \
-#     ../booksample/chronologic_en_0.2.jsonl \
-#     --full-eval \
+#     ../booksample/chronologic_en_0.4.jsonl \
+#     --mcq \
 #     --verbose-report \
-#     --output-dir prob_results
+#     --output-dir mcq_04
 #
 # python -u benchmark_evaluation.py \
 #     talkie-1930-13b-it \
-#     ../booksample/chronologic_en_0.2.jsonl \
-#     --full-eval \
+#     ../booksample/chronologic_en_0.4.jsonl \
+#     --mcq \
 #     --verbose-report \
-#     --output-dir prob_results
+#     --output-dir mcq_04
 
 # --- MCQ eval ---
 # Results land in mcq_results/.
@@ -53,14 +53,14 @@ python -u benchmark_evaluation.py \
     ../booksample/chronologic_en_0.2.jsonl \
     --mcq \
     --verbose-report \
-    --output-dir mcq_results
+    --output-dir mcq_04
 
 python -u benchmark_evaluation.py \
     talkie-1930-13b-it \
     ../booksample/chronologic_en_0.2.jsonl \
     --mcq \
     --verbose-report \
-    --output-dir mcq_results
+    --output-dir mcq_04
 
 echo "mcq done"
 date

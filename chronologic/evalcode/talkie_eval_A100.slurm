@@ -33,17 +33,17 @@ cd "$SCRIPT_DIR"
 
 python -u benchmark_evaluation.py \
     talkie-1930-13b-base \
-    ../booksample/chronologic_en_0.2.jsonl \
+    ../booksample/chronologic_en_0.4.jsonl \
     --full-eval \
     --verbose-report \
-    --output-dir prob_results
+    --output-dir prob_04
 
 python -u benchmark_evaluation.py \
     talkie-1930-13b-it \
-    ../booksample/chronologic_en_0.2.jsonl \
+    ../booksample/chronologic_en_0.4.jsonl \
     --full-eval \
     --verbose-report \
-    --output-dir prob_results
+    --output-dir prob_04
 
 echo "full-eval done"
 date
