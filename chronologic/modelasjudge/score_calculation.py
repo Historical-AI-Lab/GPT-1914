@@ -1,4 +1,9 @@
 """
+DEPRECATED — superseded by montecarlo_accuracy.py, which applies MOM bias-correction
+and a two-level Bernoulli bootstrap CI. This file is kept only because tests/
+test_score_calculation.py and several comments in other scripts reference it.
+Do not use this as the final scoring stage.
+
 score_calculation.py — Compute weighted aspect scores and overall binary accuracy.
 
 Combines the LLM judge file with the discriminative judge file (style) to produce
