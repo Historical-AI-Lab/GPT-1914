@@ -103,7 +103,14 @@ sys.path.insert(0, str(SCRIPT_DIR))
 
 from judge_prompts_nocontext import score_one_comparison
 from openrouter_client import is_openrouter_model, make_openrouter_client
-from naming import judge_tag as _judge_tag, candidate_tag as _candidate_tag, sanitize as _sanitize
+from naming import (
+    judge_tag as _judge_tag,
+    candidate_tag as _candidate_tag,
+    sanitize as _sanitize,
+    benchmark_version as _benchmark_version_from_path,
+    latest_benchmark as _latest_benchmark,
+    scored_answers_filename as _scored_answers_filename,
+)
 
 SCORED_DIR = SCRIPT_DIR / "scored_answers"
 RELIABILITY_DIR = SCRIPT_DIR / "llm_reliability"
@@ -123,9 +130,9 @@ def _normalize_for_identity(s):
 
 
 def _parse_benchmark_version(path):
-    name = Path(path).stem
-    m = re.search(r"(\d+\.\d+)", name)
-    return m.group(1) if m else "unknown"
+    # Delegates to naming.benchmark_version which takes the LAST X.Y match,
+    # so model-name decimals (Qwen2.5, gpt-4.1) don't shadow the version token.
+    return _benchmark_version_from_path(path)
 
 
 def _is_openai_model(model_id):
@@ -189,11 +196,14 @@ def _make_judge_call(judge_model, openrouter_cred=None, openai_cred=None, debug=
         )
 
 
-def _auto_output_path(judge_model, candidate_model, benchmark_version):
+def _auto_output_path(judge_model, candidate_label, benchmark_version,
+                      candidate_effort="none", judge_effort="none"):
     SCORED_DIR.mkdir(exist_ok=True)
-    j = _judge_tag(judge_model)
-    c = _candidate_tag(candidate_model)
-    return SCORED_DIR / f"judge_{j}__{c}__{benchmark_version}.json"
+    fname = _scored_answers_filename(
+        judge_model, candidate_label, benchmark_version,
+        candidate_effort, judge_effort,
+    )
+    return SCORED_DIR / fname
 
 
 def _reliability_path(judge_model, benchmark_version):
@@ -246,6 +256,7 @@ def _load_context_scored_qnums(benchmark_path):
 def _load_benchmark_frames(benchmark_path):
     """Return {qnum: substantive_metadata_frame or metadata_frame}."""
     frames = {}
+    n_substantive = 0
     with open(benchmark_path, encoding="utf-8") as fh:
         for i, line in enumerate(fh):
             line = line.strip()
@@ -256,8 +267,21 @@ def _load_benchmark_frames(benchmark_path):
             except json.JSONDecodeError:
                 continue
             qnum = str(rec.get("question_number", i))
-            frames[qnum] = (rec.get("substantive_metadata_frame")
-                            or rec.get("metadata_frame", ""))
+            sub = rec.get("substantive_metadata_frame")
+            if sub:
+                n_substantive += 1
+                frames[qnum] = sub
+            else:
+                frames[qnum] = rec.get("metadata_frame", "")
+    if n_substantive == 0:
+        print(
+            "\nWARNING: NO SUBSTANTIVE_METADATA_FRAME FOUND IN THIS BENCHMARK. "
+            "ALL QUESTIONS WILL BE SCORED USING metadata_frame ONLY. "
+            "THIS IS EXPECTED FOR BENCHMARKS BEFORE v0.4, BUT MAY INDICATE "
+            "THE WRONG BENCHMARK FILE WAS LOADED.\n"
+        )
+    else:
+        print(f"  {n_substantive}/{len(frames)} questions have substantive_metadata_frame.")
     return frames
 
 
@@ -463,9 +487,9 @@ def main():
     parser.add_argument("--benchmark", metavar="PATH",
                         default=None,
                         help="Benchmark JSONL (version string + frame_type per question). "
-                             "If omitted, inferred from the version suffix in FREE_GEN_FILE "
-                             "(e.g. __0.4.json → chronologic_en_0.4.jsonl); "
-                             "falls back to chronologic_en_0.2.jsonl.")
+                             "If omitted, inferred from benchmark_path stored in FREE_GEN_FILE; "
+                             "falls back to version detection from the filename; "
+                             "final fallback is the highest-versioned chronologic_en_*.jsonl.")
     parser.add_argument("--reliability", metavar="PATH", default=None,
                         help="Pre-computed LLM reliability JSON; auto-located from "
                              "llm_reliability/{judge}__{version}.json if omitted")
@@ -491,15 +515,43 @@ def main():
     answers = free_gen.get("answers", {})
     candidate_model = free_gen.get("model", "unknown")
     candidate_reasoning_effort = free_gen.get("reasoning_effort", "none")
+    # candidate_label carries fine-tune identity; falls back to model id for legacy files.
+    candidate_label = free_gen.get("candidate_label") or candidate_model
 
     if args.benchmark is None:
-        inferred_version = _parse_benchmark_version(args.free_gen_file)
-        candidate_path = SCRIPT_DIR.parent / "booksample" / f"chronologic_en_{inferred_version}.jsonl"
-        if candidate_path.exists():
-            args.benchmark = str(candidate_path)
+        booksample_dir = SCRIPT_DIR.parent / "booksample"
+        # Priority 1: absolute path stored in the free-gen JSON.
+        json_bpath = free_gen.get("benchmark_path")
+        if json_bpath and Path(json_bpath).exists():
+            args.benchmark = json_bpath
         else:
-            args.benchmark = str(SCRIPT_DIR.parent / "booksample" / "chronologic_en_0.2.jsonl")
-            print(f"Warning: could not find {candidate_path}; falling back to 0.2 benchmark.")
+            # Priority 2: version tag stored in the free-gen JSON.
+            json_bver = free_gen.get("benchmark_version")
+            if json_bver:
+                candidate_path = booksample_dir / f"chronologic_en_{json_bver}.jsonl"
+                if candidate_path.exists():
+                    args.benchmark = str(candidate_path)
+            # Priority 3: version inferred from the input filename (corrected last-match regex).
+            if args.benchmark is None:
+                inferred_version = _parse_benchmark_version(args.free_gen_file)
+                if inferred_version != "unknown":
+                    candidate_path = booksample_dir / f"chronologic_en_{inferred_version}.jsonl"
+                    if candidate_path.exists():
+                        args.benchmark = str(candidate_path)
+            # Priority 4: fall back to the highest-versioned benchmark present.
+            if args.benchmark is None:
+                try:
+                    args.benchmark = str(_latest_benchmark(booksample_dir))
+                    print(
+                        "\nWARNING: BENCHMARK VERSION COULD NOT BE DETERMINED FROM THE INPUT "
+                        f"FILE. FALLING BACK TO LATEST AVAILABLE BENCHMARK: {args.benchmark}\n"
+                        "USE --benchmark TO SPECIFY THE CORRECT FILE EXPLICITLY.\n"
+                    )
+                except FileNotFoundError:
+                    sys.exit(
+                        "ERROR: No benchmark file found and no --benchmark specified. "
+                        f"Expected chronologic_en_*.jsonl in {booksample_dir}"
+                    )
 
     benchmark_version = _parse_benchmark_version(args.benchmark)
 
@@ -512,7 +564,11 @@ def main():
 
     output_path = (
         Path(args.output) if args.output
-        else _auto_output_path(args.judge, candidate_model, benchmark_version)
+        else _auto_output_path(
+            args.judge, candidate_label, benchmark_version,
+            candidate_effort=candidate_reasoning_effort,
+            judge_effort=args.reasoning_effort,
+        )
     )
 
     reliability_path = (
@@ -542,6 +598,7 @@ def main():
     output_data = {
         "judge_model": args.judge,
         "candidate_model": candidate_model,
+        "candidate_label": candidate_label,
         "candidate_reasoning_effort": candidate_reasoning_effort,
         "benchmark_version": benchmark_version,
         "reasoning_effort": args.reasoning_effort,

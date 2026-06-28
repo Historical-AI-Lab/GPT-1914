@@ -45,10 +45,11 @@ SCORED_DIR = SCRIPT_DIR / "scored_answers"
 def _locate_judge(ctag: str, version: str, override: str | None) -> Path:
     if override:
         return Path(override)
-    human = sorted(SCORED_DIR.glob(f"judge_*__{ctag}__{version}_human.json"))
+    # Match both old naming (..__version.json) and new (includes effort tokens).
+    human = sorted(SCORED_DIR.glob(f"judge_*__{ctag}__{version}*_human.json"))
     if human:
         return human[0]
-    plain = sorted(SCORED_DIR.glob(f"judge_*__{ctag}__{version}.json"))
+    plain = sorted(SCORED_DIR.glob(f"judge_*__{ctag}__{version}*.json"))
     if plain:
         return plain[0]
     raise FileNotFoundError(f"No judge file for {ctag} v{version} in {SCORED_DIR}")

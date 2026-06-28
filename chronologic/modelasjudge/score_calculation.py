@@ -152,8 +152,12 @@ def weighted_mean(pairs) -> float | None:
 # ---------------------------------------------------------------------------
 
 def _locate_judge_file(ctag: str, version: str) -> tuple[Path, bool]:
-    """Return (path, used_human).  Prefers *_human.json."""
-    human_matches = sorted(SCORED_DIR.glob(f"judge_*__{ctag}__{version}_human.json"))
+    """Return (path, used_human).  Prefers *_human.json.
+
+    Matches both old naming (judge_*__{ctag}__{version}.json) and new naming
+    that appends effort tokens (judge_*__{ctag}__{version}__c-*__j-*.json).
+    """
+    human_matches = sorted(SCORED_DIR.glob(f"judge_*__{ctag}__{version}*_human.json"))
     if human_matches:
         if len(human_matches) > 1:
             names = ", ".join(p.name for p in human_matches)
@@ -163,11 +167,11 @@ def _locate_judge_file(ctag: str, version: str) -> tuple[Path, bool]:
             )
         return human_matches[0], True
 
-    base_matches = sorted(SCORED_DIR.glob(f"judge_*__{ctag}__{version}.json"))
+    base_matches = sorted(SCORED_DIR.glob(f"judge_*__{ctag}__{version}*.json"))
     if not base_matches:
         raise FileNotFoundError(
             f"No judge file found in {SCORED_DIR} matching "
-            f"judge_*__{ctag}__{version}[_human].json"
+            f"judge_*__{ctag}__{version}[*].json"
         )
     if len(base_matches) > 1:
         names = ", ".join(p.name for p in base_matches)

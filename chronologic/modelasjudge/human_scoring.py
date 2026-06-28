@@ -140,7 +140,7 @@ def _free_gen_from_meta(candidate_model: str, version: str,
     for p in direct:
         if p.exists():
             return p
-    matches = sorted(GENERATED_DIR.glob(f"free_gen_{ctag}*__{version}.json"))
+    matches = sorted(GENERATED_DIR.glob(f"free_gen_{ctag}*__{version}*.json"))
     if len(matches) == 1:
         return matches[0]
     if len(matches) > 1:
@@ -162,12 +162,14 @@ def _auto_free_gen(judge_path: Path, data: dict) -> Path:
         if p:
             return p
 
-    # Fallback: filename parsing (for non-anonymized inputs)
+    # Fallback: filename parsing (for non-anonymized inputs).
+    # The stem may now have effort tokens: judge_J__C__ver__c-X__j-Y[_human]
     stem = re.sub(r"_human$", "", judge_path.stem)
-    m = re.match(r"judge_.+__(.+__\d+\.\d+)$", stem)
+    m = re.match(r"judge_.+__(.+)__(\d+\.\d+)(?:__.*)?$", stem)
     if m:
-        candidate_version = m.group(1)
-        p = GENERATED_DIR / f"free_gen_{candidate_version}.json"
+        candidate_tag_str = m.group(1)
+        ver = m.group(2)
+        p = GENERATED_DIR / f"free_gen_{candidate_tag_str}__{ver}.json"
         if p.exists():
             return p
     raise ValueError(
@@ -183,9 +185,13 @@ def _auto_output(judge_path: Path) -> Path:
 
 
 def _infer_candidate_model(judge_path: Path) -> Optional[str]:
-    """Infer candidate_model from filename pattern judge_{judge}__{candidate}__{version}."""
+    """Infer candidate_model from filename.
+
+    Handles both old format (judge_J__C__ver.json) and new format
+    (judge_J__C__ver__c-X__j-Y.json).
+    """
     stem = re.sub(r"_human$", "", judge_path.stem)
-    m = re.match(r"judge_.+__(.+)__\d+\.\d+$", stem)
+    m = re.match(r"judge_.+__(.+)__\d+\.\d+(?:__.*)?$", stem)
     return m.group(1) if m else None
 
 
