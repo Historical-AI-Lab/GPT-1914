@@ -91,7 +91,7 @@ sys.path.insert(0, str(BERTCLASSIFY_DIR))
 
 import numpy as np
 
-from naming import candidate_tag as _candidate_tag, sanitize as _sanitize
+from naming import candidate_tag as _candidate_tag, sanitize as _sanitize, benchmark_version as _benchmark_version_from_path
 from run_deberta_pairs import load_deberta, score_pairs, select_device
 from filter_balance_clean import normalize_text
 
@@ -272,7 +272,6 @@ def score_candidate(
 
 def main():
     import argparse
-    import re
 
     parser = argparse.ArgumentParser(
         description="Score free-generated answers using the DeBERTa discriminative judge.",
@@ -302,13 +301,14 @@ def main():
     with open(args.free_gen_file, encoding="utf-8") as fh:
         free_gen = json.load(fh)
     answers = free_gen.get("answers", {})
-    candidate_model = free_gen.get("model", "unknown")
+    # Prefer candidate_label (set by free_generation.py when a display name differs
+    # from the raw model id) so the ctag matches judge_scoring output.
+    candidate_model = free_gen.get("candidate_label") or free_gen.get("model", "unknown")
     candidate_re = free_gen.get("reasoning_effort", "none")
 
-    # Infer benchmark version from the free_gen filename.
-    fname = Path(args.free_gen_file).stem
-    m = re.search(r"__(\d+\.\d+)$", fname)
-    benchmark_version = m.group(1) if m else "unknown"
+    # Prefer benchmark_version stored in the JSON; fall back to filename parsing.
+    benchmark_version = (free_gen.get("benchmark_version")
+                         or _benchmark_version_from_path(args.free_gen_file))
 
     calibrator, calib_tag = _load_calibrator(args.calibrator)
     jtag = calib_tag or Path(args.calibrator).stem
