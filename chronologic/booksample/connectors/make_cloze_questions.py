@@ -190,7 +190,7 @@ def load_primary_metadata_csv(filepath: Path) -> Dict[str, Dict]:
         for row in reader:
             barcode = row.get('barcode_src', '').strip()
             if barcode:
-                metadata[barcode] = row
+                metadata[barcode_to_csv_key(barcode)] = row
 
     return metadata
 
@@ -202,6 +202,8 @@ def barcode_to_csv_key(barcode: str) -> str:
     Filename: 32044106370034 or HN1IMP (uppercase for alphabetic)
     CSV key: hvd.32044106370034 or hvd.hn1imp (with hvd. prefix, lowercase)
     """
+    if barcode.lower().startswith('hvd.'):
+        return barcode.lower()
     return f"hvd.{barcode.lower()}"
 
 

@@ -45,7 +45,7 @@ def load_primary_metadata_csv(filepath: Path) -> Dict[str, Dict]:
         for row in reader:
             barcode = row.get('barcode_src', '').strip()
             if barcode:
-                metadata[barcode] = row
+                metadata[barcode_to_csv_key(barcode)] = row
 
     return metadata
 
@@ -281,8 +281,9 @@ def build_metadata_frame(metadata: Dict) -> str:
     """
     author = metadata.get('source_author', '')
 
-    # Check for anonymous/missing author
-    if not author or author.strip().lower() in ('', 'anonymous', 'unknown', 'various', 'n/a'):
+    # Check for anonymous/missing author, or missing profession (avoids "an American ." etc.)
+    profession = metadata.get('author_profession', '')
+    if not author or author.strip().lower() in ('', 'anonymous', 'unknown', 'various', 'n/a') or not profession:
         return (
             f"The following questions is based on {metadata['source_title']}, "
             f"{a_or_an(metadata.get('source_genre', 'book'))} {metadata.get('source_genre', 'book')} "
@@ -290,7 +291,6 @@ def build_metadata_frame(metadata: Dict) -> str:
         )
     else:
         nationality = metadata.get('author_nationality', '')
-        profession = metadata.get('author_profession', 'writer')
 
         return (
             f"The following question is drawn from {metadata['source_title']}, "
@@ -421,8 +421,15 @@ def elicit_metadata(metadata_file: str = "../primary_metadata.csv",
     # Title
     metadata['source_title'] = prompt_with_default("Title", default_title)
 
-    # Author
-    metadata['source_author'] = prompt_with_default("Author", default_author)
+    # Author - entering a space explicitly blanks the field (triggers no-author template)
+    if default_author:
+        raw_author = input(f"Author [{default_author}] (space to clear): ")
+    else:
+        raw_author = input("Author: ")
+    if raw_author != raw_author.lstrip():  # leading space = intentional blank
+        metadata['source_author'] = ''
+    else:
+        metadata['source_author'] = raw_author.strip() or default_author
 
     # Date (required)
     while True:

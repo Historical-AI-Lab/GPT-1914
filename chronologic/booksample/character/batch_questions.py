@@ -30,6 +30,9 @@ FICTION_LIST = SCRIPT_DIR / "fiction_to_process.txt"
 METADATA_CSV = BOOKSAMPLE_DIR / "primary_metadata.csv"
 DICTIONARY_FILE = BOOKSAMPLE_DIR / "MainDictionary.txt"
 
+# Central directory for JSON metadata files (shared across pipelines)
+CENTRAL_METADATA_DIR = BOOKSAMPLE_DIR / "json_metadata"
+
 # Scripts to run
 QUESTIONS_SCRIPT = SCRIPT_DIR / "form_character_questions.py"
 
@@ -72,7 +75,7 @@ def load_primary_metadata(filepath: Path) -> dict[str, dict]:
         for row in reader:
             barcode = row.get('barcode_src', '').strip()
             if barcode:
-                metadata[barcode] = row
+                metadata[barcode_to_csv_key(barcode)] = row
 
     return metadata
 
@@ -84,6 +87,8 @@ def barcode_to_csv_key(barcode: str) -> str:
     Filename: 32044106370034 or HN1IMP (uppercase for alphabetic)
     CSV key: hvd.32044106370034 or hvd.hn1imp (with hvd. prefix, lowercase)
     """
+    if barcode.lower().startswith('hvd.'):
+        return barcode.lower()
     return f"hvd.{barcode.lower()}"
 
 
@@ -110,12 +115,13 @@ def get_output_paths(barcode: str) -> dict[str, Path]:
     Get output file paths for a barcode.
 
     Uses uppercase barcode for consistency with existing files.
+    Metadata is stored in central json_metadata/ directory (shared across pipelines).
     """
     stem = barcode.upper()
     return {
         'characters': PROCESS_FILES_DIR / f"{stem}_characters.jsonl",
         'dialogue': PROCESS_FILES_DIR / f"{stem}_dialogue.jsonl",
-        'metadata': PROCESS_FILES_DIR / f"{stem}_metadata.json",
+        'metadata': CENTRAL_METADATA_DIR / f"{stem}_metadata.json",
         'questions': PROCESS_FILES_DIR / f"{stem}_questions.jsonl",
     }
 
@@ -142,8 +148,10 @@ def load_book_metadata(barcode: str) -> dict | None:
 
 
 def save_book_metadata(barcode: str, metadata: dict) -> None:
-    """Save metadata for a book."""
+    """Save metadata for a book to central json_metadata/ directory."""
     paths = get_output_paths(barcode)
+    # Ensure central metadata directory exists
+    CENTRAL_METADATA_DIR.mkdir(exist_ok=True)
     with open(paths['metadata'], 'w', encoding='utf-8') as f:
         json.dump(metadata, f, indent=2, ensure_ascii=False)
 
