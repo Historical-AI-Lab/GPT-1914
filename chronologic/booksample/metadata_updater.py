@@ -18,7 +18,8 @@ history = history[history['include_yn'] == 'y']
 # limit to columns 'barcode_src', 'title_src', 'author_src', 'firstpub', 'reason',
 # 'pubplace', 'authgender', 'authnationality', 'authordates', 'pagecount', 'tokencount'
 history = history[['barcode_src', 'title_src', 'author_src', 'firstpub', 'reason',
-                   'pubplace', 'authgender', 'authnationality', 'authordates', 'page_count_src', 'token_count_o200k_base_gen']]
+                   'pubplace', 'authgender', 'authnationality', 'authordates', 'author_profession',
+                   'page_count_src', 'token_count_o200k_base_gen']]
 
 # function to get metadata from json file
 def get_json_metadata(htid):
@@ -28,27 +29,32 @@ def get_json_metadata(htid):
         with open(json_path, 'r', encoding='latin-1') as f:
             data = json.load(f)
             returndict = dict()
-            
+
             if 'author_profession' in data:
                 returndict['author_profession'] = data['author_profession']
             else:
-                returndict['author_profession'] = ''
+                returndict['author_profession'] = None
             if 'genre' in data:
                 returndict['genre'] = data['genre']
             else:
                 returndict['genre'] = ''
-            
+
             return returndict
     else:
-        return {'author_profession': '', 'genre': ''}
+        return {'author_profession': None, 'genre': ''}
 
 # iterate through history and enrich with json metadata
+# (json_metadata/ takes priority when present; otherwise fall back
+# to the author_profession already recorded in metadata_history.csv)
 author_professions = []
 genres = []
 for idx, row in history.iterrows():
     htid = row['barcode_src']
     json_metadata = get_json_metadata(htid)
-    author_professions.append(json_metadata['author_profession'])
+    if json_metadata['author_profession']:
+        author_professions.append(json_metadata['author_profession'])
+    else:
+        author_professions.append(row['author_profession'])
     genres.append(json_metadata['genre'])
 history['author_profession'] = author_professions
 history['genre'] = genres
@@ -65,6 +71,13 @@ directories_to_count = ['character', 'connectors', 'knowledge', 'manual', 'batch
 
 # Results are stored in a dictionary mapping barcodes to dicts,
 # within which keys are directory names and values are counts.
+def normalize_barcode(barcode: str) -> str:
+    """Lowercase and strip hvd. prefix for consistent matching."""
+    b = barcode.lower()
+    if b.startswith("hvd."):
+        b = b[4:]
+    return b
+
 question_counts = dict()
 category_counter = Counter()
 answer_type_counter = Counter()
@@ -74,30 +87,45 @@ for directory in directories_to_count:
     if os.path.exists(process_files_path):
         for filename in os.listdir(process_files_path):
             if filename.endswith('questions.jsonl') and not filename.endswith('potentialquestions.jsonl'):
-                barcode_part = filename.split('_')[0]
-                # lowercase the barcode part, since filenames are uppercased
-                barcode_part = barcode_part.lower()
-                barcode = f"hvd.{barcode_part}"
                 file_path = os.path.join(process_files_path, filename)
                 with open(file_path, 'r', encoding='latin-1') as f:
                     lines = f.readlines()
-                    line_count = len(lines)
-                    if barcode not in question_counts:
-                        question_counts[barcode] = dict()
-                    question_counts[barcode][directory] = line_count
-                    for line in lines:
-                        line = line.rstrip('\n')
-                        if line:
-                            aggregation_file.write(line + '\n')
-                            try:
-                                record = json.loads(line)
-                                if 'question_category' in record:
-                                    category_counter[record['question_category']] += 1
-                                if 'answer_types' in record:
-                                    for answer_type in record['answer_types']:
-                                        answer_type_counter[answer_type] += 1
-                            except json.JSONDecodeError:
-                                pass
+
+                # Derive barcode from source_htid inside the file (ground truth),
+                # falling back to the old filename-based approach if needed.
+                barcode = None
+                for line in lines:
+                    stripped = line.strip()
+                    if stripped:
+                        try:
+                            record = json.loads(stripped)
+                            if 'source_htid' in record:
+                                barcode = record['source_htid'].lower()
+                                break
+                        except json.JSONDecodeError:
+                            pass
+                if barcode is None:
+                    barcode_part = filename.split('_')[0].lower()
+                    barcode = f"hvd.{barcode_part}"
+
+                barcode = normalize_barcode(barcode)
+                line_count = len(lines)
+                if barcode not in question_counts:
+                    question_counts[barcode] = dict()
+                question_counts[barcode][directory] = line_count
+                for line in lines:
+                    line = line.rstrip('\n')
+                    if line:
+                        aggregation_file.write(line + '\n')
+                        try:
+                            record = json.loads(line)
+                            if 'question_category' in record:
+                                category_counter[record['question_category']] += 1
+                            if 'answer_types' in record:
+                                for answer_type in record['answer_types']:
+                                    answer_type_counter[answer_type] += 1
+                        except json.JSONDecodeError:
+                            pass
 aggregation_file.close()
 
 with open('question_category_census.txt', 'w', encoding='utf-8') as f:
@@ -113,7 +141,7 @@ added_columns = []
 for directory in directories_to_count:
     counts = []
     for idx, row in history.iterrows():
-        barcode = row['barcode_src']
+        barcode = normalize_barcode(row['barcode_src'])
         if barcode in question_counts and directory in question_counts[barcode]:
             counts.append(question_counts[barcode][directory])
         else:
