@@ -28,7 +28,7 @@ except ImportError:
 # Path setup
 SCRIPT_DIR = Path(__file__).parent
 BOOKSAMPLE_DIR = SCRIPT_DIR.parent
-SOURCE_DIR = BOOKSAMPLE_DIR / "IDI_sample_1875-25"
+SOURCE_DIR = BOOKSAMPLE_DIR / "edgebooks"
 PROCESS_FILES_DIR = SCRIPT_DIR / "process_files"
 
 # Add batchconnectors to path for imports

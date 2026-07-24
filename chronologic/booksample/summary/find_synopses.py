@@ -4,7 +4,7 @@ find_synopses.py
 
 Identifies paragraphs containing synopsis sentences using Qwen via Ollama.
 
-Processes text files from IDI_sample_1875-25/ in alphabetical order,
+Processes text files from edgebooks/ in alphabetical order,
 20 at a time. Progress is tracked by the presence of output files in
 process_files/. Each invocation picks up where the last left off.
 
@@ -22,7 +22,7 @@ import argparse
 # --- Path configuration ---
 SCRIPT_DIR = Path(__file__).parent
 BOOKSAMPLE_DIR = SCRIPT_DIR.parent
-SOURCE_DIR = BOOKSAMPLE_DIR / "IDI_sample_1875-25"
+SOURCE_DIR = BOOKSAMPLE_DIR / "edgebooks"
 PROCESS_FILES_DIR = SCRIPT_DIR / "process_files"
 
 # --- Model configuration ---

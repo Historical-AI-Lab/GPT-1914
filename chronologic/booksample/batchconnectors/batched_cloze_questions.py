@@ -13,7 +13,7 @@ Usage:
         --primary-metadata FILE      Path to primary_metadata.csv
                                      (default: ../primary_metadata.csv)
         --text-dir DIR               Directory containing text files
-                                     (default: ../IDI_sample_1875-25)
+                                     (default: ../edgebooks)
         --candidates-per-category N  Max candidate passages per category (default: 7)
         --verbose-bert               Print BERT ranking details
         --debug                      Enable debug output
@@ -58,7 +58,7 @@ from distractor_generator_wcats import generate_distractors
 
 # Default paths
 DEFAULT_PRIMARY_METADATA = Path(__file__).parent.parent / "primary_metadata.csv"
-DEFAULT_TEXT_DIR = Path(__file__).parent.parent / "IDI_sample_1875-25"
+DEFAULT_TEXT_DIR = Path(__file__).parent.parent / "edgebooks"
 DEFAULT_CANDIDATES_PER_CATEGORY = 7
 
 

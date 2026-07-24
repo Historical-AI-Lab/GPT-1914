@@ -23,9 +23,12 @@ from pathlib import Path
 # Paths relative to this script
 SCRIPT_DIR = Path(__file__).parent
 BOOKSAMPLE_DIR = SCRIPT_DIR.parent
-SOURCE_DIR = BOOKSAMPLE_DIR / "IDI_sample_1875-25"
+SOURCE_DIR = BOOKSAMPLE_DIR / "edgebooks"
 PROCESS_FILES_DIR = SCRIPT_DIR / "process_files"
 FICTION_LIST = SCRIPT_DIR / "fiction_to_process.txt"
+
+# Central directory for JSON metadata files (shared across pipelines)
+CENTRAL_METADATA_DIR = BOOKSAMPLE_DIR / "json_metadata"
 
 # Scripts to run
 DESCRIPTIONS_SCRIPT = SCRIPT_DIR / "extract_character_descriptions.py"
@@ -77,12 +80,13 @@ def get_output_paths(barcode: str) -> dict[str, Path]:
     Get output file paths for a barcode.
 
     Uses uppercase barcode for consistency with existing files.
+    Metadata is stored in central json_metadata/ directory (shared across pipelines).
     """
     stem = barcode.upper()
     return {
         'characters': PROCESS_FILES_DIR / f"{stem}_characters.jsonl",
         'dialogue': PROCESS_FILES_DIR / f"{stem}_dialogue.jsonl",
-        'metadata': PROCESS_FILES_DIR / f"{stem}_metadata.json",
+        'metadata': CENTRAL_METADATA_DIR / f"{stem}_metadata.json",
         'questions': PROCESS_FILES_DIR / f"{stem}_questions.jsonl",
     }
 
