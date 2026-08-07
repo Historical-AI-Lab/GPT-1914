@@ -3,9 +3,12 @@
 Cloze Question Generator
 
 Generates cloze-style benchmark questions from historical texts by:
-1. Detecting logical connectors (cause, effect, contrast, conditional, concessive)
-2. Masking sentences or clauses containing these connectors
+1. Detecting logical connectors (cause, effect, contrast) at the start of a sentence
+2. Masking the whole sentence containing the connector
 3. Creating multiple-choice questions with distractors
+
+The answer to a cloze question is always a complete sentence. Distractors are
+generated through OpenRouter (Qwen and Gemma); no local model server is needed.
 
 Usage:
     python make_cloze_questions.py INPUT_TEXT [OPTIONS]
@@ -30,8 +33,6 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-import requests
-
 try:
     from nltk import sent_tokenize
 except ImportError:
@@ -40,11 +41,15 @@ except ImportError:
     from nltk import sent_tokenize
 
 # Import distractor generator
-from distractor_generator import generate_distractors, call_ollama_model
+from distractor_generator import (
+    generate_distractors,
+    call_openrouter_model,
+    PRIMARY_MODEL,
+    SECONDARY_MODEL,
+)
 
 # Constants
-OLLAMA_URL = "http://localhost:11434/api/generate"
-DISAMBIGUATION_MODEL = "mistral-small:24b"
+VERIFICATION_MODEL = PRIMARY_MODEL
 MIN_SENTENCES_REQUIRED = 10
 MIN_CATEGORY_EXAMPLES = 3
 MIN_PRECEDING_WORDS = 40
@@ -56,23 +61,23 @@ DEFAULT_DISTRACTOR_TYPES = [
     "negation",
     "same_book",
     "same_book",
-    "anachronistic_mistral-small:24b",
-    "anachronistic_gpt-oss:20b"
+    f"anachronistic_{PRIMARY_MODEL}",
+    f"anachronistic_{SECONDARY_MODEL}"
 ]
 
 # Metadata template (different from character questions)
 METADATA_FRAME_TEMPLATE = """The following passage comes from {title}, {a_an_genre} {genre} published in {year} by {author}, {a_an_nat} {nationality} {profession}."""
 METADATA_FRAME_NOAUTHOR = """The following passage comes from {title}, {a_an_genre} {genre} published in {year}."""
-# Tag descriptions for mask strings
+# Tag descriptions for mask strings.
+#
+# Only sentence-level categories are generated: the answer to a cloze question
+# is always a complete sentence. Clause-level categories (causalclause,
+# effectclause, contrastclause, conditionalclause, concessiveclause) were
+# retired; questions of those kinds already in the benchmark are unaffected.
 TAG_DESCRIPTIONS = {
     'causalsentence': '[masked sentence describing a cause or reason]',
-    'causalclause': '[masked clause describing a cause or reason]',
     'effectsentence': '[masked sentence describing an inference or effect]',
-    'effectclause': '[masked clause describing an inference or effect]',
-    'contrastsentence': '[masked sentence revising an implied expectation]',
-    'contrastclause': '[masked clause revising an implied expectation]',
-    'conditionalclause': '[masked clause describing a condition or proviso]',
-    'concessiveclause': '[masked clause acknowledging a countervailing fact]'
+    'contrastsentence': '[masked sentence revising an implied expectation]'
 }
 
 # Connector patterns from connector_list.md
@@ -83,10 +88,6 @@ CONNECTOR_PATTERNS = {
         'first_five_words': ['justification', 'rationale', 'purpose', 'cause', 'because'],
         'prev_sentence_why': True
     },
-    'causalclause': {
-        'after_punct': ['because', 'since', 'as', 'in order that', 'in order to',
-                        'for', 'seeing that', 'owing to', 'inasmuch', 'forasmuch']
-    },
     # EFFECT/INFERENCE
     'effectsentence': {
         'first_word': ['so', 'hence'],
@@ -94,34 +95,11 @@ CONNECTOR_PATTERNS = {
                              'consequence', 'result', 'effect', 'consequently',
                              'it follows that']
     },
-    'effectclause': {
-        'after_punct': ['so'],
-        'if_then_rule': True
-    },
     # CONTRAST
     'contrastsentence': {
         'first_word': ['but', 'yet'],
         'first_five_words': ['however', 'nevertheless']
-    },
-    'contrastclause': {
-        'after_punct': ['but', 'however', 'nevertheless']
-    },
-    # CONDITIONAL
-    'conditionalclause': {
-        'after_comma': ['if', 'provided that', 'insofar as', 'unless']
-    },
-    # CONCESSIVE
-    'concessiveclause': {
-        'after_comma': ['although', 'though', 'even though', 'even if', 'albeit', 'while']
     }
-}
-
-# Ambiguous connectors requiring LLM disambiguation
-AMBIGUOUS_CONNECTORS = {
-    'since': 'causalclause',
-    'as': 'causalclause',
-    'then': 'effectclause',
-    'while': 'concessiveclause'
 }
 
 
@@ -207,6 +185,22 @@ def barcode_to_csv_key(barcode: str) -> str:
     return f"hvd.{barcode.lower()}"
 
 
+def parse_year(year_str: Any) -> Optional[int]:
+    """
+    Parse a year string to int, tolerating float-formatted CSV values
+    like "1841.0" (pandas writes int columns with NaNs as floats).
+
+    Returns None for blank or unparseable input.
+    """
+    year_str = str(year_str or '').strip()
+    if not year_str:
+        return None
+    try:
+        return int(float(year_str))
+    except ValueError:
+        return None
+
+
 def clean_title(title: str) -> str:
     """
     Clean up book title from CSV metadata.
@@ -288,7 +282,7 @@ def load_or_create_metadata(text_path: str, metadata_path: Optional[str] = None,
                 for field in missing:
                     value = input(f"  {field}: ").strip()
                     if field in ['source_date', 'author_birth']:
-                        metadata[field] = int(value) if value else 0
+                        metadata[field] = parse_year(value) or 0
                     else:
                         metadata[field] = value
 
@@ -309,7 +303,9 @@ def load_or_create_metadata(text_path: str, metadata_path: Optional[str] = None,
     # Extract defaults from CSV metadata
     default_title = clean_title(csv_metadata.get('title_src', ''))
     default_author = reformat_author_name(csv_metadata.get('author_src', ''))
-    default_date = csv_metadata.get('firstpub') or csv_metadata.get('date1_src', '')
+    # Normalize to a bare year: the CSV can carry float-formatted values ("1854.0")
+    default_year = parse_year(csv_metadata.get('firstpub') or csv_metadata.get('date1_src', ''))
+    default_date = str(default_year) if default_year is not None else ''
     default_htid = barcode_to_csv_key(barcode)
     default_nationality = csv_metadata.get('authnationality', '')
 
@@ -317,7 +313,8 @@ def load_or_create_metadata(text_path: str, metadata_path: Optional[str] = None,
     author_dates = csv_metadata.get('authordates', '')
     default_birth = ''
     if author_dates and '-' in author_dates:
-        default_birth = author_dates.split('-')[0].strip()
+        birth_year = parse_year(author_dates.split('-')[0])
+        default_birth = str(birth_year) if birth_year is not None else ''
 
     # Display CSV defaults if available
     if csv_metadata:
@@ -343,7 +340,7 @@ def load_or_create_metadata(text_path: str, metadata_path: Optional[str] = None,
     date_prompt = f"  Publication year [{default_date}]: " if default_date else "  Publication year: "
     date_input = input(date_prompt).strip()
     date_val = date_input if date_input else default_date
-    metadata['source_date'] = int(date_val) if date_val else 0
+    metadata['source_date'] = parse_year(date_val) or 0
 
     htid_prompt = f"  HathiTrust ID [{default_htid}]: "
     htid_input = input(htid_prompt).strip()
@@ -367,7 +364,7 @@ def load_or_create_metadata(text_path: str, metadata_path: Optional[str] = None,
         birth_prompt = f"  Author birth year [{default_birth}]: " if default_birth else "  Author birth year: "
         birth_input = input(birth_prompt).strip()
         birth_val = birth_input if birth_input else default_birth
-        metadata['author_birth'] = int(birth_val) if birth_val else 0
+        metadata['author_birth'] = parse_year(birth_val) or 0
 
         prof_prompt = "  Author profession (e.g., novelist, historian, theosophist): "
         metadata['author_profession'] = input(prof_prompt).strip()
@@ -468,70 +465,6 @@ def _check_sentence_start(words: List[str], category: str, rules: Dict) -> Optio
     return None
 
 
-def _check_clause_start(sentence: str, category: str, rules: Dict) -> Optional[Tuple[str, int]]:
-    """
-    Check for connectors after comma or semicolon.
-
-    Args:
-        sentence: The full sentence text
-        category: The connector category being checked
-        rules: The rules for this category
-
-    Returns:
-        Tuple of (connector, word_position) or None
-    """
-    # Get connectors to check
-    connectors = []
-    if 'after_punct' in rules:
-        connectors.extend(rules['after_punct'])
-    if 'after_comma' in rules:
-        connectors.extend(rules['after_comma'])
-
-    if not connectors:
-        return None
-
-    for connector in connectors:
-        # Pattern: comma or semicolon, optional space, then connector word
-        pattern = r'[,;]\s*(' + re.escape(connector) + r')\b'
-        match = re.search(pattern, sentence, re.IGNORECASE)
-
-        if match:
-            # Calculate word position
-            char_pos = match.start(1)
-            # Count words before this position
-            word_pos = len(sentence[:char_pos].split())
-            return (connector.lower(), word_pos)
-
-    return None
-
-
-def _check_if_then_rule(sentence: str, words: List[str]) -> Optional[Tuple[str, int]]:
-    """
-    Check for if...then pattern indicating effect clause.
-
-    Args:
-        sentence: The full sentence text
-        words: List of words (lowercase, punctuation stripped)
-
-    Returns:
-        Tuple of ('then', word_position) or None
-    """
-    # Check if sentence starts with "if"
-    if not words or words[0] != 'if':
-        return None
-
-    # Look for "then" after a comma
-    pattern = r',\s*(then)\b'
-    match = re.search(pattern, sentence, re.IGNORECASE)
-
-    if match:
-        char_pos = match.start(1)
-        word_pos = len(sentence[:char_pos].split())
-        return ('then', word_pos)
-
-    return None
-
-
 def parse_connector_patterns(sentence: str, prev_sentence: str = "") -> Dict[str, Tuple[str, int]]:
     """
     Parse a sentence for connector patterns.
@@ -542,7 +475,7 @@ def parse_connector_patterns(sentence: str, prev_sentence: str = "") -> Dict[str
 
     Returns:
         Dict mapping category names to (connector, word_position) tuples
-        e.g., {'contrastsentence': ('but', 0), 'conditionalclause': ('if', 21)}
+        e.g., {'contrastsentence': ('but', 0), 'effectsentence': ('thus', 2)}
     """
     tags = {}
 
@@ -550,27 +483,11 @@ def parse_connector_patterns(sentence: str, prev_sentence: str = "") -> Dict[str
     words = sentence.split()
     words_clean = [w.lower().rstrip(',.;:!?"\')') for w in words]
 
-    # Check each category
+    # Check each category. All surviving categories are sentence-initial.
     for category, rules in CONNECTOR_PATTERNS.items():
-        # Sentence-starting patterns
-        if 'sentence' in category:
-            result = _check_sentence_start(words_clean, category, rules)
-            if result:
-                tags[category] = result
-                continue
-
-        # Clause-starting patterns
-        if 'clause' in category:
-            result = _check_clause_start(sentence, category, rules)
-            if result:
-                tags[category] = result
-                continue
-
-        # Special: if...then rule for effect clause
-        if category == 'effectclause' and rules.get('if_then_rule'):
-            result = _check_if_then_rule(sentence, words_clean)
-            if result:
-                tags[category] = result
+        result = _check_sentence_start(words_clean, category, rules)
+        if result:
+            tags[category] = result
 
     # Special: why? previous sentence rule for causal sentence
     if prev_sentence and _is_why_question(prev_sentence):
@@ -580,17 +497,6 @@ def parse_connector_patterns(sentence: str, prev_sentence: str = "") -> Dict[str
     return tags
 
 
-# Disambiguation prompts
-DISAMBIGUATION_PROMPT = """Read the following sentence and determine whether the word "{connector}" is being used to express:
-A) A cause or reason (WHY something happened) 
-B) A temporal relationship (WHEN something happened) or similarity of manner (HOW something was done)
-
-Sentence: {sentence}
-
-Context (previous sentence): {context}
-
-Respond with only "A" or "B" followed by a one-sentence explanation."""
-
 CAUSAL_VERIFICATION_PROMPT = """Read the following two sentences. Does the second sentence express a CAUSE, REASON, or EXPLANATION for something mentioned or implied in the first sentence?
 
 Previous sentence: {prev}
@@ -599,37 +505,6 @@ Current sentence: {current}
 Respond "YES" if the current sentence explains why something happens or provides a reason.
 Respond "NO" if it does not express causation or explanation.
 Then provide a one-sentence explanation."""
-
-
-def disambiguate_temporal_vs_logical(sentence: str, connector: str,
-                                     prev_sentence: str = "",
-                                     debug: bool = False) -> bool:
-    """
-    Use LLM to disambiguate temporal vs logical usage of connector.
-
-    Args:
-        sentence: The sentence containing the connector
-        connector: The ambiguous connector word
-        prev_sentence: Previous sentence for context
-        debug: Print debug information
-
-    Returns:
-        True if logical (keep tag), False if temporal (remove tag)
-    """
-    prompt = DISAMBIGUATION_PROMPT.format(
-        connector=connector,
-        sentence=sentence,
-        context=prev_sentence or "(none)"
-    )
-
-    result = call_ollama_model(prompt, model=DISAMBIGUATION_MODEL, temperature=0.1, debug=debug)
-
-    if result['status'] != 'success':
-        print(f"  Warning: Disambiguation failed ({result['reason']}), keeping tag")
-        return True  # Conservative default
-
-    response = result['response'].strip().upper()
-    return response.startswith('A')  # A = logical/causal
 
 
 def verify_causal_sentence(sentence: str, prev_sentence: str,
@@ -653,13 +528,61 @@ def verify_causal_sentence(sentence: str, prev_sentence: str,
         current=sentence
     )
 
-    result = call_ollama_model(prompt, model=DISAMBIGUATION_MODEL, temperature=0.1, debug=debug)
+    result = call_openrouter_model(prompt, model=VERIFICATION_MODEL, debug=debug)
 
     if result['status'] != 'success':
         print(f"  Warning: Causal verification failed ({result['reason']}), keeping tag")
         return True
 
     return result['response'].strip().upper().startswith('YES')
+
+
+def clean_ocr_text(text: str) -> str:
+    """
+    Light OCR repair for early-print scans, applied before sentence tokenization.
+
+    The edgebooks texts are mostly reflowed already, so the dominant artifact is
+    not hyphenation but short ALL-CAPS running heads and bare page numbers
+    dropped into the middle of paragraphs, which both split real sentences and
+    inject junk "sentences". Measured across the 92-volume corpus: running heads
+    and page numbers occur 3-65 per 10,000 words; hyphenated line-break splits
+    only 1-5 per 10,000 words.
+
+    This is deliberately shallow. It will occasionally drop a legitimate short
+    ALL-CAPS line (a shouted line of dialogue, a line of small-caps verse) and
+    will occasionally merge a genuine hyphenated compound broken across lines.
+    Both are far rarer than the artifacts being removed, and the interactive
+    edit_passage step remains available as a backstop.
+
+    Args:
+        text: Raw text as read from the volume file
+
+    Returns:
+        Cleaned text, with paragraph breaks (blank lines) preserved
+    """
+    # Rejoin words split by a hyphen at a line ending
+    text = re.sub(r'(\w)-[ \t]*\n[ \t]*(\w)', r'\1\2', text)
+
+    kept_lines = []
+    for line in text.split('\n'):
+        stripped = line.strip()
+        if stripped:
+            # Bare page or section number (arabic or roman)
+            if re.fullmatch(r'[\dIVXLC.,\-—\[\]() ]{1,12}', stripped):
+                continue
+            # Short ALL-CAPS line: a running head or chapter heading
+            if (len(stripped) < 45 and stripped == stripped.upper()
+                    and re.search(r'[A-Z]{3}', stripped)):
+                continue
+        kept_lines.append(line)
+    text = '\n'.join(kept_lines)
+
+    # Drop spaces the OCR inserted before punctuation
+    text = re.sub(r'[ \t]+([,;:.!?])', r'\1', text)
+    # Reflow paragraph interiors: a lone newline is a line wrap, not a break
+    text = re.sub(r'(?<!\n)\n(?!\n)', ' ', text)
+
+    return re.sub(r'[ \t]{2,}', ' ', text)
 
 
 def tokenize_and_tag_sentences(text: str, debug: bool = False) -> List[Dict]:
@@ -673,6 +596,7 @@ def tokenize_and_tag_sentences(text: str, debug: bool = False) -> List[Dict]:
     Returns:
         List of dicts with 'sentence' and connector tags
     """
+    text = clean_ocr_text(text)
     sentences = sent_tokenize(text)
     tagged = []
 
@@ -703,11 +627,14 @@ def tokenize_and_tag_sentences(text: str, debug: bool = False) -> List[Dict]:
 
 def disambiguate_tagged_sentences(tagged: List[Dict], debug: bool = False) -> List[Dict]:
     """
-    Use LLM to disambiguate ambiguous connector usages.
+    Use an LLM to verify that sentences tagged 'causalsentence' really are causal.
 
-    Once a category reaches CAP_WHERE_VERIFICATION_STOPS verified examples,
-    ambiguous connectors in that category are skipped (tag removed) without
-    LLM verification to save time. Non-ambiguous connectors still pass through.
+    Once the category reaches CAP_WHERE_VERIFICATION_STOPS verified examples,
+    remaining tags are kept without an LLM call to save time.
+
+    (This function formerly also disambiguated temporal vs. logical uses of
+    'since', 'as', 'then' and 'while'. Those connectors only ever produced
+    clause-level tags, so that pass went away with the clause categories.)
 
     Args:
         tagged: List of tagged sentence dicts
@@ -716,11 +643,10 @@ def disambiguate_tagged_sentences(tagged: List[Dict], debug: bool = False) -> Li
     Returns:
         Updated list with false positives removed
     """
-    print("\nDisambiguating ambiguous connectors...")
-    print(f"  (Will stop verifying each category after {CAP_WHERE_VERIFICATION_STOPS} verified examples)")
+    print("\nVerifying causal sentences...")
+    print(f"  (Will stop verifying after {CAP_WHERE_VERIFICATION_STOPS} verified examples)")
 
     removed_count = 0
-    skipped_count = 0
 
     # Track verified counts per category
     verified_counts: Dict[str, int] = {}
@@ -728,32 +654,6 @@ def disambiguate_tagged_sentences(tagged: List[Dict], debug: bool = False) -> Li
     for i, entry in enumerate(tagged):
         sentence = entry['sentence']
         prev_sentence = tagged[i-1]['sentence'] if i > 0 else ""
-
-        # Check each ambiguous connector
-        for connector, category in AMBIGUOUS_CONNECTORS.items():
-            if category in entry:
-                conn, pos = entry[category]
-                if conn == connector:
-                    # Check if we've already verified enough for this category
-                    if verified_counts.get(category, 0) >= CAP_WHERE_VERIFICATION_STOPS:
-                        # Skip LLM call, just remove the ambiguous tag
-                        del entry[category]
-                        skipped_count += 1
-                        if skipped_count <= 5 or skipped_count % 50 == 0:
-                            print(f"  Skipping '{connector}' in sentence {i} ({category} has {verified_counts[category]} verified)")
-                        continue
-
-                    print(f"  Checking '{connector}' in sentence {i}...")
-                    is_logical = disambiguate_temporal_vs_logical(
-                        sentence, connector, prev_sentence, debug
-                    )
-                    if not is_logical:
-                        print(f"    -> Temporal usage, removing {category} tag")
-                        del entry[category]
-                        removed_count += 1
-                    else:
-                        print(f"    -> Logical usage, keeping tag")
-                        verified_counts[category] = verified_counts.get(category, 0) + 1
 
         # Verify causal sentences
         if 'causalsentence' in entry:
@@ -774,7 +674,6 @@ def disambiguate_tagged_sentences(tagged: List[Dict], debug: bool = False) -> Li
                     verified_counts['causalsentence'] = verified_counts.get('causalsentence', 0) + 1
 
     print(f"Removed {removed_count} false positive tags")
-    print(f"Skipped {skipped_count} ambiguous tags (category cap reached)")
     print(f"Verified counts: {verified_counts}")
 
     # Recount tags
@@ -811,6 +710,11 @@ def build_category_index(tagged: List[Dict]) -> Dict[str, List[int]]:
     """
     Build index mapping categories to sentence indices.
 
+    Only live categories are indexed. A *_tagged.jsonl file saved before the
+    clause categories were retired still carries keys like 'causalclause';
+    ignoring them here keeps those files reusable via --resume instead of
+    failing later on a TAG_DESCRIPTIONS lookup.
+
     Args:
         tagged: List of tagged sentence dicts
 
@@ -821,7 +725,7 @@ def build_category_index(tagged: List[Dict]) -> Dict[str, List[int]]:
 
     for entry in tagged:
         for key in entry:
-            if key not in ['sentence', 'index']:
+            if key in TAG_DESCRIPTIONS:
                 if key not in index:
                     index[key] = []
                 index[key].append(entry['index'])
@@ -829,84 +733,29 @@ def build_category_index(tagged: List[Dict]) -> Dict[str, List[int]]:
     return index
 
 
-# Categories where clause extraction should stop at internal punctuation
-# rather than extending to end of sentence
-CLAUSE_STOPS_AT_PUNCTUATION = {'conditionalclause', 'concessiveclause'}
-
-
-def extract_clause_to_punctuation(sentence: str, word_pos: int) -> str:
-    """
-    Extract clause from word position to the next punctuation mark.
-
-    This is used for clause types (like conditionalclause) where the clause
-    should not extend to the end of the sentence, but only to the next
-    comma, semicolon, or other punctuation.
-
-    Example:
-        sentence: "Game wardens are rarely able to prosecute; if the evidence has been consumed, there will be no grounds."
-        word_pos: 8 (position of "if")
-        result: "if the evidence has been consumed"
-
-    Args:
-        sentence: The full sentence text
-        word_pos: Starting word position for the clause
-
-    Returns:
-        The extracted clause (without trailing punctuation)
-    """
-    words = sentence.split()
-
-    # Build clause word by word, stopping at punctuation
-    clause_words = []
-    for i in range(word_pos, len(words)):
-        word = words[i]
-        # Check if word ends with clause-ending punctuation
-        if word.rstrip('.,;:!?') != word:
-            # Word has trailing punctuation - include the word but strip punctuation
-            clause_words.append(word.rstrip('.,;:!?'))
-            break
-        else:
-            clause_words.append(word)
-
-    return ' '.join(clause_words)
-
-
-def extract_ground_truth(sentence: str, tag_info: Tuple[str, int], is_clause: bool,
-                         category: str = '') -> str:
+def extract_ground_truth(sentence: str, tag_info: Tuple[str, int],
+                         is_clause: bool = False, category: str = '') -> str:
     """
     Extract ground truth answer from sentence.
 
+    Every surviving category is sentence-level, so the ground truth is always
+    the whole sentence.
+
     Args:
         sentence: The full sentence text
-        tag_info: Tuple of (connector, word_position)
-        is_clause: Whether to extract clause (vs full sentence)
-        category: The connector category (used to determine extraction method)
+        tag_info: Tuple of (connector, word_position); unused, kept for callers
+        is_clause: Vestigial, always False
+        category: The connector category; unused
 
     Returns:
         The ground truth string
     """
-    if not is_clause:
-        return sentence.strip()
-
-    connector, word_pos = tag_info
-
-    # For certain categories, stop at punctuation rather than sentence end
-    if category in CLAUSE_STOPS_AT_PUNCTUATION:
-        return extract_clause_to_punctuation(sentence, word_pos)
-
-    # Default: extract from word position to end
-    words = sentence.split()
-    clause = ' '.join(words[word_pos:])
-
-    # Remove trailing punctuation that belongs to parent sentence
-    clause = clause.rstrip('.,;:!?')
-
-    return clause
+    return sentence.strip()
 
 
 def build_passage(tagged: List[Dict], target_idx: int, category: str) -> Optional[Dict]:
     """
-    Build a passage with masked sentence/clause.
+    Build a passage with the target sentence masked.
 
     Args:
         tagged: List of tagged sentence dicts
@@ -916,7 +765,9 @@ def build_passage(tagged: List[Dict], target_idx: int, category: str) -> Optiona
     Returns:
         Dict with passage, ground_truth, mask_string, etc. or None if invalid
     """
-    is_clause = 'clause' in category
+    # Vestigial: all categories are sentence-level now. The field is retained
+    # because approve_batched_questions.py and older batch files still read it.
+    is_clause = False
 
     # Get tag info
     entry = tagged[target_idx]
@@ -935,7 +786,7 @@ def build_passage(tagged: List[Dict], target_idx: int, category: str) -> Optiona
     target_sentence = normalize_text(entry['sentence'])
 
     # Extract ground truth
-    ground_truth = extract_ground_truth(target_sentence, tag_info, is_clause, category)
+    ground_truth = extract_ground_truth(target_sentence, tag_info)
 
     # Collect preceding sentences until >= MIN_PRECEDING_WORDS
     preceding = []
@@ -961,13 +812,8 @@ def build_passage(tagged: List[Dict], target_idx: int, category: str) -> Optiona
     # Create mask string
     mask_string = TAG_DESCRIPTIONS[category]
 
-    # Build masked version of target
-    if is_clause:
-        # Mask just the clause portion
-        masked_sentence = target_sentence.replace(ground_truth, mask_string)
-    else:
-        # Mask entire sentence
-        masked_sentence = mask_string
+    # Mask the entire target sentence
+    masked_sentence = mask_string
 
     # Assemble masked passage (for the question)
     passage_parts = preceding + [masked_sentence] + following
@@ -992,7 +838,7 @@ def build_passage(tagged: List[Dict], target_idx: int, category: str) -> Optiona
 def get_distractor_candidates(tagged: List[Dict], category: str,
                               exclude_idx: int, ground_truth: str) -> List[str]:
     """
-    Get candidate sentences/clauses from the same category for same_book distractors.
+    Get candidate sentences from the same category for same_book distractors.
 
     Args:
         tagged: List of tagged sentence dicts
@@ -1003,7 +849,6 @@ def get_distractor_candidates(tagged: List[Dict], category: str,
     Returns:
         List of unique candidate strings (excluding ground truth)
     """
-    is_clause = 'clause' in category
     candidates = []
     seen_text: Set[str] = set()
 
@@ -1015,7 +860,7 @@ def get_distractor_candidates(tagged: List[Dict], category: str,
         if entry['index'] == exclude_idx:
             continue
         if category in entry:
-            candidate = extract_ground_truth(entry['sentence'], entry[category], is_clause, category)
+            candidate = extract_ground_truth(entry['sentence'], entry[category], False, category)
             # Normalize for deduplication
             candidate_normalized = candidate.strip().lower()
 
@@ -1046,8 +891,7 @@ def present_question_for_approval(passage_data: Dict, metadata_prefix: str) -> s
     print(f"passage: \"{passage_data['passage']}\"")
     print()
 
-    answer_type = "clause" if passage_data['is_clause'] else "sentence"
-    prompt = f"Write a {answer_type} appropriate for this book that could stand in the position marked by {passage_data['mask_string']}:"
+    prompt = f"Write a sentence appropriate for this book that could stand in the position marked by {passage_data['mask_string']}:"
     print(f"prompt: \"{prompt}\"")
     print()
     print(f"ground truth answer: \"{passage_data['ground_truth']}\"")
@@ -1209,8 +1053,7 @@ def format_question_output(passage_data: Dict, metadata: Dict,
     Returns:
         Formatted question dict for JSONL output
     """
-    answer_type = "clause" if passage_data['is_clause'] else "sentence"
-    prompt = f"Write a {answer_type} appropriate for this book that could stand in the position marked by {passage_data['mask_string']}:"
+    prompt = f"Write a sentence appropriate for this book that could stand in the position marked by {passage_data['mask_string']}:"
 
     return {
         "metadata_frame": metadata_prefix,
@@ -1333,8 +1176,7 @@ def process_questions(tagged: List[Dict], metadata: Dict, output_path: str,
         candidates = get_distractor_candidates(tagged, category, target_idx, passage_data['ground_truth'])
 
         # Build prompt for distractor generation
-        answer_type = "clause" if passage_data['is_clause'] else "sentence"
-        prompt = f"Write a {answer_type} appropriate for this book that could stand in the position marked by {passage_data['mask_string']}:"
+        prompt = f"Write a sentence appropriate for this book that could stand in the position marked by {passage_data['mask_string']}:"
 
         answer_strings, answer_types, answer_probabilities = generate_distractors(
             metadata_prefix=metadata_prefix,
@@ -1344,7 +1186,6 @@ def process_questions(tagged: List[Dict], metadata: Dict, output_path: str,
             distractor_candidates=candidates,
             mask_string=passage_data['mask_string'],
             distractor_types=DEFAULT_DISTRACTOR_TYPES,
-            is_clause=passage_data['is_clause'],
             verbose_bert=verbose_bert,
             debug=debug
         )

@@ -239,28 +239,21 @@ def generate_negation_samples(num_samples: int = 5):
 
     from distractor_generator import (
         NEGATION_SENTENCE_PROMPT,
-        NEGATION_CLAUSE_PROMPT,
         generate_negation
     )
 
     # Sample sentences for testing
     sample_sentences = [
-        ("But the king refused to listen to their pleas.", False),
-        ("because the hour was late", True),
-        ("However, the merchants continued trading despite the war.", False),
-        ("although he knew the dangers involved", True),
-        ("Therefore, the council voted to proceed with the expedition.", False),
+        "But the king refused to listen to their pleas.",
+        "However, the merchants continued trading despite the war.",
+        "Therefore, the council voted to proceed with the expedition.",
+        "So the villagers gathered what little grain remained.",
+        "Thus the treaty was signed before the year was out.",
     ]
 
-    print("NEGATION PROMPTS:")
-    print()
-    print("For SENTENCES:")
+    print("NEGATION PROMPT:")
     print("-" * 50)
     print(NEGATION_SENTENCE_PROMPT[:500] + "...")
-    print()
-    print("For CLAUSES:")
-    print("-" * 50)
-    print(NEGATION_CLAUSE_PROMPT[:500] + "...")
     print()
 
     print("=" * 70)
@@ -268,50 +261,38 @@ def generate_negation_samples(num_samples: int = 5):
     print("=" * 70)
     print()
 
-    for sentence, is_clause in sample_sentences[:num_samples]:
-        sentence_type = "CLAUSE" if is_clause else "SENTENCE"
-        print(f"Input ({sentence_type}):")
+    for sentence in sample_sentences[:num_samples]:
+        print(f"Input:")
         print(f"  \"{sentence}\"")
         print()
         print(f"  Expected negation characteristics:")
-        if is_clause:
-            print(f"    - Should NOT start with capital letter")
-            print(f"    - Should NOT end with period")
-        else:
-            print(f"    - Should start with capital letter")
-            print(f"    - Should end with period")
+        print(f"    - Should start with capital letter")
+        print(f"    - Should end with period")
         print(f"    - Should express opposite meaning")
         print(f"    - Should be similar length (0.5x to 2x)")
         print()
 
-    # Try to generate actual negations if Ollama is available
+    # Try to generate actual negations if the API is reachable
     print("=" * 70)
-    print("ATTEMPTING LIVE NEGATION GENERATION (requires Ollama):")
+    print("ATTEMPTING LIVE NEGATION GENERATION (requires OpenRouter access):")
     print("=" * 70)
     print()
 
     try:
-        for sentence, is_clause in sample_sentences[:3]:
-            sentence_type = "CLAUSE" if is_clause else "SENTENCE"
-            print(f"Generating negation for ({sentence_type}): \"{sentence}\"")
+        for sentence in sample_sentences[:3]:
+            print(f"Generating negation for: \"{sentence}\"")
 
-            negation = generate_negation(sentence, is_clause)
+            negation = generate_negation(sentence)
 
             if negation:
                 print(f"  Result: \"{negation}\"")
 
                 # Validate characteristics
                 issues = []
-                if is_clause:
-                    if negation[0].isupper():
-                        issues.append("starts with capital (should not for clause)")
-                    if negation.endswith('.'):
-                        issues.append("ends with period (should not for clause)")
-                else:
-                    if not negation[0].isupper():
-                        issues.append("doesn't start with capital (should for sentence)")
-                    if not negation.endswith('.'):
-                        issues.append("doesn't end with period (should for sentence)")
+                if not negation[0].isupper():
+                    issues.append("doesn't start with capital")
+                if not negation.endswith('.'):
+                    issues.append("doesn't end with period")
 
                 if issues:
                     print(f"  Issues: {', '.join(issues)}")
@@ -323,7 +304,7 @@ def generate_negation_samples(num_samples: int = 5):
 
     except Exception as e:
         print(f"Could not generate live negations: {e}")
-        print("This is expected if Ollama is not running.")
+        print("This is expected if OPENROUTER_API_KEY is not configured.")
 
 
 def generate_bert_ranking_samples(textfile: str, num_candidates: int = 10):

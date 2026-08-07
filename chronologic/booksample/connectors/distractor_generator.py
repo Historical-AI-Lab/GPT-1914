@@ -2,11 +2,18 @@
 """
 Distractor Generator Module
 
-Generates distractors for cloze-style benchmark questions.
+Generates distractors for cloze-style benchmark questions. Since the cloze
+pipeline became sentence-only, every ground truth is a complete sentence.
+
 Supports three distractor types:
 - negation: LLM reverses meaning of ground truth
 - same_book: BERT NSP-ranked candidates from same text
 - anachronistic: LLM generates without historical context
+
+LLM calls go through OpenRouter (Qwen and Gemma), reusing the shared client in
+modelasjudge/openrouter_client.py that the summary/ pipeline also uses. No local
+model server is required. The BERT NSP ranker for same_book distractors is still
+local — it is a ranker, not a generator, and has no API equivalent.
 
 Usage:
     from distractor_generator import generate_distractors
@@ -18,17 +25,17 @@ Usage:
         ground_truth="...",
         distractor_candidates=[...],
         mask_string="[masked sentence...]",
-        distractor_types=["negation", "same_book", "anachronistic_gpt-oss:20b"],
-        is_clause=False
+        distractor_types=["negation", "same_book", "anachronistic_qwen/qwen3-30b-a3b-instruct-2507"],
+        category="causalsentence"
     )
 """
 
-import json
 import math
 import random
 import re
-import requests
+import sys
 import time
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 # Try to import BERT dependencies
@@ -47,22 +54,25 @@ except ImportError:
     nltk.download('punkt', quiet=True)
     from nltk import sent_tokenize
 
+# Reuse the OpenRouter client shared by the modelasjudge and summary pipelines
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(REPO_ROOT / "modelasjudge"))
+from openrouter_client import make_openrouter_client, call_openrouter_chat
+
 # Constants
-OLLAMA_URL = "http://localhost:11434/api/generate"
-DEFAULT_MODEL = "gpt-oss:20b"
+PRIMARY_MODEL = "qwen/qwen3-30b-a3b-instruct-2507"
+SECONDARY_MODEL = "google/gemma-4-31b-it"
 BERT_MODEL_NAME = "bert-base-uncased"
-TEMPERATURE = 0.7
-NUM_PREDICT = 1200
-TIMEOUT = 120
+MAX_TOKENS = 400
 MAX_RETRIES = 2
 
 # BERT model cache
 _bert_cache: Dict[str, Any] = {}
 
-# Prompts for negation
-NEGATION_SENTENCE_PROMPT = """You are transforming sentences by reversing one aspect of their meaning. In doing this you try to change as little as possible and produce idiomatic prose. Don't simply add 'not' if it's possible to reverse the meaning more idiomatically by substituting a different word. 
+# Prompt for negation
+NEGATION_SENTENCE_PROMPT = """You are transforming sentences by reversing one aspect of their meaning. In doing this you try to change as little as possible and produce idiomatic prose. Don't simply add 'not' if it's possible to reverse the meaning more idiomatically by substituting a different word.
 
-Reverse only one aspect of the sentence; reversing everything may produce a double negative and maintain the original meaning. Respond only with the negated sentence; do not add any framing language or explanation.
+Reverse only one aspect of the sentence; don't reverse everything. Respond only with the negated sentence; do not add any framing language or explanation.
 
 For instance:
 
@@ -77,89 +87,98 @@ negation: But for our present purpose, we may focus on the inherent unity of eac
 original sentence: {ground_truth}
 negation:"""
 
-NEGATION_CLAUSE_PROMPT = """You are transforming clauses by reversing one aspect of their meaning. In doing this you try to change as little as possible, but also strive to produce idiomatic prose. Don't simply add 'not' if it's possible to reverse the meaning more elegantly and idiomatically by substituting different words. Respond only with the negated clause; do not add any framing language or explanation.
+CONNECTOR_TERMS = {
+    'causalsentence': 'justification, rationale, purpose, cause, or because',
+    'effectsentence': 'so, hence, thus, therefore, thence, accordingly, consequence, result, effect, consequently, or it follows that',
+    'contrastsentence': 'but, yet, however, or nevertheless',
+}
 
-original clause: because its sides are so steep that a stone will slide down
-
-negation: because its sides slope so gently that stones never slide
-
-original clause: provided that the funds are sufficient to cover costs
-
-negation: provided that the funds fail to cover costs
-
-original clause: {ground_truth}
-negation:"""
-
-ANACHRONISTIC_PROMPT = """Answer the following question with a short passage ({length_spec}1-3 sentences):
+ANACHRONISTIC_PROMPT = """Answer the following question with a {length_spec} that uses a term such as {term_spec}:
 
 {question_text}
 
 Write only the answer, without quotation marks:"""
 
 
-def call_ollama_model(prompt: str, model: str = DEFAULT_MODEL,
-                      temperature: float = TEMPERATURE,
-                      num_predict: int = NUM_PREDICT,
-                      timeout: int = TIMEOUT,
-                      debug: bool = False) -> Dict[str, Any]:
+def model_slug(model_id: str) -> str:
     """
-    Call Ollama API to generate text.
+    Strip the OpenRouter provider prefix for use in answer_type strings.
+
+    "qwen/qwen3-30b-a3b-instruct-2507" -> "qwen3-30b-a3b-instruct-2507"
+    """
+    return model_id.split('/')[-1]
+
+
+def format_length_spec(gt_words: int) -> str:
+    """
+    Build a length specification string for the anachronistic prompt.
+
+    Rounds gt_words to the nearest even number (floor of 2) and returns
+    a string like "sentence of roughly 20 words".
+
+    Args:
+        gt_words: Word count of the ground truth
+
+    Returns:
+        Length specification string
+    """
+    rounded = round(gt_words / 2) * 2
+    rounded = max(rounded, 2)
+    return f"sentence of roughly {rounded} words"
+
+
+def get_term_spec(category: Optional[str]) -> str:
+    """
+    Look up connector term specification for a category.
+
+    Args:
+        category: Connector category key (e.g. 'causalsentence'), or None
+
+    Returns:
+        Term spec string listing appropriate connector vocabulary,
+        or a generic fallback if category is unknown/None
+    """
+    if category and category in CONNECTOR_TERMS:
+        return CONNECTOR_TERMS[category]
+    return "a connecting word or phrase"
+
+
+_CLIENT = None
+
+
+def get_client():
+    """Return a cached OpenRouter client, creating it on first use."""
+    global _CLIENT
+    if _CLIENT is None:
+        _CLIENT = make_openrouter_client()
+    return _CLIENT
+
+
+def call_openrouter_model(prompt: str, model: str = PRIMARY_MODEL,
+                          max_tokens: int = MAX_TOKENS,
+                          debug: bool = False) -> Dict[str, Any]:
+    """
+    Generate text via OpenRouter.
+
+    Wraps call_openrouter_chat, which raises after exhausting its own retries,
+    in the status-dict contract the rest of this module expects.
 
     Args:
         prompt: The prompt to send to the model
-        model: Model name (default: gpt-oss:20b)
-        temperature: Temperature parameter (default: 0.7)
-        num_predict: Maximum tokens to generate (default: 500)
-        timeout: Request timeout in seconds (default: 120)
-        debug: Print debug information
+        model: OpenRouter model identifier (default: PRIMARY_MODEL)
+        max_tokens: Maximum tokens in the visible answer
+        debug: Print the request and full response
 
     Returns:
         Dict with 'status' and either 'response' or 'reason'
     """
     try:
-        payload = {
-            "model": model,
-            "prompt": prompt,
-            "stream": False,
-            "options": {
-                "temperature": temperature,
-                "num_predict": num_predict
-            }
-        }
-
-        if debug:
-            print(f"\n[DEBUG] Calling Ollama API with model: {model}")
-            print(f"[DEBUG] Prompt length: {len(prompt)} characters")
-
-        response = requests.post(OLLAMA_URL, json=payload, timeout=timeout)
-        response.raise_for_status()
-
-        result = response.json()
-        generated_text = result.get("response", "").strip()
-
-        # Handle thinking models that put content in "thinking" field
-        if not generated_text and "thinking" in result:
-            thinking_text = result.get("thinking", "").strip()
-            if thinking_text:
-                # Try to extract the actual response from thinking
-                generated_text = thinking_text
-
-        if debug:
-            print(f"[DEBUG] Response length: {len(generated_text)} characters")
-            print(f"[DEBUG] Response: {generated_text[:200]}...")
-
-        return {"status": "success", "response": generated_text}
-
-    except requests.exceptions.ConnectionError:
-        return {"status": "error", "reason": "Connection refused - is Ollama running?"}
-    except requests.exceptions.Timeout:
-        return {"status": "error", "reason": f"Request timeout after {timeout}s"}
-    except requests.exceptions.RequestException as e:
-        return {"status": "error", "reason": f"Request failed: {str(e)}"}
-    except json.JSONDecodeError:
-        return {"status": "error", "reason": "Invalid JSON response from Ollama"}
+        text = call_openrouter_chat(
+            get_client(), model, prompt, max_tokens=max_tokens, debug=debug
+        )
+        return {"status": "success", "response": (text or "").strip()}
     except Exception as e:
-        return {"status": "error", "reason": f"Unexpected error: {str(e)}"}
+        return {"status": "error", "reason": f"{type(e).__name__}: {str(e)}"}
 
 
 def _load_bert_model() -> Tuple[Optional[Any], Optional[Any]]:
@@ -317,28 +336,24 @@ def rank_candidates_by_nsp(passage: str, mask_string: str,
     return [cand for _, cand in scored_candidates[:n]]
 
 
-def generate_negation(ground_truth: str, is_clause: bool,
-                      model: str = "mistral-small:24b",
+def generate_negation(ground_truth: str,
+                      model: str = PRIMARY_MODEL,
                       debug: bool = False) -> Optional[str]:
     """
     Generate negation distractor using LLM.
 
     Args:
-        ground_truth: The original sentence/clause to negate
-        is_clause: Whether this is a clause (vs full sentence)
-        model: Model to use for generation
+        ground_truth: The original sentence to negate
+        model: OpenRouter model to use for generation
         debug: Print debug information
 
     Returns:
         Negated string or None if generation fails
     """
-    if is_clause:
-        prompt = NEGATION_CLAUSE_PROMPT.format(ground_truth=ground_truth)
-    else:
-        prompt = NEGATION_SENTENCE_PROMPT.format(ground_truth=ground_truth)
+    prompt = NEGATION_SENTENCE_PROMPT.format(ground_truth=ground_truth)
 
     for attempt in range(MAX_RETRIES + 1):
-        result = call_ollama_model(prompt, model=model, temperature=0.5, debug=debug)
+        result = call_openrouter_model(prompt, model=model, debug=debug)
 
         if result['status'] != 'success':
             if attempt < MAX_RETRIES:
@@ -359,9 +374,8 @@ def generate_negation(ground_truth: str, is_clause: bool,
         # Remove quotation marks
         negation = negation.strip('"\'')
 
-        # If it still has explanation text after period (for sentences), try to extract just the sentence
-        if not is_clause and '. ' in negation:
-            # Check if there's explanatory text after the first sentence
+        # If it still has explanation text after the sentence, try to trim it
+        if '. ' in negation:
             parts = negation.split('. ', 1)
             # If second part starts with lowercase or parenthesis, it's likely explanation
             if len(parts) > 1 and (parts[1][0].islower() or parts[1][0] == '('):
@@ -384,11 +398,16 @@ def parse_distractor_type(type_string: str) -> Dict[str, Any]:
     """
     Parse a distractor type string into components.
 
+    Model identifiers may contain a provider prefix with a slash; everything
+    after the "anachronistic_" (and optional "metadataless_") prefix is the model.
+
     Examples:
         "negation" -> {"type": "negation", "model": None, "metadataless": False}
         "same_book" -> {"type": "same_book", "model": None, "metadataless": False}
-        "anachronistic_gpt-oss:20b" -> {"type": "anachronistic", "model": "gpt-oss:20b", "metadataless": False}
-        "anachronistic_metadataless_mistral-small:24b" -> {"type": "anachronistic", "model": "mistral-small:24b", "metadataless": True}
+        "anachronistic_qwen/qwen3-30b-a3b-instruct-2507"
+            -> {"type": "anachronistic", "model": "qwen/qwen3-30b-a3b-instruct-2507", "metadataless": False}
+        "anachronistic_metadataless_google/gemma-4-31b-it"
+            -> {"type": "anachronistic", "model": "google/gemma-4-31b-it", "metadataless": True}
 
     Args:
         type_string: The distractor type specification
@@ -465,6 +484,7 @@ def normalize_distractor_format(distractor: str, ground_truth: str) -> str:
 def generate_anachronistic(metadata_prefix: str, passage: str, prompt: str,
                            ground_truth: str, model: str,
                            metadataless: bool = False,
+                           category: Optional[str] = None,
                            debug: bool = False) -> Optional[str]:
     """
     Generate anachronistic distractor using LLM.
@@ -474,8 +494,9 @@ def generate_anachronistic(metadata_prefix: str, passage: str, prompt: str,
         passage: The passage with mask
         prompt: The question prompt
         ground_truth: The correct answer (for length comparison)
-        model: Model to use for generation
+        model: OpenRouter model to use for generation
         metadataless: If True, omit metadata_prefix from the prompt
+        category: Connector category (e.g. 'causalsentence') for term guidance
         debug: Print debug information
 
     Returns:
@@ -489,19 +510,21 @@ def generate_anachronistic(metadata_prefix: str, passage: str, prompt: str,
     else:
         question_text = f"{metadata_prefix}\n\n{passage}\n\n{prompt}"
 
-    # First attempt without length specification
-    length_spec = ""
+    # Compute specs upfront — same on every attempt
+    length_spec = format_length_spec(gt_words)
+    term_spec = get_term_spec(category)
 
-    for attempt in range(MAX_RETRIES + 1):
+    for attempt in range(2):
         full_prompt = ANACHRONISTIC_PROMPT.format(
             length_spec=length_spec,
+            term_spec=term_spec,
             question_text=question_text
         )
 
-        result = call_ollama_model(full_prompt, model=model, debug=debug)
+        result = call_openrouter_model(full_prompt, model=model, debug=debug)
 
         if result['status'] != 'success':
-            if attempt < MAX_RETRIES:
+            if attempt < 1:
                 print(f"  Anachronistic generation failed ({result['reason']}), retrying...")
                 time.sleep(1)
                 continue
@@ -521,10 +544,9 @@ def generate_anachronistic(metadata_prefix: str, passage: str, prompt: str,
         if resp_words >= gt_words * 0.5 and resp_words <= gt_words * 2:
             return response
 
-        # Length check failed, add specification for retry
-        if attempt < MAX_RETRIES:
-            length_spec = f"about {gt_words} words, "
-            print(f"  Response length ({resp_words} words) outside bounds, retrying with length spec...")
+        # Length check failed, retry once with same spec
+        if attempt < 1:
+            print(f"  Response length ({resp_words} words) outside bounds, retrying...")
 
     # Return whatever we got even if length is off, but still normalize formatting
     fallback = result.get('response', '').strip().strip('"\'')
@@ -567,7 +589,8 @@ def generate_distractors(
     distractor_candidates: List[str],
     mask_string: str,
     distractor_types: List[str],
-    is_clause: bool,
+    is_clause: bool = False,
+    category: Optional[str] = None,
     verbose_bert: bool = False,
     debug: bool = False
 ) -> Tuple[List[str], List[str], List[float]]:
@@ -582,7 +605,8 @@ def generate_distractors(
         distractor_candidates: List of candidates for same_book type
         mask_string: The placeholder string in passage (e.g., "[masked sentence...]")
         distractor_types: List of distractor types to generate
-        is_clause: Whether ground truth is a clause (vs full sentence)
+        is_clause: Vestigial; the pipeline is sentence-only, so this is ignored
+        category: Connector category (e.g. 'causalsentence') for term guidance
         verbose_bert: Print BERT ranking details
         debug: Print debug information
 
@@ -632,7 +656,7 @@ def generate_distractors(
         parsed = parse_distractor_type(dtype)
 
         if parsed['type'] == 'negation':
-            distractor = generate_negation(ground_truth, is_clause, debug=debug)
+            distractor = generate_negation(ground_truth, debug=debug)
             if distractor:
                 answer_strings.append(distractor)
                 answer_types.append("negation")
@@ -655,15 +679,18 @@ def generate_distractors(
                 metadata_prefix, passage, prompt, ground_truth,
                 model=parsed['model'],
                 metadataless=parsed['metadataless'],
+                category=category,
                 debug=debug
             )
             if distractor:
                 answer_strings.append(distractor)
-                # Include model info in type, and metadataless if applicable
+                # Label with the bare model name (no provider prefix), and
+                # metadataless if applicable
+                slug = model_slug(parsed['model'])
                 if parsed['metadataless']:
-                    answer_types.append(f"anachronistic_metadataless_{parsed['model']}")
+                    answer_types.append(f"anachronistic_metadataless_{slug}")
                 else:
-                    answer_types.append(f"anachronistic_{parsed['model']}")
+                    answer_types.append(f"anachronistic_{slug}")
                 answer_probabilities.append(0.0)
             else:
                 print(f"  Warning: Failed to generate anachronistic distractor ({parsed['model']})")
@@ -683,8 +710,8 @@ if __name__ == "__main__":
     test_cases = [
         "negation",
         "same_book",
-        "anachronistic_gpt-oss:20b",
-        "anachronistic_metadataless_mistral-small:24b"
+        f"anachronistic_{PRIMARY_MODEL}",
+        f"anachronistic_metadataless_{SECONDARY_MODEL}"
     ]
 
     print("\nParsing distractor types:")
@@ -695,7 +722,7 @@ if __name__ == "__main__":
     # Test assign_metadataless_variant
     print("\nTesting metadataless assignment:")
     types = ["negation", "same_book", "same_book",
-             "anachronistic_mistral-small:24b", "anachronistic_gpt-oss:20b"]
+             f"anachronistic_{PRIMARY_MODEL}", f"anachronistic_{SECONDARY_MODEL}"]
     modified = assign_metadataless_variant(list(types))
     print(f"  Original: {types}")
     print(f"  Modified: {modified}")
