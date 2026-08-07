@@ -5,9 +5,10 @@ This guide explains how to generate character-modeling benchmark questions from 
 ## What You'll Need
 
 ### Software requirements
-- **Python 3.10+** with packages: `nltk`, `requests`
-- **Ollama** running locally with the `gpt-oss:20b` model loaded
+- **Python 3.10+** with packages: `nltk`, `requests`, `openai`
+- **Ollama** running locally with the `gpt-oss:20b` model loaded — needed for **stage 1 only** (the two extraction scripts)
 - Realistically, this assumes you're running on a machine that can handle gpt-oss:20b, which might take 64GB, or at least mistral-small:24b. Quantized, that requires 12GB of GPU VRAM. Which probably means Apple Silicon with 16GB, or a non-Apple machine with a 4080 or 4090 GPU. Might work on Colab Pro. If that's not available, we need to rewrite this to run in some other context.
+- **An OpenRouter credential** — needed for **stage 2** (question formation), which generates its anachronistic distractors from API-hosted models rather than locally. Either set `OPENROUTER_API_KEY` in the environment, or put a `password:` line in `../../bertclassify/OpenRouterCredentials.txt`. This is the same credential the cloze and summary pipelines use.
 
 To check if Ollama is running:
 ```bash
@@ -158,9 +159,25 @@ This is interactive—you'll review and approve each question.
    - `p` = View the original passage for context
    - `stop` = Stop processing this book
 
-4. **Anachronistic distractor**: If you accept a question, the script generates a third distractor using the LLM (dialogue that sounds modern/anachronistic). You approve or reject this too.
+4. **Anachronistic distractors**: If you accept a question, the script generates two more distractors — dialogue that sounds modern or anachronistic — one from each OpenRouter model (`qwen3-30b`, then `gemma-4-31b`). You approve or reject each one, with two attempts per model. If one model fails or you reject it twice, the script warns you and carries on with the other; the question is only discarded if it ends up with no anachronistic distractor at all.
 
-5. **Continue prompt**: After each book, choose whether to continue to the next one.
+5. **Manual distractors**: You're then invited to type distractors of your own, as many as you like. Each entry is saved with answer type `anachronistic_manual` and probability 0.0. Press Enter on a blank line when you're done.
+
+6. **Context judgment**: Finally, you're asked whether the question is open to judgment on context fit:
+
+   ```
+   Is this question open to judgment on context fit (context_judged)? (y = yes, enter/n = no): 
+   ```
+
+   The default is no. If you answer `y`, the record gets `context_judged: 1` and you're prompted for one rejection rationale per distractor, in the order they appear:
+
+   ```
+   Reason for rejection is that the answer ...: 
+   ```
+
+   Reasons can't be blank. They're stored as `reject_reasons`, a list parallel to `answer_strings` with `""` at index 0 for the ground truth. Questions answered `n` get `context_judged: 0` and no `reject_reasons` field at all — the same convention the `manual/`, `poetry/`, and `summary/` writers follow.
+
+7. **Continue prompt**: After each book, choose whether to continue to the next one.
 
 ### What makes a good question?
 
@@ -175,9 +192,12 @@ When reviewing questions, consider:
 Approved questions are appended to `{BARCODE}_questions.jsonl`. Each question includes:
 
 - The full question text
-- Four answer options (ground truth + 3 distractors)
+- Five answer options by default (ground truth + two book distractors + two anachronistic), plus any manual distractors you typed. `answer_types` and `answer_probabilities` are always the same length as `answer_strings`, with the ground truth at index 0.
+- `context_judged` (always `0` or `1`), and `reject_reasons` when `context_judged` is 1
 - Metadata (title, author, date, genre, etc.)
 - The original passage for reference
+
+Questions written before this change kept a fixed four options and carried no `context_judged` field; they were not rewritten.
 
 ### Resuming
 
@@ -204,7 +224,9 @@ In `form_character_questions.py`:
 
 | Parameter | Default | Effect |
 |-----------|---------|--------|
-| `TEMPERATURE` | `0.7` | Higher for more creative anachronistic distractors |
+| `PRIMARY_MODEL` | `"qwen/qwen3-30b-a3b-instruct-2507"` | First anachronistic distractor (OpenRouter) |
+| `SECONDARY_MODEL` | `"google/gemma-4-31b-it"` | Second anachronistic distractor (OpenRouter) |
+| `MAX_TOKENS` | `400` | Cap on the generated distractor length |
 | `MAX_DESCRIPTION_WORDS` | `150` | Maximum words in character description |
 | `MIN_DESCRIPTION_WORDS` | `10` | Skip characters with very short descriptions |
 | `MIN_DIALOGUE_WORDS` | `10` | Skip very brief dialogue passages |

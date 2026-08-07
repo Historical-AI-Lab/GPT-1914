@@ -5,6 +5,10 @@ Character Question Formation Script
 Generates benchmark questions by combining character descriptions and dialogue
 from the previous two scripts in the pipeline.
 
+Anachronistic distractors come from API-hosted Qwen and Gemma via OpenRouter,
+reusing the shared client in modelasjudge/openrouter_client.py that the cloze and
+summary pipelines also use. The two extraction stages still run on local Ollama.
+
 Usage:
     python character/form_character_questions.py DESCRIPTIONS_FILE DIALOGUE_FILE OUTPUT_FILE [OPTIONS]
 """
@@ -13,8 +17,8 @@ import json
 import os
 import sys
 import argparse
-import requests
 import random
+from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple, Set
 
 import nltk
@@ -26,12 +30,15 @@ try:
 except LookupError:
     nltk.download('punkt', quiet=True)
 
+# Reuse the OpenRouter client shared by the modelasjudge and summary pipelines
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(REPO_ROOT / "modelasjudge"))
+from openrouter_client import make_openrouter_client, call_openrouter_chat
+
 # Constants
-OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL = "gpt-oss:20b"
-TEMPERATURE = 0.7  # Higher for creative dialogue generation
-NUM_PREDICT = 1500
-TIMEOUT = 120
+PRIMARY_MODEL = "qwen/qwen3-30b-a3b-instruct-2507"
+SECONDARY_MODEL = "google/gemma-4-31b-it"
+MAX_TOKENS = 400
 MAX_DESCRIPTION_WORDS = 150
 MIN_DESCRIPTION_WORDS = 10
 MIN_DIALOGUE_WORDS = 10  # Minimum words for ground truth dialogue
@@ -156,60 +163,51 @@ class Character:
         return description
 
 
-def call_ollama_model(prompt: str, model: str = MODEL, temperature: float = TEMPERATURE,
-                     num_predict: int = NUM_PREDICT, timeout: int = TIMEOUT,
-                     debug: bool = False) -> Dict[str, Any]:
+def model_slug(model_id: str) -> str:
     """
-    Call Ollama API to generate text.
+    Strip the OpenRouter provider prefix for use in answer_type strings.
+
+    "qwen/qwen3-30b-a3b-instruct-2507" -> "qwen3-30b-a3b-instruct-2507"
+    """
+    return model_id.split('/')[-1]
+
+
+_CLIENT = None
+
+
+def get_client():
+    """Return a cached OpenRouter client, creating it on first use."""
+    global _CLIENT
+    if _CLIENT is None:
+        _CLIENT = make_openrouter_client()
+    return _CLIENT
+
+
+def call_openrouter_model(prompt: str, model: str = PRIMARY_MODEL,
+                          max_tokens: int = MAX_TOKENS,
+                          debug: bool = False) -> Dict[str, Any]:
+    """
+    Generate text via OpenRouter.
+
+    Wraps call_openrouter_chat, which raises after exhausting its own retries,
+    in the status-dict contract the rest of this module expects.
 
     Args:
         prompt: The prompt to send to the model
-        model: Model name (default: gpt-oss:20b)
-        temperature: Temperature parameter (default: 0.7)
-        num_predict: Maximum tokens to generate (default: 1500)
-        timeout: Request timeout in seconds (default: 120)
-        debug: Print debug information
+        model: OpenRouter model identifier (default: PRIMARY_MODEL)
+        max_tokens: Maximum tokens in the visible answer
+        debug: Print the request and full response
 
     Returns:
         Dict with 'status' and either 'response' or 'reason'
     """
     try:
-        payload = {
-            "model": model,
-            "prompt": prompt,
-            "stream": False,
-            "options": {
-                "temperature": temperature,
-                "num_predict": num_predict
-            }
-        }
-
-        if debug:
-            print(f"\n[DEBUG] Calling Ollama API with model: {model}")
-            print(f"[DEBUG] Prompt length: {len(prompt)} characters")
-
-        response = requests.post(OLLAMA_URL, json=payload, timeout=timeout)
-        response.raise_for_status()
-
-        result = response.json()
-        generated_text = result.get("response", "").strip()
-
-        if debug:
-            print(f"[DEBUG] Response length: {len(generated_text)} characters")
-            print(f"[DEBUG] Response: {generated_text[:200]}...")
-
-        return {"status": "success", "response": generated_text}
-
-    except requests.exceptions.ConnectionError:
-        return {"status": "error", "reason": "Connection refused - is Ollama running?"}
-    except requests.exceptions.Timeout:
-        return {"status": "error", "reason": f"Request timeout after {timeout}s"}
-    except requests.exceptions.RequestException as e:
-        return {"status": "error", "reason": f"Request failed: {str(e)}"}
-    except json.JSONDecodeError:
-        return {"status": "error", "reason": "Invalid JSON response from Ollama"}
+        text = call_openrouter_chat(
+            get_client(), model, prompt, max_tokens=max_tokens, debug=debug
+        )
+        return {"status": "success", "response": (text or "").strip()}
     except Exception as e:
-        return {"status": "error", "reason": f"Unexpected error: {str(e)}"}
+        return {"status": "error", "reason": f"{type(e).__name__}: {str(e)}"}
 
 
 def load_metadata(metadata_file: Optional[str]) -> Dict[str, Any]:
@@ -646,7 +644,7 @@ def select_distractors(characters: List[Character], question_char: Character,
 
 
 def generate_anachronistic_distractor(question_text: str, target_words: int,
-                                     model: str = MODEL,
+                                     model: str = PRIMARY_MODEL,
                                      max_attempts: int = 2,
                                      debug: bool = False) -> Optional[str]:
     """
@@ -655,7 +653,7 @@ def generate_anachronistic_distractor(question_text: str, target_words: int,
     Args:
         question_text: Full question text
         target_words: Target word count to match ground truth length
-        model: Model name to use (default: gpt-oss:20b)
+        model: OpenRouter model identifier (default: PRIMARY_MODEL)
         max_attempts: Maximum number of attempts
         debug: Print debug information
 
@@ -671,7 +669,7 @@ def generate_anachronistic_distractor(question_text: str, target_words: int,
         if attempt > 0:
             print(f"\n  Retrying anachronistic distractor (attempt {attempt + 1}/{max_attempts})...")
 
-        result = call_ollama_model(prompt, model=model, debug=debug)
+        result = call_openrouter_model(prompt, model=model, max_tokens=MAX_TOKENS, debug=debug)
 
         if result['status'] != 'success':
             print(f"  Error generating anachronistic distractor: {result['reason']}")
@@ -690,6 +688,86 @@ def generate_anachronistic_distractor(question_text: str, target_words: int,
             print("  Distractor rejected.")
 
     return None
+
+
+def prompt_for_manual_distractors(target_words: int) -> List[str]:
+    """
+    Collect any number of hand-written distractors, blank line ends the loop.
+
+    Every entry is typed anachronistic_manual with probability 0.0 by the caller.
+
+    Args:
+        target_words: Ground truth length, shown as guidance
+
+    Returns:
+        List of distractor strings, possibly empty
+    """
+    print(f"\n  Manual distractors (ground truth is {target_words} words).")
+    manual = []
+    while True:
+        entry = input("  Add a manual distractor (blank line = done): ").strip()
+        if not entry:
+            break
+        manual.append(entry)
+        print(f"    Added ({len(entry.split())} words).")
+    return manual
+
+
+def prompt_for_context_judged() -> bool:
+    """
+    Ask whether this question is open to judgment about fit with the target context.
+
+    Only context-judged questions carry reject_reasons. Default is no: character
+    questions ask for plausible dialogue, which is not usually scored on period fit.
+
+    Returns True if context_judged.
+    """
+    response = input(
+        "\nIs this question open to judgment on context fit (context_judged)? "
+        "(y = yes, enter/n = no): "
+    ).strip().lower()
+    return response in ('y', 'yes')
+
+
+def prompt_for_reject_reason() -> str:
+    """
+    Prompt user for the reason a non-ground_truth answer should be rejected.
+
+    Required, non-blank: the ideal phrasing begins with a verb, completing
+    "Reason for rejection is that the answer ...".
+    """
+    while True:
+        reason = input("Reason for rejection is that the answer ...: ").strip()
+        if reason:
+            return reason
+        print("  Reason cannot be blank")
+
+
+def collect_reject_reasons(answer_strings: List[str],
+                           answer_types: List[str]) -> List[str]:
+    """
+    Collect one rejection rationale per answer, parallel to answer_strings.
+
+    Index 0 is the ground truth and always gets "". Must be called only after the
+    answer list is final, so the arrays stay aligned.
+
+    Args:
+        answer_strings: Final answer list, ground truth at index 0
+        answer_types: Final answer type list, same length
+
+    Returns:
+        List of reasons, same length as answer_strings
+    """
+    print("\n" + "-" * 60)
+    print("Rejection reasons (one per distractor)")
+    print("-" * 60)
+
+    reasons = [""]
+    for i, (answer, atype) in enumerate(zip(answer_strings[1:], answer_types[1:]), 1):
+        print(f"\n  Answer {i + 1} ({atype}): {answer}")
+        reasons.append(prompt_for_reject_reason())
+
+    return reasons
 
 
 def present_question_for_approval(question_dict: Dict, distractors: List[str],
@@ -741,7 +819,9 @@ def present_question_for_approval(question_dict: Dict, distractors: List[str],
 
 
 def format_question(question_dict: Dict, metadata: Dict, distractors: List[str],
-                   use_summary: bool, anachronistic_model: str = MODEL) -> Dict:
+                   distractor_types: List[str], use_summary: bool,
+                   context_judged: bool = False,
+                   reject_reasons: Optional[List[str]] = None) -> Dict:
     """
     Format final question for output.
 
@@ -749,28 +829,18 @@ def format_question(question_dict: Dict, metadata: Dict, distractors: List[str],
         question_dict: Question dictionary
         metadata: Metadata dictionary
         distractors: List of distractor strings
+        distractor_types: Answer type per distractor, parallel to distractors
         use_summary: Whether question uses summary
-        anachronistic_model: Model used for anachronistic distractor
+        context_judged: Whether the question is judged on fit with its context
+        reject_reasons: One rationale per answer when context_judged, else None
 
     Returns:
         Formatted question dict for JSONL output
     """
-    anachronistic_type = f"anachronistic_{anachronistic_model}"
+    answer_strings = [question_dict["ground_truth"]] + distractors
+    answer_types = ["ground_truth"] + distractor_types
 
-    # Determine answer_types based on use_summary and available distractors
-    if use_summary:
-        if len(distractors) == 3:  # Same char, other char, anachronistic
-            answer_types = ["ground_truth", "same_character", "same_book",
-                          anachronistic_type]
-        else:  # No same_character available, two same_book
-            answer_types = ["ground_truth", "same_book", "same_book",
-                          anachronistic_type]
-    else:
-        # NO_SUMMARY: all distractors from other characters
-        answer_types = ["ground_truth", "same_book", "same_book",
-                      anachronistic_type]
-
-    return {
+    record = {
         "metadata_frame": question_dict["metadata_frame"],
         "main_question": question_dict["character_portion"] + question_dict["question_text"],
         "source_title": metadata["source_title"],
@@ -784,15 +854,24 @@ def format_question(question_dict: Dict, metadata: Dict, distractors: List[str],
                             else "character_modeling_without_summary"),
         "question_process": "automatic",
         "answer_types": answer_types,
-        "answer_strings": [question_dict["ground_truth"]] + distractors,
-        "answer_probabilities": [1.0, 0.0, 0.0, 0.0],
+        "answer_strings": answer_strings,
+        "answer_probabilities": [1.0] + [0.0] * (len(answer_strings) - 1),
+        "reject_reasons": reject_reasons,
+        "context_judged": 1 if context_judged else 0,
         "passage": question_dict["passage"]
     }
+
+    # Invariant shared with the manual/ and summary/ writers: reject_reasons
+    # exists only on context_judged questions.
+    if not context_judged:
+        del record["reject_reasons"]
+
+    return record
 
 
 def process_questions(characters: List[Character], metadata: Dict, output_file: str,
                      common_words: Set[str], start_from: int = 0,
-                     anachronistic_model: str = MODEL, debug: bool = False) -> None:
+                     debug: bool = False) -> None:
     """
     Main question generation loop.
 
@@ -802,7 +881,6 @@ def process_questions(characters: List[Character], metadata: Dict, output_file: 
         output_file: Path to output JSONL file
         common_words: Set of common words for summary preprocessing
         start_from: Resume from question N
-        anachronistic_model: Model to use for anachronistic distractors
         debug: Print debug information
     """
     # Build metadata frame once
@@ -868,12 +946,17 @@ def process_questions(characters: List[Character], metadata: Dict, output_file: 
             characters, character, dialogue_idx, use_summary, target_words
         )
 
-        # Build distractor list
+        # Build distractor list, typing each as it is added. With a summary the
+        # first slot comes from the same character; otherwise both are other
+        # characters in the same book.
         distractors = []
+        distractor_types = []
         if distractor_1:
             distractors.append(distractor_1)
+            distractor_types.append("same_character" if use_summary else "same_book")
         if distractor_2:
             distractors.append(distractor_2)
+            distractor_types.append("same_book")
 
         # Need at least 2 book distractors
         if len(distractors) < 2:
@@ -904,29 +987,50 @@ def process_questions(characters: List[Character], metadata: Dict, output_file: 
             print("✗ Question rejected.")
             continue
 
-        # Question accepted - now generate anachronistic distractor
+        # Question accepted - now generate anachronistic distractors, one per model
         full_question = (question_dict["metadata_frame"] + "\n\n" +
                         question_dict["character_portion"] +
                         question_dict["question_text"])
 
-        print(f"\nGenerating anachronistic distractor for {character.longest_name} using {anachronistic_model}...")
-        anachronistic = generate_anachronistic_distractor(full_question, target_words=target_words,
-                                                          model=anachronistic_model, debug=debug)
+        for anachronistic_model in (PRIMARY_MODEL, SECONDARY_MODEL):
+            print(f"\nGenerating anachronistic distractor for {character.longest_name} "
+                  f"using {anachronistic_model}...")
+            anachronistic = generate_anachronistic_distractor(
+                full_question, target_words=target_words,
+                model=anachronistic_model, debug=debug
+            )
+            if anachronistic is None:
+                print(f"  No usable distractor from {anachronistic_model}; continuing.")
+                continue
+            distractors.append(anachronistic)
+            distractor_types.append(f"anachronistic_{model_slug(anachronistic_model)}")
 
         # Mark dialogue as used regardless of whether anachronistic generation succeeds
         character.mark_dialogue_used(dialogue_idx)
 
-        if anachronistic is None:
-            print("Failed to generate anachronistic distractor after 2 attempts.")
-            print("✗ Question not saved (missing anachronistic distractor).")
+        # Hand-written distractors, as many as the user cares to type
+        for manual in prompt_for_manual_distractors(target_words):
+            distractors.append(manual)
+            distractor_types.append("anachronistic_manual")
+
+        # Only the two book distractors survived: nothing tests anachronism here
+        if len(distractors) < 3:
+            print("✗ Question not saved (no anachronistic distractor).")
             continue
 
-        # Add anachronistic distractor to list
-        distractors.append(anachronistic)
+        # Reasons must be collected last, so they stay parallel to answer_strings
+        context_judged = prompt_for_context_judged()
+        reject_reasons = None
+        if context_judged:
+            reject_reasons = collect_reject_reasons(
+                [question_dict["ground_truth"]] + distractors,
+                ["ground_truth"] + distractor_types
+            )
 
         # Format and write to output
         formatted = format_question(
-            question_dict, metadata, distractors, use_summary, anachronistic_model
+            question_dict, metadata, distractors, distractor_types, use_summary,
+            context_judged=context_judged, reject_reasons=reject_reasons
         )
         with open(output_file, 'a', encoding='utf-8') as f:
             f.write(json.dumps(formatted, ensure_ascii=False) + '\n')
@@ -963,17 +1067,8 @@ def main():
                        help="Resume from question N (default: 0)")
     parser.add_argument("--debug", action="store_true",
                        help="Print debug information")
-    parser.add_argument("--qwen", action="store_true",
-                       help="Use qwen2.5:7b-instruct instead of gpt-oss:20b for anachronistic distractors")
-    parser.add_argument("--mistral", action="store_true",
-                       help="Use mistral-small:24b instead of gpt-oss:20b for anachronistic distractors")
 
     args = parser.parse_args()
-
-    # Check for conflicting model options
-    if args.qwen and args.mistral:
-        print("Error: Cannot specify both --qwen and --mistral")
-        sys.exit(1)
 
     # Load metadata
     print("Loading metadata...")
@@ -989,18 +1084,12 @@ def main():
     print(f"  Dialogue: {args.dialogue_file}")
     characters = load_characters(args.descriptions_file, args.dialogue_file)
 
-    # Determine anachronistic model
-    if args.qwen:
-        anachronistic_model = "qwen2.5:7b-instruct"
-    elif args.mistral:
-        anachronistic_model = "mistral-small:24b"
-    else:
-        anachronistic_model = MODEL
-    print(f"\nUsing {anachronistic_model} for anachronistic distractors")
+    print(f"\nUsing {PRIMARY_MODEL} and {SECONDARY_MODEL} "
+          "for anachronistic distractors")
 
     # Process questions
     process_questions(characters, metadata, args.output_file, common_words,
-                     args.start_from, anachronistic_model, args.debug)
+                     args.start_from, args.debug)
 
 
 if __name__ == "__main__":

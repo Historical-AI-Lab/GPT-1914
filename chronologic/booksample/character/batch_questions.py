@@ -191,6 +191,11 @@ def prompt_for_metadata(barcode: str, csv_metadata: dict) -> dict:
     title = csv_metadata.get('title_src', '')
     author = reformat_author_name(csv_metadata.get('author_src', ''))
     date_str = csv_metadata.get('firstpub') or csv_metadata.get('date1_src', '')
+    if date_str:
+        try:
+            date_str = str(int(float(date_str)))
+        except ValueError:
+            pass
     nationality_hint = csv_metadata.get('authnationality', '')
     author_dates = csv_metadata.get('authordates', '')
 
@@ -218,7 +223,7 @@ def prompt_for_metadata(barcode: str, csv_metadata: dict) -> dict:
         if not date_input:
             date_input = date_str
         try:
-            pub_year = int(date_input)
+            pub_year = int(float(date_input))
             break
         except ValueError:
             print("  Please enter a valid year")
@@ -258,15 +263,12 @@ def prompt_for_metadata(barcode: str, csv_metadata: dict) -> dict:
     return metadata
 
 
-def run_question_generation(barcode: str, use_qwen: bool = False,
-                            use_mistral: bool = False) -> bool:
+def run_question_generation(barcode: str) -> bool:
     """
     Run form_character_questions.py for a barcode.
 
     Args:
         barcode: Book barcode
-        use_qwen: If True, use qwen2.5:7b-instruct for anachronistic distractors
-        use_mistral: If True, use mistral-small:24b for anachronistic distractors
 
     Returns True on success/normal completion, False on error.
     """
@@ -281,11 +283,6 @@ def run_question_generation(barcode: str, use_qwen: bool = False,
         '--metadata', str(paths['metadata']),
         '--dictionary', str(DICTIONARY_FILE)
     ]
-
-    if use_qwen:
-        cmd.append('--qwen')
-    elif use_mistral:
-        cmd.append('--mistral')
 
     print(f"\nRunning question generation...")
     print(f"Command: {' '.join(cmd)}")
@@ -303,16 +300,13 @@ def run_question_generation(barcode: str, use_qwen: bool = False,
         return False
 
 
-def process_book(barcode: str, csv_metadata_all: dict, use_qwen: bool = False,
-                 use_mistral: bool = False) -> str:
+def process_book(barcode: str, csv_metadata_all: dict) -> str:
     """
     Process a single book for question generation.
 
     Args:
         barcode: Book barcode
         csv_metadata_all: Dictionary of all CSV metadata
-        use_qwen: If True, use qwen2.5:7b-instruct for anachronistic distractors
-        use_mistral: If True, use mistral-small:24b for anachronistic distractors
 
     Returns: "continue", "skip", or "quit"
     """
@@ -358,7 +352,7 @@ def process_book(barcode: str, csv_metadata_all: dict, use_qwen: bool = False,
         return "skip"
 
     # Run question generation
-    success = run_question_generation(barcode, use_qwen, use_mistral)
+    success = run_question_generation(barcode)
 
     if not success:
         print(f"\nQuestion generation failed for {barcode}")
@@ -381,25 +375,11 @@ def main():
     parser = argparse.ArgumentParser(
         description="Batch process books for question generation"
     )
-    parser.add_argument("--qwen", action="store_true",
-                       help="Use qwen2.5:7b-instruct instead of gpt-oss:20b for anachronistic distractors")
-    parser.add_argument("--mistral", action="store_true",
-                       help="Use mistral-small:24b instead of gpt-oss:20b for anachronistic distractors")
-    args = parser.parse_args()
-
-    # Check for conflicting model options
-    if args.qwen and args.mistral:
-        print("Error: Cannot specify both --qwen and --mistral")
-        sys.exit(1)
+    parser.parse_args()  # no options; still gives --help and rejects stray args
 
     print("="*60)
     print("Stage 2: Interactive Question Generation")
-    if args.qwen:
-        print("Using qwen2.5:7b-instruct for anachronistic distractors")
-    elif args.mistral:
-        print("Using mistral-small:24b for anachronistic distractors")
-    else:
-        print("Using gpt-oss:20b for anachronistic distractors")
+    print("Using qwen3-30b and gemma-4-31b (OpenRouter) for anachronistic distractors")
     print("="*60)
 
     # Load barcodes
@@ -459,7 +439,7 @@ def main():
 
     try:
         for barcode in ready:
-            result = process_book(barcode, csv_metadata, args.qwen, args.mistral)
+            result = process_book(barcode, csv_metadata)
 
             if result == "quit":
                 print("\nQuitting...")
