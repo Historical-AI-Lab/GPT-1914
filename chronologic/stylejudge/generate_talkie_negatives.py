@@ -282,7 +282,10 @@ def make_row(job, raw_text, verdict, model_name, temperature, top_p):
 
 
 def cmd_run(args):
-    lexicon = load_lexicon()
+    # `normalize.DEFAULT_LEXICON` points at ~/Dropbox/DataMunging/rulesets/,
+    # which exists on the workstation and nowhere else. On Delta the path must
+    # be supplied explicitly or the run dies on the first QC call.
+    lexicon = load_lexicon(args.lexicon)
     jobs = load_input(args.input, args.start_line)
     done = already_done(args.out)
     jobs = [j for j in jobs if j["talkie_id"] not in done]
@@ -390,6 +393,9 @@ def build_parser():
                          "loading the checkpoint")
     rp.add_argument("--show", type=int, default=5)
     rp.add_argument("--out", default=str(DEFAULT_OUT))
+    rp.add_argument("--lexicon", default=None,
+                    help="MainDictionary.txt; required off the workstation, "
+                         "where the default ~/Dropbox path does not exist")
     rp.add_argument("--start-line", type=int, default=0)
     rp.set_defaults(func=cmd_run)
     return ap

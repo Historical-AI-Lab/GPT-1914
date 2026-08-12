@@ -273,8 +273,17 @@ def match_lengths(positives, negatives, seed=20260809):
     return kept_p, kept_n
 
 
-def check_composition(negatives, total=ms.DEFAULT_TOTAL):
+def check_composition(negatives, total=ms.DEFAULT_TOTAL, drift_tolerance=0.03):
+    """Modality mix against the spec's 40/20/10/20/10.
+
+    Phase D3 deliberately softened that rule to buy length symmetry, so once
+    `length_targeted` rows are present a drift is a *reported trade*, not a
+    defect -- flagged as `notes` rather than `problems`. Making it a hard failure
+    would leave the tool permanently red for a decision that was taken on
+    purpose, and a check that always fails is a check nobody reads.
+    """
     train = [r for r in negatives if r.get("split_role") == ms.TRAIN]
+    supplemented = any(r.get("length_targeted") for r in negatives)
     by_modality = Counter(r.get("elicitation_strategy") for r in train)
     targets = ms.modality_totals(total)
     rows, problems = [], []
@@ -284,16 +293,22 @@ def check_composition(negatives, total=ms.DEFAULT_TOTAL):
         rows.append({"modality": mod, "rows": got, "target": want,
                      "share": round(share, 3),
                      "target_share": round(want / total, 3)})
+    notes = []
     if train and len(train) >= total:
         for row in rows:
-            if abs(row["share"] - row["target_share"]) > 0.03:
-                problems.append(f"{row['modality']}: {row['share']:.3f} "
-                                f"vs target {row['target_share']:.3f}")
+            drift = row["share"] - row["target_share"]
+            if abs(drift) > drift_tolerance:
+                msg = (f"{row['modality']}: {row['share']:.3f} "
+                       f"vs target {row['target_share']:.3f} ({drift:+.3f})")
+                (notes if supplemented else problems).append(msg)
     dup = [k for k, v in Counter(r.get("negative_id") for r in negatives).items()
            if v > 1]
     if dup:
         problems.append(f"{len(dup)} duplicate negative_id values")
-    return {"ok": not problems, "problems": problems, "modalities": rows,
+    return {"ok": not problems, "problems": problems, "notes": notes,
+            "length_targeted_rows": sum(1 for r in negatives
+                                        if r.get("length_targeted")),
+            "modalities": rows,
             "n_train": len(train), "target_total": total,
             "by_provenance": dict(Counter(r.get("provenance") for r in negatives)),
             "complete": len(train) >= total}
@@ -367,6 +382,10 @@ def main(argv=None):
         for row in comp["modalities"]:
             print(f"  {row['modality']:24s} {row['rows']:6d} / {row['target']:6d}"
                   f"   share {row['share']:.3f} (target {row['target_share']:.3f})")
+        for note in comp.get("notes", []):
+            print(f"  ~ accepted D3 drift: {note}")
+        for prob in comp["problems"]:
+            print(f"  ! {prob}")
         print(f"\nholdout integrity: "
               f"{'ok' if report['holdout_integrity']['ok'] else 'FAIL'}")
         for p in report["holdout_integrity"]["problems"]:

@@ -65,6 +65,7 @@ python generate_talkie_negatives.py run \
     --top-p 0.95 \
     --max-new-tokens 160 \
     --device cuda \
+    --lexicon "$SLURM_SUBMIT_DIR/MainDictionary.txt" \
     --out talkie_negatives.jsonl
 
 echo "Job completed"

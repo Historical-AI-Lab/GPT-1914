@@ -193,12 +193,22 @@ def sample_fitted_length(length_table, rng, avail_sentences, avail_words,
 
 
 def fit_length(text, target_sentences, target_words, tolerance=0.4,
-               min_words=5):
+               min_words=5, max_overshoot=None):
     """Trim `text` toward the Phase A target; return (fitted_text, reason).
 
     Over-long responses are truncated at a sentence boundary, per §5.4.
     Under-length responses are discarded rather than padded — there is nothing
     honest to pad them with.
+
+    `max_overshoot` closes an asymmetry: truncation fixes the *sentence* count
+    exactly but nothing bounds words from above, so a model asked for "5
+    sentences, 68 words" can return 5 very long sentences and still pass. Across
+    D2 that left the negatives wordier than the positives at matched sentence
+    counts (+28 words at 5 sentences). When set, a response is rejected if it
+    exceeds `target_words * (1 + max_overshoot)`.
+
+    **Default None — off.** The D2 pool was built without it and must stay
+    reproducible; only the D3 length-targeted supplement passes a value.
     """
     t = (text or "").strip()
     if not t:
@@ -211,6 +221,9 @@ def fit_length(text, target_sentences, target_words, tolerance=0.4,
         return None, "too_short"
     if target_words and n_words < target_words * (1 - tolerance):
         return None, "under_length"
+    if target_words and max_overshoot is not None \
+            and n_words > target_words * (1 + max_overshoot):
+        return None, "over_length"
     return fitted, None
 
 
@@ -220,7 +233,8 @@ def fit_length(text, target_sentences, target_words, tolerance=0.4,
 
 def qc_negative(raw_text, lexicon=None, references=(), bookend_before="",
                 bookend_after="", target_sentences=None, target_words=None,
-                tolerance=0.4, ngram=DEFAULT_NGRAM, check_bookends=True):
+                tolerance=0.4, ngram=DEFAULT_NGRAM, check_bookends=True,
+                max_overshoot=None):
     """Run §5.4 end to end on one candidate negative.
 
     Returns:
@@ -259,7 +273,8 @@ def qc_negative(raw_text, lexicon=None, references=(), bookend_before="",
         return result
 
     # 4: length
-    fitted, reason = fit_length(text, target_sentences, target_words, tolerance)
+    fitted, reason = fit_length(text, target_sentences, target_words, tolerance,
+                                max_overshoot=max_overshoot)
     if reason:
         result["reason"] = reason
         return result

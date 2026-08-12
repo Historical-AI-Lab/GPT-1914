@@ -121,11 +121,28 @@ def assemble_continuation_prompt(passage_row):
     return passage_row["text"].rstrip()
 
 
-def assemble_continuation_chat_prompt(passage_row, n_sentences):
+def _terse_hint(n_sentences, n_words):
+    """Ask for clipped sentences when the target implies them.
+
+    A bare "4 sentences, roughly 30 words" is read by most models as a licence to
+    write four ordinary sentences and overshoot the word count threefold. Saying
+    so explicitly is what makes the pool's short-sentence cells reachable at all.
+    """
+    if not n_words or not n_sentences:
+        return ""
+    if n_words / n_sentences >= TERSE_WORDS_PER_SENTENCE:
+        return ""
+    return " Use short, clipped sentences."
+
+
+def assemble_continuation_chat_prompt(passage_row, n_sentences, n_words=None):
     """Continuation for chat models, which cannot take a bare prefix."""
     plural = "sentence" if n_sentences == 1 else "sentences"
-    return (f"Continue the following passage for {n_sentences} more {plural}, "
-            f"in the same style. Respond with the continuation only.\n\n"
+    length = f", roughly {n_words} words" if n_words else ""
+    return (f"Continue the following passage for {n_sentences} more {plural}"
+            f"{length}, in the same style."
+            f"{_terse_hint(n_sentences, n_words)} "
+            f"Respond with the continuation only.\n\n"
             f"{passage_row['text'].rstrip()}")
 
 
@@ -159,6 +176,9 @@ def assemble_constrained_prompt(passage_row, summary_row, title, n_sentences,
         lines.append(f"It should convey: {summary}")
     if words:
         lines.append(f"Use the word \"{words[0]}\".")
+    hint = _terse_hint(n_sentences, n_words).strip()
+    if hint:
+        lines.append(hint)
     lines.append("Respond with the passage only.")
     return "\n".join(lines)
 
@@ -239,6 +259,151 @@ def complement_length_table(length_table, achieved_rows, pool_total):
     for c in out:
         c["weight"] = c["weight"] / total
     return out
+
+
+# ---------------------------------------------------------------------------
+# Phase D3 — deficit-targeted length sampling
+# ---------------------------------------------------------------------------
+#
+# `complement_length_table` above reweights the *Phase A* table toward whatever
+# is still owed. That is the right instrument while the pinned modalities still
+# have room to be compensated for — but it has two limits D3 has to get past:
+#
+#   1. The Phase A table has no 6-sentence cell, while the positives hold ~1,000
+#      rows at 6+ against the negatives' 43. A table-shaped target cannot ask for
+#      a length the table cannot express.
+#   2. It reweights, it does not *select*. D2 spread its draws over every
+#      modality, most of which cannot honour a long target at all.
+#
+# So D3 targets the positives' own empirical joint histogram, and routes only to
+# modalities whose length can actually be steered.
+
+DEFICIT_SENTENCE_CAP = 6      # 6 means "6 or more", matching verify_d2.length_cell
+DEFICIT_WORD_DECILE_CAP = 12
+
+
+def length_cell(n_sentences, n_words):
+    """Coarse (sentences, word-decile) cell. Mirrors `verify_d2.length_cell`.
+
+    The two must agree: D3 generates against these cells and `verify_d2`
+    measures the result with them, so a divergence would let the supplement
+    report success against a target the verifier is not checking.
+    """
+    return (min(n_sentences or 0, DEFICIT_SENTENCE_CAP),
+            min((n_words or 0) // 10, DEFICIT_WORD_DECILE_CAP))
+
+
+def length_histogram(rows):
+    """Counter over `length_cell` for any rows carrying n_sentences/n_words."""
+    return Counter(length_cell(r.get("n_sentences"), r.get("n_words"))
+                   for r in rows)
+
+
+#: Below this words-per-sentence ratio a chat model will not comply, whatever the
+#: prompt says: the positives' terse cells are clipped dialogue ("Yes." "Come
+#: here.") that no instruction reliably reproduces. 23% of the raw deficit sits
+#: below 5 w/s; targeting it would burn calls on requests that cannot be met and
+#: whose responses land in some other cell anyway.
+DEFAULT_MIN_WORDS_PER_SENTENCE = 5
+
+#: Below this ratio the request is reachable but needs to be asked for explicitly.
+TERSE_WORDS_PER_SENTENCE = 12
+
+
+def deficit_cells(positives, negatives, min_sentences=3, scale=None,
+                  min_words_per_sentence=DEFAULT_MIN_WORDS_PER_SENTENCE):
+    """Cells where the negatives fall short of the positives' own shape.
+
+    Args:
+        positives / negatives: row dicts with `n_sentences` and `n_words`.
+        min_sentences: ignore cells below this sentence count. The surplus is at
+            1-2 sentences and cannot be un-generated, so asking for more short
+            rows would only dilute; D3 spends its budget where the pool is thin.
+        scale: target pool size for the negatives. None means "mirror the
+            positives one-for-one", which is what maximises the matched export.
+        min_words_per_sentence: drop cells demanding prose terser than any model
+            will write. Measured on the real pool this trims 5,437 rows of raw
+            deficit to 4,776 reachable ones.
+
+    Returns:
+        {cell: rows_needed}, only for cells with a positive deficit.
+    """
+    pos_hist = length_histogram(positives)
+    neg_hist = length_histogram(negatives)
+    factor = 1.0 if scale is None else scale / max(len(positives), 1)
+    out = {}
+    for cell, n_pos in pos_hist.items():
+        if cell[0] < min_sentences:
+            continue
+        sentences, words = cell_targets(cell)
+        if min_words_per_sentence and words / max(sentences, 1) < min_words_per_sentence:
+            continue
+        need = int(round(n_pos * factor)) - neg_hist.get(cell, 0)
+        if need > 0:
+            out[cell] = need
+    return out
+
+
+def cell_targets(cell):
+    """(target_sentences, target_words) for a deficit cell.
+
+    Words are the decile midpoint. The top decile is open-ended, so it gets the
+    bin floor plus a nominal half-decile rather than a midpoint that does not
+    exist.
+    """
+    sentences, decile = cell
+    words = decile * 10 + 5
+    return sentences, words
+
+
+def sample_deficit_target(cells, rng):
+    """Draw a cell weighted by how badly it is under-filled, then its targets.
+
+    Returns (cell, target_sentences, target_words), or None when nothing is owed.
+    """
+    if not cells:
+        return None
+    items = sorted(cells.items())
+    total = sum(n for _, n in items)
+    if total <= 0:
+        return None
+    r = rng.random() * total
+    cum = 0
+    for cell, n in items:
+        cum += n
+        if r <= cum:
+            s, w = cell_targets(cell)
+            return cell, s, w
+    cell = items[-1][0]
+    s, w = cell_targets(cell)
+    return cell, s, w
+
+
+def load_reserved_sources(paths):
+    """(modality, source_id) pairs claimed by a producer that has not written yet.
+
+    Talkie stages 2,000 sources into `talkie_input.jsonl` well before the Delta
+    job writes any rows, so a supplement that consults only `negatives.jsonl`
+    will hand the same passages out twice. Reserving them keeps one source to
+    one negative.
+    """
+    reserved = set()
+    for path in paths or ():
+        p = Path(path)
+        if not p.exists():
+            continue
+        with open(p, encoding="utf-8") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                sid = row.get("source_passage_id")
+                if sid:
+                    reserved.add((row.get("elicitation_strategy"), sid))
+    return reserved
 
 
 # ---------------------------------------------------------------------------
@@ -466,11 +631,19 @@ def plan_jobs(quota, pools, rng, length_table, titles=None, summaries=None,
     return jobs[:limit] if limit else jobs
 
 
-def make_job(model_id, modality, source, rng, length_table, titles, summaries):
+def make_job(model_id, modality, source, rng, length_table, titles, summaries,
+             target_override=None):
     """One elicitation job: everything needed to issue the call and QC the result.
 
     The date coin-flip happens here, once, and is carried on the job into the
     output row — §5.1 requires it be logged rather than re-inferred.
+
+    `target_override=(sentences, words)` replaces the length draw for the two
+    modalities whose output length is genuinely free — continuation and
+    constrained generation. It is how D3 aims at a specific deficit cell.
+    Infill and paraphrase ignore it by construction: infill's length is fixed by
+    its prep row's gap and paraphrase's by its source, so for those the *source*
+    is selected to match the cell instead.
     """
     spec = ms.by_id(model_id)
     variants = PROMPT_VARIANTS[modality]
@@ -506,7 +679,8 @@ def make_job(model_id, modality, source, rng, length_table, titles, summaries):
         job["source_passage_id"] = source.get("passage_id")
     elif modality == CONSTRAINED:
         from measure_length_distribution import sample_length
-        n_sent, n_words, _ = sample_length(length_table, rng)
+        n_sent, n_words = (target_override if target_override
+                           else sample_length(length_table, rng)[:2])
         title = titles.get(str(source.get("volume_id")), "")
         job["prompt"] = assemble_constrained_prompt(
             source, summaries.get(source.get("passage_id")), title, n_sent, n_words)
@@ -516,11 +690,15 @@ def make_job(model_id, modality, source, rng, length_table, titles, summaries):
         job["source_passage_id"] = source.get("passage_id")
     else:  # continuation
         from measure_length_distribution import sample_length
-        n_sent, n_words, _ = sample_length(length_table, rng)
+        n_sent, n_words = (target_override if target_override
+                           else sample_length(length_table, rng)[:2])
         if job["endpoint"] == ms.COMPLETIONS:
+            # A raw prefix carries no length instruction, so a completion-endpoint
+            # job cannot be aimed at a cell; only the chat form takes a target.
             job["prompt"] = assemble_continuation_prompt(source)
         else:
-            job["prompt"] = assemble_continuation_chat_prompt(source, n_sent)
+            job["prompt"] = assemble_continuation_chat_prompt(
+                source, n_sent, n_words if target_override else None)
         job["target_sentences"] = n_sent
         job["target_words"] = n_words
         # The true continuation lives in the volume and is not loaded here; the
@@ -530,6 +708,9 @@ def make_job(model_id, modality, source, rng, length_table, titles, summaries):
         job["bookend_before"] = source.get("text", "")
         job["source_passage_id"] = source.get("passage_id")
 
+    if target_override:
+        job["target_cell"] = length_cell(job["target_sentences"],
+                                         job["target_words"])
     job.setdefault("bookend_before", "")
     job.setdefault("bookend_after", "")
     job["leakage_checkable"] = bool(job["references"])
@@ -888,22 +1069,36 @@ def cmd_run(args):
         return 0
 
     client = make_client(args.credentials)
+    return execute_jobs(client, jobs, args, lexicon, split_role=args.role)
+
+
+# ---------------------------------------------------------------------------
+# Shared execution loop
+# ---------------------------------------------------------------------------
+
+def execute_jobs(client, jobs, args, lexicon, split_role=ms.TRAIN,
+                 max_overshoot=None, extra_fields=None):
+    """Issue `jobs`, QC each response, append what survives. Returns an exit code.
+
+    Shared by `run` and `supplement` so the two cannot drift apart in how they
+    QC, tally cost, or account for rejections.
+
+    Concurrency: 23,600 serial calls is a ~16-hour job, so requests run in a
+    thread pool. **Not** in lock-step waves: per-call latency across this stable
+    ranges from 0.5s to 14s, and a wave that waits for its slowest member
+    throughputs at `width / max_latency` rather than `width / mean_latency` --
+    measured at 0.4/s with width 10, a 16-hour ETA. Instead the pool is kept
+    continuously full: each completion immediately submits the next job. The
+    budget cap is checked on every completion, so it still stops promptly.
+    """
+    from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+
     tally = CostTally(cap=args.budget_cap)
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     stats = Counter()
     per_model = defaultdict(Counter)
     attempts = Counter()
     written = 0
-
-    # Concurrency: 23,600 serial calls is a ~16-hour job, so requests run in a
-    # thread pool. **Not** in lock-step waves: per-call latency across this
-    # stable ranges from 0.5s to 14s, and a wave that waits for its slowest
-    # member throughs at `width / max_latency` instead of
-    # `width / mean_latency` -- measured at 0.4/s with width 10, a 16-hour ETA.
-    # Instead the pool is kept continuously full: each completion immediately
-    # submits the next job. The budget cap is checked on every completion, so
-    # it still stops the run promptly.
-    from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 
     def attempt(job):
         try:
@@ -943,10 +1138,16 @@ def cmd_run(args):
                         bookend_before=job["bookend_before"],
                         bookend_after=job["bookend_after"],
                         target_sentences=job["target_sentences"],
-                        target_words=job["target_words"])
+                        target_words=job["target_words"],
+                        max_overshoot=max_overshoot)
                     if verdict["ok"]:
-                        append_row(negative_row(job, raw, verdict, args.role,
-                                                args.temperature), args.out)
+                        row = negative_row(job, raw, verdict, split_role,
+                                           args.temperature)
+                        if extra_fields:
+                            row.update(extra_fields)
+                        if job.get("target_cell"):
+                            row["target_cell"] = list(job["target_cell"])
+                        append_row(row, args.out)
                         written += 1
                         stats["accepted"] += 1
                         per_model[job["model_id"]]["accepted"] += 1
@@ -1000,6 +1201,210 @@ def summarize_jobs(jobs):
             j["source"].get("decade") for j in jobs).items(),
             key=lambda kv: (kv[0] is None, kv[0]))),
     }
+
+
+# ---------------------------------------------------------------------------
+# Subcommand: supplement (Phase D3)
+# ---------------------------------------------------------------------------
+
+#: Modalities whose output length can actually be steered. `few_shot` is absent
+#: on purpose: it is one sentence by definition, which is a large part of why the
+#: pool came out short in the first place.
+STEERABLE = (INFILL, CONSTRAINED, CONTINUATION, PARAPHRASE)
+
+
+def supplement_pools(positives, infill_prep, rng, used, reserved):
+    """Sources for the supplement, indexed by the cell they can serve.
+
+    Infill and paraphrase cannot be told what length to produce -- infill's is
+    fixed by its prep gap, paraphrase's by its source -- so for those the source
+    itself determines the cell, and they are indexed by the **full** cell rather
+    than by sentence count alone. Indexing by sentences only would let a job
+    aimed at "4 sentences, 40-49 words" be filled by a 103-word source, landing
+    in a different cell than the one it was drawn to fill.
+
+    Continuation and constrained generation take an explicit target, so any
+    source will do and they stay flat lists.
+    """
+    blocked = set(used) | set(reserved)
+
+    by_cell_infill = defaultdict(list)
+    for row in infill_prep:
+        if (INFILL, row.get("elicitation_id")) in blocked:
+            continue
+        cell = length_cell(row.get("gap_n_sentences", 0), row.get("gap_n_words", 0))
+        by_cell_infill[cell].append(row)
+
+    by_cell_para = defaultdict(list)
+    for row in positives:
+        if (PARAPHRASE, row["passage_id"]) in blocked:
+            continue
+        by_cell_para[length_cell(row.get("n_sentences", 0),
+                                 row.get("n_words", 0))].append(row)
+
+    for index in (by_cell_infill, by_cell_para):
+        for rows in index.values():
+            rng.shuffle(rows)
+
+    def free_pool(flag, modality):
+        rows = [r for r in positives
+                if r.get(flag) and (modality, r["passage_id"]) not in blocked]
+        rng.shuffle(rows)
+        return rows
+
+    return {
+        INFILL: by_cell_infill,
+        PARAPHRASE: by_cell_para,
+        CONTINUATION: free_pool("eligible_continuation", CONTINUATION),
+        CONSTRAINED: free_pool("eligible_constrained_generation", CONSTRAINED),
+    }
+
+
+def supplement_models(modality):
+    """Available chat models that can serve `modality` in the supplement.
+
+    Continuation needs the explicit `CHAT_CONTINUATION_MODELS` list: no model in
+    the §4.1 table declares `continuation` among its primary modalities, so a
+    plain `ms.select(modality=...)` returns nothing and the modality silently
+    produces zero rows -- which is exactly what the first dry run did.
+    """
+    if modality == CONTINUATION:
+        return [m.model_id for m in ms.TRAIN_MODELS
+                if m.model_id in ms.CHAT_CONTINUATION_MODELS and m.available]
+    return [m.model_id for m in ms.select(role=ms.TRAIN, modality=modality)
+            if m.available and m.endpoint == ms.CHAT]
+
+
+def plan_supplement_jobs(cells, pools, per_modality, rng, titles, summaries,
+                         limit=None):
+    """Build length-targeted jobs, aiming each at an under-filled cell.
+
+    For the two source-pinned modalities the draw is restricted to cells that
+    actually have a source available, so a job is never planned against a length
+    it cannot deliver. A modality that runs out yields fewer rows rather than
+    substituting a shorter one -- silently swapping in a short row is exactly the
+    failure this phase exists to correct.
+    """
+    remaining = dict(cells)
+    cursors = {CONTINUATION: 0, CONSTRAINED: 0}
+    jobs = []
+    shortfall = Counter()
+
+    for modality, want in per_modality.items():
+        models = supplement_models(modality)
+        if not models or want <= 0:
+            if want > 0:
+                shortfall[(modality, "no_models")] += want
+            continue
+        made = 0
+        while made < want:
+            live = {c: n for c, n in remaining.items() if n > 0}
+            if modality in (INFILL, PARAPHRASE):
+                # Only cells this modality can actually source.
+                live = {c: n for c, n in live.items() if pools[modality].get(c)}
+            if not live:
+                break
+            drawn = sample_deficit_target(live, rng)
+            if drawn is None:
+                break
+            cell, n_sent, n_words = drawn
+
+            override = None
+            if modality in (INFILL, PARAPHRASE):
+                source = pools[modality][cell].pop()
+            else:
+                pool = pools[modality]
+                if cursors[modality] >= len(pool):
+                    break
+                source = pool[cursors[modality]]
+                cursors[modality] += 1
+                override = (n_sent, n_words)
+
+            model_id = models[len(jobs) % len(models)]
+            job = make_job(model_id, modality, source, rng, [], titles, summaries,
+                           target_override=override)
+            job["target_cell"] = cell
+            jobs.append(job)
+            remaining[cell] = max(0, remaining[cell] - 1)
+            made += 1
+        if made < want:
+            shortfall[(modality, "source_exhausted")] += want - made
+
+    rng.shuffle(jobs)
+    return (jobs[:limit] if limit else jobs), shortfall
+
+
+def cmd_supplement(args):
+    ms.assert_holdout_integrity()
+    rng = random.Random(args.seed)
+    lexicon = load_lexicon()
+
+    # The pool being *measured* is separate from the file being *written*: a
+    # smoke run writes elsewhere but must still size its deficit against the real
+    # pool. They are the same path in normal use.
+    pool_path = args.pool_in or args.out
+    positives = load_positives(args.positives_in)
+    state = scan_negatives(pool_path)
+    negatives = []
+    if Path(pool_path).exists():
+        with open(pool_path, encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    r = json.loads(line)
+                    if r.get("split_role", ms.TRAIN) == ms.TRAIN:
+                        negatives.append(r)
+
+    cells = deficit_cells(positives, negatives,
+                          min_sentences=args.min_sentences,
+                          min_words_per_sentence=args.min_words_per_sentence)
+    print(f"{len(negatives)} train negatives vs {len(positives)} positives; "
+          f"{len(cells)} deficit cells, {sum(cells.values())} rows owed",
+          file=sys.stderr)
+    if not cells:
+        print("nothing owed -- the pool already mirrors the positives",
+              file=sys.stderr)
+        return 0
+
+    infill_prep = []
+    for path in [args.prep_in] + list(args.extra_prep_in or []):
+        if Path(path).exists():
+            rows, _ = load_prep(path)
+            infill_prep.extend(rows)
+    reserved = load_reserved_sources(args.reserve_in or [])
+    print(f"{len(infill_prep)} infill prep rows; "
+          f"{len(reserved)} sources reserved by other producers", file=sys.stderr)
+
+    pools = supplement_pools(positives, infill_prep, rng,
+                             state["used_sources"], reserved)
+    per_modality = {INFILL: args.n_infill, CONSTRAINED: args.n_constrained,
+                    CONTINUATION: args.n_continuation,
+                    PARAPHRASE: args.n_paraphrase}
+    jobs, shortfall = plan_supplement_jobs(
+        cells, pools, per_modality, rng, load_titles(args.roster),
+        load_summaries(args.summaries_in), limit=args.limit)
+
+    print(f"planned {len(jobs)} jobs", file=sys.stderr)
+    if shortfall:
+        print(f"source shortfall: {dict(shortfall.most_common(8))}", file=sys.stderr)
+
+    if args.dry_run:
+        for job in jobs[:args.show]:
+            print("-" * 70, file=sys.stderr)
+            print(f"{job['model_id']} | {job['modality']} | cell={job['target_cell']}"
+                  f" | target {job['target_sentences']}s/{job['target_words']}w",
+                  file=sys.stderr)
+            print(job["prompt"][:500], file=sys.stderr)
+        summary = summarize_jobs(jobs)
+        summary["target_sentences"] = dict(sorted(
+            Counter(j["target_sentences"] for j in jobs).items()))
+        summary["target_cells"] = len({j["target_cell"] for j in jobs})
+        print(json.dumps(summary, indent=2), file=sys.stderr)
+        return 0
+
+    client = make_client(args.credentials)
+    return execute_jobs(client, jobs, args, lexicon, split_role=ms.TRAIN,
+                        max_overshoot=args.max_overshoot,
+                        extra_fields={"length_targeted": True})
 
 
 # ---------------------------------------------------------------------------
@@ -1095,6 +1500,44 @@ def build_parser():
                     help="prompts to print under --dry-run")
     rp.add_argument("--dry-run", action="store_true")
     rp.set_defaults(func=cmd_run)
+
+    up2 = sub.add_parser("supplement",
+                         help="length-deficit supplement (Phase D3)")
+    up2.add_argument("--positives-in", default=str(DEFAULT_POSITIVES))
+    up2.add_argument("--prep-in",
+                     default=str(DEFAULT_PASSAGES / "elicitation_prep_longgap.jsonl"))
+    up2.add_argument("--extra-prep-in", action="append",
+                     default=[str(DEFAULT_PREP)])
+    up2.add_argument("--summaries-in", default=str(DEFAULT_SUMMARIES))
+    up2.add_argument("--reserve-in", action="append",
+                     default=[str(SCRIPT_DIR / "talkie_input.jsonl")],
+                     help="sources claimed by a producer that has not written yet")
+    up2.add_argument("--roster", default=str(DEFAULT_ROSTER))
+    up2.add_argument("--out", default=str(DEFAULT_NEGATIVES))
+    up2.add_argument("--pool-in", default=None,
+                     help="pool to measure the deficit against; defaults to --out. "
+                          "Set it when writing a smoke run to a scratch file.")
+    up2.add_argument("--total", type=int, default=5000,
+                     help="informational; per-modality counts are what bind")
+    up2.add_argument("--n-infill", type=int, default=2000)
+    up2.add_argument("--n-constrained", type=int, default=1250)
+    up2.add_argument("--n-continuation", type=int, default=1000)
+    up2.add_argument("--n-paraphrase", type=int, default=750)
+    up2.add_argument("--min-sentences", type=int, default=3)
+    up2.add_argument("--min-words-per-sentence", type=float,
+                     default=DEFAULT_MIN_WORDS_PER_SENTENCE)
+    up2.add_argument("--max-overshoot", type=float, default=0.5)
+    up2.add_argument("--model", action="append", default=None)
+    up2.add_argument("--limit", type=int, default=None)
+    up2.add_argument("--budget-cap", type=float, default=DEFAULT_BUDGET_CAP)
+    up2.add_argument("--concurrency", type=int, default=32)
+    up2.add_argument("--max-tokens", type=int, default=500)
+    up2.add_argument("--temperature", type=float, default=1.0)
+    up2.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    up2.add_argument("--credentials", default=None)
+    up2.add_argument("--show", type=int, default=6)
+    up2.add_argument("--dry-run", action="store_true")
+    up2.set_defaults(func=cmd_supplement)
 
     pp = sub.add_parser("report", help="counts over negatives.jsonl")
     pp.add_argument("--negatives-in", default=str(DEFAULT_NEGATIVES))
