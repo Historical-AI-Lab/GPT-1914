@@ -10,7 +10,8 @@
 #SBATCH --output=talkie-negatives-%j.out
 #SBATCH --gpus-per-node=1
 #SBATCH --gpu-bind=closest
-#SBATCH --mem=40g
+#SBATCH --mem=128g          # 13B bf16: peaks ~2x the 26 GB checkpoint while loading.
+                            # 40g (the DeBERTa template's value) gets OOM-killed at load.
 #SBATCH --constraint="scratch"
 
 # ---------------------------------------------------------------------------
@@ -58,6 +59,10 @@ module load cudatoolkit/25.3_12.8
 module list
 
 export HF_HOME=/work/nvme/bdfx/.cache/huggingface
+# The other Talkie jobs on this cluster run offline; the checkpoint is
+# already cached, and this turns a silent 26 GB download attempt on a
+# network-less compute node into an immediate, legible failure.
+export HF_HUB_OFFLINE=1
 
 SCRIPT_DIR="$SLURM_SUBMIT_DIR"
 cd "$SCRIPT_DIR"
@@ -104,9 +109,9 @@ for resource in ("tokenizers/punkt", "tokenizers/punkt_tab"):
 
 # Talkie has no local checkpoint directory: get_model_files() pulls from the
 # Hub into HF_HOME. If it is not already cached, this job will try to download
-# ~26 GB inside batch time -- and will simply hang or fail if the compute node
-# has no outbound network. Warn rather than abort: a node with network will
-# proceed fine, and the operator can judge.
+# ~26 GB inside batch time. With HF_HUB_OFFLINE=1 that is not even possible, so
+# an uncached checkpoint is a hard error here rather than a warning -- better to
+# fail in two seconds than to burn a GPU allocation discovering it.
 try:
     from huggingface_hub import try_to_load_from_cache
     from talkie.config import MODELS
@@ -116,12 +121,11 @@ try:
     if isinstance(hit, str):
         print(f"checkpoint cached: {hit}")
     else:
-        print("WARNING: talkie-1930-13b-base checkpoint is NOT in HF_HOME "
-              f"({os.environ.get('HF_HOME', '<unset>')}).", file=sys.stderr)
-        print("         This job will attempt a ~26 GB download; pre-fetch on a "
-              "login node with:", file=sys.stderr)
-        print("           python -c \"from talkie.download import download_model;"
-              " download_model('talkie-1930-13b-base')\"", file=sys.stderr)
+        sys.exit("ERROR: talkie-1930-13b-base is not cached in HF_HOME "
+                 f"({os.environ.get('HF_HOME', '<unset>')}) and HF_HUB_OFFLINE=1.\n"
+                 "       Pre-fetch on a login node:\n"
+                 "         python -c \"from talkie.download import "
+                 "download_model; download_model('talkie-1930-13b-base')\"")
 except Exception as exc:                                       # noqa: BLE001
     print(f"note: could not check the checkpoint cache ({exc})", file=sys.stderr)
 print("preflight ok")
@@ -131,7 +135,7 @@ for f in talkie_input.jsonl MainDictionary.txt ../bertclassify/bin_counter.py; d
     [ -e "$f" ] || { echo "ERROR: missing required input: $f" >&2; exit 1; }
 done
 
-python generate_talkie_negatives.py run \
+python -u generate_talkie_negatives.py run \
     --input talkie_input.jsonl \
     --model talkie-1930-13b-base \
     --temperature 0.9 \
