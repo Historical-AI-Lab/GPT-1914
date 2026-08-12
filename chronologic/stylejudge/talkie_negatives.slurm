@@ -74,17 +74,32 @@ echo "venv: $TALKIE_VENV  ($(python --version 2>&1))"
 # Preflight: fail in seconds on a missing import rather than after the model
 # has been loaded, and check the two inputs that are not in the repo.
 python - <<'PREFLIGHT' || exit 1
-import importlib, sys
-missing = [m for m in ("torch", "nltk", "talkie", "huggingface_hub", "tiktoken")
-           if not importlib.util.find_spec(m)]
+# `import importlib` alone does NOT bind the `util` submodule -- it must be
+# imported by name. Without this the preflight itself dies with
+# "module 'importlib' has no attribute 'util'".
+import importlib.util
+import sys
+
+REQUIRED = ("torch", "nltk", "talkie", "huggingface_hub", "tiktoken")
+present, missing = [], []
+for name in REQUIRED:
+    try:
+        found = importlib.util.find_spec(name) is not None
+    except (ImportError, ValueError):
+        found = False
+    (present if found else missing).append(name)
+print("packages present:", ", ".join(present) or "(none)")
 if missing:
-    sys.exit(f"ERROR: missing packages in this venv: {', '.join(missing)}")
+    sys.exit(f"ERROR: missing packages in this venv: {', '.join(missing)}\n"
+             f"       pip install them into $TALKIE_VENV on a login node")
+
 import nltk
-try:
-    nltk.data.find("tokenizers/punkt")
-except LookupError:
-    sys.exit("ERROR: nltk punkt not present and compute nodes have no network; "
-             "run nltk.download('punkt') and ('punkt_tab') on a login node")
+for resource in ("tokenizers/punkt", "tokenizers/punkt_tab"):
+    try:
+        nltk.data.find(resource)
+    except LookupError:
+        sys.exit(f"ERROR: nltk {resource} missing and compute nodes have no "
+                 f"network; run nltk.download() for it on a login node")
 print("preflight ok")
 PREFLIGHT
 
