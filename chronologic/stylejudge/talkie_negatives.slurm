@@ -78,6 +78,7 @@ python - <<'PREFLIGHT' || exit 1
 # imported by name. Without this the preflight itself dies with
 # "module 'importlib' has no attribute 'util'".
 import importlib.util
+import os
 import sys
 
 REQUIRED = ("torch", "nltk", "talkie", "huggingface_hub", "tiktoken")
@@ -100,6 +101,29 @@ for resource in ("tokenizers/punkt", "tokenizers/punkt_tab"):
     except LookupError:
         sys.exit(f"ERROR: nltk {resource} missing and compute nodes have no "
                  f"network; run nltk.download() for it on a login node")
+
+# Talkie has no local checkpoint directory: get_model_files() pulls from the
+# Hub into HF_HOME. If it is not already cached, this job will try to download
+# ~26 GB inside batch time -- and will simply hang or fail if the compute node
+# has no outbound network. Warn rather than abort: a node with network will
+# proceed fine, and the operator can judge.
+try:
+    from huggingface_hub import try_to_load_from_cache
+    from talkie.config import MODELS
+    spec = MODELS["talkie-1930-13b-base"]
+    hit = try_to_load_from_cache(repo_id=spec.repo_id,
+                                 filename=spec.checkpoint_filename)
+    if isinstance(hit, str):
+        print(f"checkpoint cached: {hit}")
+    else:
+        print("WARNING: talkie-1930-13b-base checkpoint is NOT in HF_HOME "
+              f"({os.environ.get('HF_HOME', '<unset>')}).", file=sys.stderr)
+        print("         This job will attempt a ~26 GB download; pre-fetch on a "
+              "login node with:", file=sys.stderr)
+        print("           python -c \"from talkie.download import download_model;"
+              " download_model('talkie-1930-13b-base')\"", file=sys.stderr)
+except Exception as exc:                                       # noqa: BLE001
+    print(f"note: could not check the checkpoint cache ({exc})", file=sys.stderr)
 print("preflight ok")
 PREFLIGHT
 
