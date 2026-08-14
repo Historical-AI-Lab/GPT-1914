@@ -26,6 +26,20 @@ Options:
     --output-dir PATH           Parent directory for run output (default: model_output)
     --run-name STR              Sub-directory name; timestamp used if omitted
     --seed INT                  Random seed (default: 42)
+    --save-strategy STR         best | last (default: best) — see note below
+    --best-metric STR           accuracy | f1 | auroc | loss (default: accuracy);
+                                 which val metric selects the checkpoint under
+                                 --save-strategy best
+
+Note on --save-strategy: get_linear_schedule_with_warmup decays LR to zero at
+num_training_steps = steps_per_epoch * --epochs, so requesting fewer epochs is
+NOT the same as stopping a longer run early — every epoch's LR trajectory
+changes with the total epoch count. A run configured for 3 epochs whose epoch 2
+looked best cannot be reproduced by rerunning with --epochs 2; that is a
+different schedule. --save-strategy best (the default) sidesteps this: it
+checkpoints whenever --best-metric improves, so the epoch count can be set
+generously and whichever epoch actually scored best is what ends up on disk,
+without having to predict it in advance.
 
 Examples:
     # Smoke test
@@ -40,6 +54,7 @@ Examples:
 """
 
 import argparse
+import json
 import random
 import sys
 from datetime import datetime
@@ -126,6 +141,13 @@ def parse_args(argv=None):
                         help="Validation TSV filename relative to script dir (default: val.tsv)")
     parser.add_argument("--model-name", default="microsoft/deberta-v3-base", dest="model_name",
                         help="HuggingFace model name (default: microsoft/deberta-v3-base)")
+    parser.add_argument("--save-strategy", choices=["best", "last"], default="best",
+                        dest="save_strategy",
+                        help="Checkpoint whenever --best-metric improves, or only at the "
+                             "final epoch (default: best)")
+    parser.add_argument("--best-metric", choices=["accuracy", "f1", "auroc", "loss"],
+                        default="accuracy", dest="best_metric",
+                        help="Val metric --save-strategy best selects on (default: accuracy)")
     return parser.parse_args(argv)
 
 
@@ -451,6 +473,15 @@ def main(argv=None):
     train_losses = []
     val_metrics_list = []
 
+    # --save-strategy best: checkpoint whenever --best-metric improves, so the
+    # epoch count can be set generously without having to predict in advance
+    # which epoch will score best (see the module docstring's note on why
+    # rerunning with a smaller --epochs does not reproduce a shorter prefix of
+    # a longer run — the LR schedule itself changes with total epoch count).
+    _higher_is_better = {"accuracy": True, "f1": True, "auroc": True, "loss": False}
+    best_score = float("-inf") if _higher_is_better[args.best_metric] else float("inf")
+    best_epoch = None
+
     print(f"\n{'Epoch':>5}  {'Train loss':>10}  {'Val loss':>9}  "
           f"{'Val acc':>8}  {'Val F1':>7}  {'Val AUROC':>9}")
     print("-" * 60)
@@ -470,10 +501,46 @@ def main(argv=None):
             f"{val_m['accuracy']:>8.4f}  {val_m['f1']:>7.4f}  {val_m['auroc']:>9.4f}"
         )
 
-    # Save model + tokenizer
-    model.save_pretrained(output_dir)
-    tokenizer.save_pretrained(output_dir)
-    print(f"\nModel saved → {output_dir}")
+        if args.save_strategy == "best":
+            score = val_m[args.best_metric]
+            is_valid = score == score  # False for NaN
+            is_better = (score > best_score if _higher_is_better[args.best_metric]
+                        else score < best_score)
+            if is_valid and is_better:
+                best_score = score
+                best_epoch = epoch
+                model.save_pretrained(output_dir)
+                tokenizer.save_pretrained(output_dir)
+                print(f"       -> new best {args.best_metric}={score:.4f}, "
+                      f"checkpoint saved")
+
+    # Save model + tokenizer: --save-strategy last always overwrites with the
+    # final epoch; --save-strategy best only falls back here if no epoch ever
+    # produced a valid (non-NaN) --best-metric value.
+    if args.save_strategy == "last":
+        model.save_pretrained(output_dir)
+        tokenizer.save_pretrained(output_dir)
+        kept_desc = f"last (epoch {args.epochs})"
+    elif best_epoch is None:
+        print(f"WARNING: no epoch produced a valid {args.best_metric}; "
+              f"falling back to the final epoch", file=sys.stderr)
+        model.save_pretrained(output_dir)
+        tokenizer.save_pretrained(output_dir)
+        kept_desc = f"final (fallback, epoch {args.epochs})"
+    else:
+        kept_desc = f"epoch {best_epoch} ({args.best_metric}={best_score:.4f})"
+    print(f"\nModel saved → {output_dir}  [kept: {kept_desc}]")
+
+    with open(output_dir / "training_metrics.json", "w", encoding="utf-8") as f:
+        json.dump({
+            "save_strategy": args.save_strategy,
+            "best_metric": args.best_metric,
+            "kept": kept_desc,
+            "per_epoch": [
+                {"epoch": i + 1, "train_loss": tl, **vm}
+                for i, (tl, vm) in enumerate(zip(train_losses, val_metrics_list))
+            ],
+        }, f, indent=2)
 
     # Learning curve
     if args.epochs > 1:
