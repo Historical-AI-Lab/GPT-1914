@@ -21,7 +21,7 @@
 #   python -m venv ../bertclassify/deberta-env
 #   source ../bertclassify/deberta-env/bin/activate
 #   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
-#   pip install transformers sentencepiece scikit-learn matplotlib numpy
+#   pip install transformers sentencepiece scikit-learn matplotlib numpy protobuf
 # ---------------------------------------------------------------------------
 
 echo "Job starting on $(hostname)"

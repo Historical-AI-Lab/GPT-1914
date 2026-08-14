@@ -13,6 +13,10 @@ Usage:
 Options:
     --learning-rate FLOAT       AdamW learning rate (default: 2e-5)
     --weight-decay FLOAT        AdamW weight decay (default: 0.01)
+    --adam-epsilon FLOAT        AdamW eps (default: 1e-6 — NOT torch's 1e-8 default, which
+                                 produces NaN parameters after the first optimizer step for
+                                 this architecture; see the flag's help text for how that was
+                                 diagnosed)
     --epochs INT                Training epochs (default: 3)
     --batch-size INT            Micro-batch size per forward pass (default: 32)
     --effective-batch-size INT  Logical batch size; grad accum = effective // micro (default: 32)
@@ -85,6 +89,18 @@ def parse_args(argv=None):
                         help="AdamW learning rate (default: 2e-5)")
     parser.add_argument("--weight-decay", type=float, default=0.01, dest="weight_decay",
                         help="AdamW weight decay (default: 0.01)")
+    parser.add_argument("--adam-epsilon", type=float, default=1e-6, dest="adam_epsilon",
+                        help="AdamW eps (default: 1e-6, not PyTorch's 1e-8 default — the "
+                             "smaller value produces NaN parameters after the first optimizer "
+                             "step for this DeBERTa-v2 architecture: at step 1 the bias-corrected "
+                             "second-moment estimate is still small enough that 1/(sqrt(v)+1e-8) "
+                             "overflows for some parameters. 1e-6 is HuggingFace's own documented "
+                             "recommendation for fine-tuning DeBERTa. Reproduced 2026-08-12: NaN "
+                             "at eps=1e-8 independent of --max-length (128/254/256 identical), "
+                             "independent of --learning-rate (fails even at 1e-8), and independent "
+                             "of device (CPU here; MPS per the nan_to_num fallback in evaluate() "
+                             "below) — isolated to Adam's own update math, since SGD does not "
+                             "reproduce it and eps=1e-6 fixes it outright")
     parser.add_argument("--epochs", type=int, default=3,
                         help="Number of training epochs (default: 3)")
     parser.add_argument("--batch-size", type=int, default=32, dest="batch_size",
@@ -418,6 +434,7 @@ def main(argv=None):
             {"params": no_decay_p, "weight_decay": 0.0},
         ],
         lr=args.learning_rate,
+        eps=args.adam_epsilon,
     )
 
     # Scheduler

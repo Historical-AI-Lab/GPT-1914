@@ -38,6 +38,7 @@ Examples:
 
 import argparse
 import json
+import string
 import subprocess
 import sys
 from pathlib import Path
@@ -62,6 +63,14 @@ SCORES_DIR = SCRIPT_DIR / "scores"
 REJECTED_QUESTIONS_PATH = SCRIPT_DIR / "rejected_questions.txt"
 DEFAULT_BENCHMARK = REPO_ROOT / "booksample" / "chronologic_en_0.1.jsonl"
 DEFAULT_MODEL_DIR = "baseline/"
+ANSWER_CACHE_PATH = FORMANUAL_DIR / "answer_cache.jsonl"
+
+_PUNCT_TABLE = str.maketrans("", "", string.punctuation)
+
+
+def normalize_answer(text):
+    """Lowercase, strip punctuation, collapse whitespace."""
+    return " ".join(text.lower().translate(_PUNCT_TABLE).split())
 
 
 # ---------------------------------------------------------------------------
@@ -277,6 +286,39 @@ def score_deberta_pairs(predictions_path, deberta_qnums):
 # Step 4: Manual scoring
 # ---------------------------------------------------------------------------
 
+def _load_answer_cache(cache_path=None):
+    """Read answer_cache.jsonl; return {(qnum, normalized_answer): {"correct": bool, "reason": str}}.
+
+    Returns empty dict if the file does not exist.
+    """
+    if cache_path is None:
+        cache_path = ANSWER_CACHE_PATH
+    cache_path = Path(cache_path)
+    cache = {}
+    if cache_path.exists():
+        with open(cache_path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                record = json.loads(line)
+                key = (str(record["question_number"]), record["normalized_answer"])
+                cache[key] = {"correct": record["correct"], "reason": record["reason"]}
+    return cache
+
+
+def _append_to_cache(cache_fh, qnum, model_answer, correct, reason):
+    """Write one cache record; normalizes model_answer before storing."""
+    record = {
+        "question_number": str(qnum),
+        "normalized_answer": normalize_answer(model_answer),
+        "correct": correct,
+        "reason": reason,
+    }
+    cache_fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+    cache_fh.flush()
+
+
 def _load_scored_file(scored_path):
     """Read existing scored JSONL; return {qnum: {"correct": bool, "reason": str}}."""
     scored_path = Path(scored_path)
@@ -293,22 +335,30 @@ def _load_scored_file(scored_path):
     return existing
 
 
-def run_manual_scoring(manual_items, scored_path, start_line=None):
+def run_manual_scoring(manual_items, scored_path, start_line=None, cache_path=None):
     """Interactively score manual items; append to scored_path.
 
     If start_line is None, it is derived by counting existing lines in scored_path.
 
     For each unscored question prints a formatted prompt and reads Y/n input.
+    Prior decisions from other runs are looked up in the answer cache and applied
+    automatically when the normalized model answer matches.
 
     Returns:
         scored_dict     : {qnum: "T" | "F"}
         manual_accuracy : float in [0, 1]  (or 0.0 if nothing was scored)
     """
+    if cache_path is None:
+        cache_path = ANSWER_CACHE_PATH
+
     scored_path = Path(scored_path)
     scored_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path = Path(cache_path)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Load already-scored records
+    # Load already-scored records and cross-run cache
     existing = _load_scored_file(scored_path)
+    answer_cache = _load_answer_cache(cache_path)
 
     # Determine how many items to skip
     if start_line is None:
@@ -319,8 +369,9 @@ def run_manual_scoring(manual_items, scored_path, start_line=None):
     for qnum, record in existing.items():
         scored_dict[qnum] = "T" if record["correct"] else "F"
 
-    # Open in append mode for new records
-    with open(scored_path, "a", encoding="utf-8") as out_f:
+    # Open scored file and cache in append mode for new records
+    with open(scored_path, "a", encoding="utf-8") as out_f, \
+         open(cache_path, "a", encoding="utf-8") as cache_fh:
         for idx, item in enumerate(manual_items):
             qnum = str(item["question_number"])
 
@@ -337,10 +388,11 @@ def run_manual_scoring(manual_items, scored_path, start_line=None):
 
             if (answer_strings and answer_types
                     and answer_types[0] == "ground_truth"
-                    and model_answer == answer_strings[0]):
+                    and normalize_answer(model_answer) == normalize_answer(answer_strings[0])):
                 record = {"question_number": qnum, "correct": True, "reason": "exact_match"}
                 out_f.write(json.dumps(record, ensure_ascii=False) + "\n")
                 out_f.flush()
+                _append_to_cache(cache_fh, qnum, model_answer, True, "exact_match")
                 scored_dict[qnum] = "T"
                 continue
 
@@ -350,7 +402,22 @@ def run_manual_scoring(manual_items, scored_path, start_line=None):
                 record = {"question_number": qnum, "correct": True, "reason": "correct abstention"}
                 out_f.write(json.dumps(record, ensure_ascii=False) + "\n")
                 out_f.flush()
+                _append_to_cache(cache_fh, qnum, model_answer, True, "correct abstention")
                 scored_dict[qnum] = "T"
+                continue
+
+            # Check cross-run cache
+            cache_key = (qnum, normalize_answer(model_answer))
+            if cache_key in answer_cache:
+                cached = answer_cache[cache_key]
+                correct = cached["correct"]
+                reason = cached["reason"]
+                label = "correct" if correct else "incorrect"
+                print(f"  [cache] Q{qnum}: {label} (from prior run)")
+                record = {"question_number": qnum, "correct": correct, "reason": reason}
+                out_f.write(json.dumps(record, ensure_ascii=False) + "\n")
+                out_f.flush()
+                scored_dict[qnum] = "T" if correct else "F"
                 continue
 
             # Display question
@@ -385,6 +452,9 @@ def run_manual_scoring(manual_items, scored_path, start_line=None):
             }
             out_f.write(json.dumps(record, ensure_ascii=False) + "\n")
             out_f.flush()
+            _append_to_cache(cache_fh, qnum, model_answer, correct, reason)
+            # Add to in-memory cache so later items in this same run can also hit it
+            answer_cache[cache_key] = {"correct": correct, "reason": reason}
 
             scored_dict[qnum] = "T" if correct else "F"
 

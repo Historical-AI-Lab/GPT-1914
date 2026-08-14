@@ -20,6 +20,8 @@ module reset
 module load cudatoolkit/25.3_12.8
 
 source deberta-env/bin/activate
+# Note: protobuf is required for the DeBERTa-v3 tokenizer
+# If missing: pip install protobuf
 
 SCRIPT_DIR="$SLURM_SUBMIT_DIR"
 cd "$SCRIPT_DIR"
