@@ -5,7 +5,7 @@
 #SBATCH --partition=gpuA100x4
 #SBATCH --account=bdfx-delta-gpu
 #SBATCH --time=08:00:00
-#SBATCH --job-name=deberta-e2
+#SBATCH --job-name=deberta-e2a
 #SBATCH --error=deberta-e2-%j.err
 #SBATCH --output=deberta-e2-%j.out
 #SBATCH --gpus-per-node=1
