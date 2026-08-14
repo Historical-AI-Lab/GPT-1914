@@ -103,7 +103,7 @@ source deberta-env/bin/activate
 SCRIPT_DIR="$SLURM_SUBMIT_DIR"
 cd "$SCRIPT_DIR"
 
-E2_DIR="$HOME/workdata/chronologic-dating-corpus/passages/e2"
+E2_DIR="$SCRIPT_DIR"
 
 python -u train_deberta.py \
     --model-name microsoft/deberta-v3-large \
