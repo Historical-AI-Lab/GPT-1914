@@ -62,8 +62,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
+import random
 import sys
 from pathlib import Path
+
+import numpy as np
 
 MODELASJUDGE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(MODELASJUDGE_DIR))
@@ -79,6 +83,7 @@ from bt.tau import score_candidate
 from bt.validate import (LooRecord, bias_stats, bootstrap_auc, dedupe_judgments,
                          restrict_counts, roc_from_loo)
 from substantive.routing import is_legacy_context_scored, route_questions
+from substantive import artifacts as substantive_artifacts
 
 # Kept as an alias so any external caller of the old name keeps working.
 is_context_scored = is_legacy_context_scored
@@ -111,6 +116,50 @@ def select_questions(records: dict[str, dict], questions_arg: str | None) -> dic
         return records
     wanted = set(questions_arg.split(","))
     return {q: r for q, r in records.items() if q in wanted}
+
+
+def _n_gt(rec: dict) -> int:
+    return sum(1 for t in rec.get("answer_types", []) if t == "ground_truth")
+
+
+def stratified_subsample(records: dict[str, dict], n: int, stratify_by: list[str],
+                         seed: int) -> list[str]:
+    """Stratified sample of `n` qnums from `records`, largest-remainder allocation.
+
+    Why stratify on n_gt (plan §8): cmd_loo skips held-out ground truths
+    when len(gt_ids) < 2, so only the two-GT questions can ever produce a
+    label==1.0 LOO record. Proportional allocation alone would under-
+    represent them if they are a minority of the population; stratifying
+    on n_gt (alongside question_category, the default) keeps them
+    represented in proportion to the *population*, not starved to zero by
+    chance the way unstratified random sampling could.
+    """
+    def key(rec):
+        parts = []
+        for field in stratify_by:
+            parts.append(str(_n_gt(rec)) if field == "n_gt" else str(rec.get(field, "")))
+        return tuple(parts)
+
+    strata: dict[tuple, list[str]] = {}
+    for qnum, rec in records.items():
+        strata.setdefault(key(rec), []).append(qnum)
+
+    total = sum(len(v) for v in strata.values())
+    if n >= total:
+        return sorted(records, key=int)
+
+    raw = {k: len(v) * n / total for k, v in strata.items()}
+    floors = {k: int(v) for k, v in raw.items()}
+    remainder = n - sum(floors.values())
+    for k in sorted(strata, key=lambda k: -(raw[k] - floors[k]))[:remainder]:
+        floors[k] += 1
+
+    rng = random.Random(seed)
+    selected: list[str] = []
+    for k, count in floors.items():
+        pool = strata[k]
+        selected.extend(rng.sample(pool, min(count, len(pool))))
+    return sorted(selected, key=int)
 
 
 # How Delta relates a candidate to a question's ground truths. Recorded in
@@ -296,6 +345,7 @@ def cmd_score(args):
     context_fit = dict(scored.get("context_fit", {}))
     calib_rows = []
     delta_draws_by_qnum: dict[str, object] = {}   # spec §9 item 4: persist, don't discard
+    c_len_by_qnum: dict[str, int] = {}
     for qnum in sorted(book_context_qnums & benchmark_records.keys() & set(free_gen.get("answers", {}))):
         rec = benchmark_records[qnum]
         items = items_from_question(rec)
@@ -335,6 +385,7 @@ def cmd_score(args):
 
         p_mean, p_ci, p_draws = apply_calibration(calib, score.delta_draws)
         delta_draws_by_qnum[qnum] = score.delta_draws
+        c_len_by_qnum[qnum] = len(cand.text)
 
         context_fit[qnum] = {
             "judge": f"bt:{args.judge}",
@@ -374,9 +425,48 @@ def cmd_score(args):
     if args.emit_calibration_row and calib_rows:
         artifacts.append_jsonl(Path(args.emit_calibration_row), calib_rows)
 
+    if args.save_delta_draws is not None and delta_draws_by_qnum:
+        candidate_label = scored.get("candidate_label") or scored.get("candidate_model", "unknown")
+        candidate_effort = scored.get("candidate_reasoning_effort", "none")
+        rng = np.random.default_rng(args.seed)
+        thin = args.thin
+        arrays = {}
+        for qnum, draws in delta_draws_by_qnum.items():
+            draws = np.asarray(draws, dtype=np.float32)
+            if draws.shape[0] > thin:
+                idx = np.sort(rng.choice(draws.shape[0], size=thin, replace=False))
+                draws = draws[idx]
+            arrays[f"delta__{qnum}"] = draws
+            arrays[f"c_len__{qnum}"] = np.array(c_len_by_qnum[qnum], dtype=np.int64)
+        meta = substantive_artifacts.base_meta(
+            produced_by="bt_context_scoring.py score",
+            seed=args.seed, judge=args.judge, judge_effort=args.judge_effort,
+            benchmark_path=str(args.benchmark), benchmark_version=artifacts.benchmark_version(args.benchmark),
+            bt_tag=tag, candidate_label=candidate_label, candidate_effort=candidate_effort,
+            prior_scale=args.prior_scale, prior_dist=args.prior_dist, prior_df=args.prior_df,
+            prompt_mode=args.prompt_mode, reference_policy=REFERENCE_POLICY, thin=thin,
+        )
+        draws_path = (Path(args.save_delta_draws) if args.save_delta_draws
+                     else substantive_artifacts.delta_draws_path(tag, candidate_label, candidate_effort))
+        substantive_artifacts.save_npz(draws_path, arrays, meta)
+        print(f"Wrote {draws_path}: {len(delta_draws_by_qnum)} questions' Delta draws")
+
 
 def cmd_loo(args):
     benchmark_records = select_questions(load_benchmark(args.benchmark), args.questions)
+
+    if args.subsample:
+        stratify_by = args.stratify_by.split(",")
+        subsample_qnums = stratified_subsample(benchmark_records, args.subsample, stratify_by,
+                                               args.seed)
+        print(f"  --subsample {args.subsample} (stratify_by={stratify_by}): "
+              f"{len(subsample_qnums)}/{len(benchmark_records)} questions selected.")
+        benchmark_records = {q: benchmark_records[q] for q in subsample_qnums}
+        if args.subsample_out:
+            Path(args.subsample_out).write_text("\n".join(subsample_qnums) + "\n",
+                                                encoding="utf-8")
+            print(f"  Wrote subsample list to {args.subsample_out}")
+
     tag = artifacts.bt_tag(args.judge, args.benchmark, args.judge_effort, args.prompt_mode,
                            args.prior_dist)
     anchors_file = artifacts.anchors_path(tag)
@@ -543,31 +633,168 @@ def loo_label(rec: dict) -> tuple[float, str]:
     return 0.0, "distractor"
 
 
+def _length_lookup(benchmark_path) -> dict[str, dict[str, int]]:
+    """{qid: {item_id: character length}} for every item in every BT-routed question."""
+    lookup = {}
+    for qid, rec in load_benchmark(benchmark_path).items():
+        lookup[qid] = {it.item_id: len(it.text) for it in items_from_question(rec)}
+    return lookup
+
+
+def _attach_z_len(records: list[dict], benchmark_path) -> tuple[list[dict], dict]:
+    """Resolve and attach standardized log-length z_len to each record.
+
+    Records pooled from a different benchmark version (e.g. the BT pilot
+    via --extra-labels) generally will not resolve against this
+    benchmark's items and are dropped from the length-covariate fit --
+    printed, not silent. Returns (resolved_records, {mu_loglen, sd_loglen}).
+    """
+    lookup = _length_lookup(benchmark_path)
+    resolved = []
+    for r in records:
+        item_len = lookup.get(r["qid"], {}).get(r["item_id"])
+        if item_len is not None:
+            resolved.append({**r, "_len": item_len})
+    skipped = len(records) - len(resolved)
+    if skipped:
+        print(f"  --length-covariate: {skipped}/{len(records)} records could not be resolved "
+              f"against {benchmark_path} (likely pooled from a different benchmark version) "
+              f"and were dropped from the length-covariate fit.")
+    if len(resolved) < 2:
+        raise ValueError(
+            f"--length-covariate: only {len(resolved)} records resolved against "
+            f"{benchmark_path}; cannot fit."
+        )
+    log_lens = np.array([math.log(max(r["_len"], 1)) for r in resolved])
+    mu, sd = float(log_lens.mean()), float(log_lens.std()) or 1.0
+    for r in resolved:
+        r["z_len"] = (math.log(max(r["_len"], 1)) - mu) / sd
+    return resolved, {"mu_loglen": mu, "sd_loglen": sd}
+
+
+def _cluster_bootstrap_calibration(records: list[dict], *, n_boot: int, seed: int,
+                                   use_length: bool) -> tuple[np.ndarray, int]:
+    """Cluster-bootstrap (a, b[, c]) by qid -- resampling records, not qids in
+    isolation, keeps every record from a sampled question together (spec §8.7:
+    239 records over 40 pilot questions is a cluster sample, effective n
+    nearer 40 than 239). Returns (draws (R, 2 or 3), n_zero_positive_replicates
+    -- replicates with no positive-label record, where fit_calibration would
+    degenerate; these are skipped and counted, not silently included).
+    """
+    by_qid: dict[str, list[dict]] = {}
+    for r in records:
+        by_qid.setdefault(r["qid"], []).append(r)
+    qids = sorted(by_qid)
+    rng = np.random.default_rng(seed)
+
+    draws = []
+    n_zero_positive = 0
+    for _ in range(n_boot):
+        sample_qids = rng.choice(qids, size=len(qids), replace=True)
+        pooled = [r for q in sample_qids for r in by_qid[q]]
+        if not any(r["label"] > 0 for r in pooled):
+            n_zero_positive += 1
+            continue
+        fit = fit_calibration(pooled, use_length=use_length)
+        draws.append((fit["intercept"], fit["slope"], fit["length_slope"]) if use_length
+                     else (fit["intercept"], fit["slope"]))
+    return np.array(draws, dtype=float), n_zero_positive
+
+
 def cmd_calibrate(args):
     tag = artifacts.bt_tag(args.judge, args.benchmark, args.judge_effort, args.prompt_mode,
                            args.prior_dist)
     loo_data = artifacts.read_json(artifacts.loo_path(tag))
+    this_version = artifacts.benchmark_version(args.benchmark)
     records = []
     for r in loo_data["records"]:
         label, source = loo_label(r)
         records.append({"qid": r["qid"], "item_id": r["item_id"],
-                        "delta_mean": r["delta_mean"], "label": label, "source": source})
+                        "delta_mean": r["delta_mean"], "label": label, "source": source,
+                        "benchmark_version": this_version})
     if args.extra_labels:
-        records.extend(artifacts.read_jsonl(Path(args.extra_labels)))
-    calib = fit_calibration(records)
+        # Rows may carry their own benchmark_version (recommended when
+        # pooling LOO records from a different version, e.g. the BT pilot
+        # via namespaced qids like "pilot:3"); default to this run's
+        # version when absent.
+        extra = artifacts.read_jsonl(Path(args.extra_labels))
+        for r in extra:
+            r.setdefault("benchmark_version", this_version)
+        records.extend(extra)
+
+    length_standardization = None
+    fit_records = records
+    if args.length_covariate:
+        fit_records, length_standardization = _attach_z_len(records, args.benchmark)
+
+    calib = fit_calibration(fit_records, use_length=args.length_covariate)
     # Stamp the prior scale the LOO deltas were produced on. b is fitted on
     # that scale and only cancels it when applied on the same scale -- see
     # check_prior_scale_consistency.
     calib["prior_scale"] = loo_data.get("meta", {}).get("prior_scale")
     calib["reference_policy"] = loo_data.get("meta", {}).get("reference_policy")
+    if length_standardization:
+        calib["length_standardization"] = length_standardization
     artifacts.ensure_dirs()
     artifacts.write_json(artifacts.calibration_path(tag), calib)
     ps = calib["prior_scale"]
     print(f"Wrote {artifacts.calibration_path(tag)}: "
           f"intercept={calib['intercept']:.3f} slope={calib['slope']:.3f} "
-          f"n={calib['n']} {calib['n_by_source']}"
+          + (f"length_slope={calib['length_slope']:.3f} " if args.length_covariate else "")
+          + f"n={calib['n']} {calib['n_by_source']}"
           + (f" prior_scale={ps}" if ps is not None else
              "  (no prior_scale in the LOO artifact; re-run `loo` to stamp it)"))
+
+    if args.bootstrap:
+        draws, n_zero_positive = _cluster_bootstrap_calibration(
+            fit_records, n_boot=args.bootstrap, seed=args.seed, use_length=args.length_covariate)
+        cal_a, cal_b = draws[:, 0], draws[:, 1]
+        arrays = {"cal_a": cal_a, "cal_b": cal_b}
+        if args.length_covariate:
+            arrays["cal_c"] = draws[:, 2]
+        cluster_ids = sorted({(r["qid"], r["benchmark_version"]) for r in fit_records})
+        meta = substantive_artifacts.base_meta(
+            produced_by="bt_context_scoring.py calibrate",
+            seed=args.seed, judge=args.judge, judge_effort=args.judge_effort,
+            benchmark_path=str(args.benchmark), benchmark_version=this_version,
+            bt_tag=tag, prior_scale=calib["prior_scale"], prior_dist=args.prior_dist,
+            prior_df=args.prior_df, prompt_mode=args.prompt_mode,
+            reference_policy=calib["reference_policy"],
+            n_boot=args.bootstrap, n_draws=int(draws.shape[0]), n_zero_positive=n_zero_positive,
+            cluster_ids=[list(c) for c in cluster_ids], length_covariate=args.length_covariate,
+        )
+        draws_path = (Path(args.draws_out) if args.draws_out
+                     else substantive_artifacts.calib_draws_path(tag))
+        substantive_artifacts.save_npz(draws_path, arrays, meta)
+        print(f"Wrote {draws_path}: {draws.shape[0]}/{args.bootstrap} replicates "
+              f"({n_zero_positive} skipped, zero positive labels)")
+
+
+def cmd_emit_pilot_labels(args):
+    """Convert a pilot LOO artifact into namespaced --extra-labels rows.
+
+    Namespacing (plan §4): pilot qid "3" (benchmark 0.1) and production qid
+    "3" (benchmark 0.7) are different questions. The cluster bootstrap in
+    `calibrate` resamples by qid, so leaving both bare would silently merge
+    them into one cluster -- correlating two unrelated questions and
+    narrowing the interval. Prefixing every pilot qid with "pilot:" keeps
+    them distinct; verify_compatible's cluster-id check (drawbank.py) then
+    catches the mistake if a caller forgets to namespace.
+    """
+    pilot_tag = artifacts.bt_tag(args.judge, args.pilot_benchmark, args.judge_effort,
+                                 args.prompt_mode, args.prior_dist)
+    loo_data = artifacts.read_json(artifacts.loo_path(pilot_tag))
+    version = artifacts.benchmark_version(args.pilot_benchmark)
+    rows = []
+    for r in loo_data["records"]:
+        label, source = loo_label(r)
+        rows.append({"qid": f"pilot:{r['qid']}", "item_id": r["item_id"],
+                    "delta_mean": r["delta_mean"], "label": label, "source": source,
+                    "benchmark_version": version})
+    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.output).write_text("\n".join(json.dumps(r) for r in rows) + ("\n" if rows else ""),
+                                 encoding="utf-8")
+    print(f"Wrote {len(rows)} namespaced pilot label rows to {args.output}")
 
 
 def cmd_simulate(args):
@@ -646,6 +873,14 @@ def build_parser():
 
     p_loo = sub.add_parser("loo")
     add_common(p_loo)
+    p_loo.add_argument("--subsample", type=int, default=None,
+                       help="Stratified subsample of this many questions (plan §8: run "
+                            "before spending the full LOO budget).")
+    p_loo.add_argument("--stratify-by", default="question_category,n_gt",
+                       help="Comma list of fields to stratify on; 'n_gt' is computed "
+                            "(number of ground truths), not a benchmark field.")
+    p_loo.add_argument("--subsample-out", default=None,
+                       help="Write the selected qnums, one per line, to this path.")
     p_loo.set_defaults(func=cmd_loo)
 
     p_validate = sub.add_parser("validate")
@@ -655,7 +890,18 @@ def build_parser():
 
     p_calibrate = sub.add_parser("calibrate")
     add_common(p_calibrate)
-    p_calibrate.add_argument("--extra-labels", default=None)
+    p_calibrate.add_argument("--extra-labels", default=None,
+                             help="JSONL of extra {qid, item_id, delta_mean, label, source"
+                                  "[, benchmark_version]} rows, e.g. namespaced pilot LOO "
+                                  "records (qid 'pilot:3') for pooling into the calibration set.")
+    p_calibrate.add_argument("--bootstrap", type=int, default=1000,
+                             help="Cluster-bootstrap replicates by qid, saved to --draws-out. "
+                                  "0 disables.")
+    p_calibrate.add_argument("--length-covariate", action="store_true",
+                             help="Fit sigma(a + b*Delta + c*z_len) instead of the plain "
+                                  "2-parameter curve (spec §2.1).")
+    p_calibrate.add_argument("--draws-out", default=None,
+                             help="Calibration draw-bank path; default derived from the tag.")
     p_calibrate.set_defaults(func=cmd_calibrate)
 
     p_score = sub.add_parser("score")
@@ -664,7 +910,28 @@ def build_parser():
     p_score.add_argument("--free-gen", required=True)
     p_score.add_argument("--output", default=None)
     p_score.add_argument("--emit-calibration-row", default=None)
+    p_score.add_argument("--save-delta-draws", nargs="?", const="", default=None,
+                         help="Persist calibrated Delta draws (spec §9 item 4). Bare flag "
+                              "uses the derived path; a value overrides it.")
+    p_score.add_argument("--thin", type=int, default=1000,
+                         help="Draws kept per question in the saved Delta bank (default 1000).")
     p_score.set_defaults(func=cmd_score)
+
+    p_emit_pilot = sub.add_parser("emit-pilot-labels",
+                                  help="Convert a pilot LOO artifact into namespaced "
+                                       "--extra-labels rows for calibrate --extra-labels.")
+    p_emit_pilot.add_argument("--judge", default="anthropic/claude-sonnet-5")
+    p_emit_pilot.add_argument("--judge-effort", default="medium",
+                              choices=["none", "low", "medium", "high"])
+    p_emit_pilot.add_argument("--pilot-benchmark", required=True,
+                              help="The pilot benchmark whose `loo` artifact to read "
+                                   "(e.g. chronologic_btpilot_0.1.jsonl).")
+    p_emit_pilot.add_argument("--prior-scale", type=float, default=1.0)
+    p_emit_pilot.add_argument("--prior-dist", default="normal", choices=["normal", "studentt"])
+    p_emit_pilot.add_argument("--prompt-mode", default=artifacts.DEFAULT_PROMPT_MODE,
+                              choices=list(artifacts.PROMPT_MODES))
+    p_emit_pilot.add_argument("--output", required=True)
+    p_emit_pilot.set_defaults(func=cmd_emit_pilot_labels)
 
     p_sim = sub.add_parser("simulate")
     p_sim.add_argument("--mode", default="all",

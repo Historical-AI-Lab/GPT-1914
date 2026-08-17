@@ -19,6 +19,7 @@ sys.path.insert(0, str(MODELASJUDGE))
 import bt_context_scoring as cli
 from bt import artifacts
 from bt.fit import AnchorFit, save_anchor_fits
+from substantive import artifacts as substantive_artifacts
 
 
 QUESTION = {
@@ -66,6 +67,8 @@ def workspace(tmp_path, monkeypatch):
 
     # Pre-built tiny anchor fit for question "1" (3 items: gt0, gt1, d0).
     monkeypatch.setattr(artifacts, "ARTIFACT_DIR", tmp_path / "bt_artifacts")
+    monkeypatch.setattr(substantive_artifacts, "SUBSTANTIVE_ARTIFACTS_DIR",
+                        tmp_path / "substantive_artifacts")
     rng = np.random.default_rng(0)
     draws = rng.normal(0, 1, size=(200, 3))
     draws -= draws.mean(axis=1, keepdims=True)
@@ -116,6 +119,8 @@ def make_args(ws, **overrides):
     a.free_gen = str(ws["free_gen"])
     a.output = None
     a.emit_calibration_row = None
+    a.save_delta_draws = None
+    a.thin = 1000
     for k, v in overrides.items():
         setattr(a, k, v)
     return a
@@ -163,6 +168,41 @@ class TestScoreEndToEnd:
         out = json.loads(out_path.read_text())
         assert out["context_fit"]["1"]["bt"]["artifacts_tag"] == workspace["tag"]
         assert out["bt_context"]["artifacts_tag"] == workspace["tag"]
+
+
+class TestSaveDeltaDraws:
+    def test_bare_flag_writes_one_key_per_scored_question(self, workspace):
+        args = make_args(workspace, save_delta_draws="")
+        cli.cmd_score(args)
+        path = substantive_artifacts.delta_draws_path(workspace["tag"], "cand", "none")
+        assert path.exists()
+        arrays, meta = substantive_artifacts.load_npz(path)
+        assert "delta__1" in arrays
+        assert "c_len__1" in arrays
+        assert meta["candidate_label"] == "cand"
+        assert meta["bt_tag"] == workspace["tag"]
+
+    def test_explicit_path_overrides_derived_path(self, workspace, tmp_path):
+        out = tmp_path / "custom_delta.npz"
+        args = make_args(workspace, save_delta_draws=str(out))
+        cli.cmd_score(args)
+        assert out.exists()
+        arrays, _meta = substantive_artifacts.load_npz(out)
+        assert "delta__1" in arrays
+
+    def test_omitted_flag_writes_nothing(self, workspace):
+        args = make_args(workspace)   # save_delta_draws=None by default
+        cli.cmd_score(args)
+        path = substantive_artifacts.delta_draws_path(workspace["tag"], "cand", "none")
+        assert not path.exists()
+
+    def test_thin_caps_draw_count(self, workspace):
+        args = make_args(workspace, save_delta_draws="", thin=50)
+        cli.cmd_score(args)
+        path = substantive_artifacts.delta_draws_path(workspace["tag"], "cand", "none")
+        arrays, meta = substantive_artifacts.load_npz(path)
+        assert arrays["delta__1"].shape[0] == 50
+        assert meta["thin"] == 50
 
 
 class TestPriorScaleGuard:
@@ -345,3 +385,53 @@ class TestAnchorFitMerges:
         assert meta["seed"] == 2
         assert np.allclose(back["1"].theta_draws, existing["1"].theta_draws)
         assert not np.allclose(back["2"].theta_draws, existing["2"].theta_draws)
+
+
+class TestEmitPilotLabels:
+    """qid namespacing: pilot qid '3' (benchmark 0.1) and production qid
+    '3' (0.7) are different questions; the cluster bootstrap resamples by
+    qid, so leaving both bare would silently merge them (plan §4)."""
+
+    def test_qids_are_namespaced_and_version_stamped(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(artifacts, "ARTIFACT_DIR", tmp_path / "bt_artifacts")
+        pilot_bm = tmp_path / "chronologic_btpilot_0.1.jsonl"
+        pilot_bm.write_text("")   # only benchmark_version(path) is used, no parsing
+
+        tag = artifacts.bt_tag("anthropic/claude-sonnet-5", pilot_bm, "medium")
+        artifacts.write_json(artifacts.loo_path(tag), {
+            "meta": {},
+            "records": [
+                {"qid": "3", "item_id": "gt0", "kind": "ground_truth", "prob": 1.0,
+                 "delta_mean": 2.0},
+                {"qid": "3", "item_id": "d0", "kind": "distractor", "prob": 0.0,
+                 "delta_mean": -2.0},
+            ],
+        })
+
+        out = tmp_path / "pilot_rows.jsonl"
+
+        class Args:
+            pass
+        a = Args()
+        a.judge = "anthropic/claude-sonnet-5"
+        a.judge_effort = "medium"
+        a.pilot_benchmark = str(pilot_bm)
+        a.prior_scale = 1.0
+        a.prior_dist = "normal"
+        a.prompt_mode = artifacts.DEFAULT_PROMPT_MODE
+        a.output = str(out)
+        cli.cmd_emit_pilot_labels(a)
+
+        rows = [json.loads(l) for l in out.read_text().splitlines() if l.strip()]
+        assert len(rows) == 2
+        assert all(r["qid"] == "pilot:3" for r in rows)
+        assert all(r["benchmark_version"] == "0.1" for r in rows)
+
+    def test_collision_with_production_qid_is_caught_by_verify_compatible(self, tmp_path, monkeypatch):
+        """The trap this namespacing prevents, demonstrated: an UNnamespaced
+        merge of pilot qid '3' and production qid '3' collides two versions
+        under one cluster id, and drawbank.verify_compatible must catch it."""
+        from substantive.drawbank import ArtifactMismatch, verify_compatible
+        unnamespaced_cluster_ids = [["3", "0.1"], ["3", "0.7"]]
+        with pytest.raises(ArtifactMismatch, match="more than one benchmark version"):
+            verify_compatible({"calib": {"cluster_ids": unnamespaced_cluster_ids}})
