@@ -15,6 +15,8 @@ from pathlib import Path
 
 import numpy as np
 
+from substantive import estimator
+
 
 def _ci(replicates):
     lo, hi = np.percentile(replicates, [2.5, 97.5])
@@ -40,7 +42,8 @@ def write_report(path, *, point, boot, bank, provenance, checks=None,
 
     clip_rate = float(np.mean((boot.pooled_equal <= 0.0) | (boot.pooled_equal >= 1.0)))
     near_floor_frac = float(point.n_excluded_floor / max(len(bank.v_hat), 1))
-    mean_alpha = float(np.mean(bank.k_alpha / np.maximum(bank.n_alpha, 1))) if bank.n_alpha.size else float("nan")
+    mean_alpha = (float(np.mean(estimator.alpha_point(bank.k_alpha, bank.n_alpha, prior=alpha_prior)))
+                 if bank.n_alpha.size else float("nan"))
 
     row = {
         "run_date": run_date, "benchmark_version": bank.metas.get("beta_draws", {}).get("benchmark_version", ""),

@@ -180,6 +180,11 @@ class TestAssemble:
         assert bank.v_hat.shape == (3,)
         assert np.allclose(bank.v_hat, 2 / 3)
         assert bank.k_alpha.shape == (3,)
+        # k_alpha is the ERROR count (question_total - question_correct),
+        # not question_correct itself -- a regression pin for the inverted
+        # assignment that silently floor-excluded every pass/fail question.
+        assert np.allclose(bank.k_alpha, 1)
+        assert np.allclose(bank.n_alpha, 8)
         assert bank.delta_draws.shape == (2, 100)
         assert bank.coef_u_frame.shape == (50, 3)
         assert bank.sigma_u == pytest.approx(0.5)

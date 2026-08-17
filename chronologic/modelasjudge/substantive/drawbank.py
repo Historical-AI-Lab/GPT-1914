@@ -176,8 +176,15 @@ def assemble(*, scored_file, benchmark_path, reliability_path,
         v_hat.append(float(np.mean(scores)))
         n_v.append(len(scores))
         alpha_rec = per_question_alpha[qnum]
-        k_alpha.append(alpha_rec["question_correct"])
-        n_alpha.append(alpha_rec["question_total"])
+        # alpha's k is the ERROR count, not the correct count: the Beta
+        # posterior models P(judge wrongly passes a distractor), and the
+        # reliability file's question_correct measures the opposite event
+        # (correct rejections). See spec Sec8.5: k=0 (a perfect judge, zero
+        # errors) gives the low Jeffreys mean 0.125 at n=6, not a high one.
+        n_total = alpha_rec["question_total"]
+        n_correct = alpha_rec["question_correct"]
+        k_alpha.append(n_total - n_correct)
+        n_alpha.append(n_total)
         rec = routing.pass_fail[qnum]
         frame = _frame_type_of(rec)
         if frame not in frame_index:
