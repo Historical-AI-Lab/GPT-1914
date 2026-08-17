@@ -6,15 +6,27 @@ post-stratifies them through one shared regression. The complete scheme is
 a shared coefficient draw plus an independent per-question residual term,
 because true beta_q scatters around its predicted value (R^2 < 1).
 
-The regression targets 2*beta, so the residual lives on the logit scale of
-2*beta and beta_q = expit(eta_q + u_q) / 2 -- structurally <= 0.5. eta_i is
-the posterior-mean linear predictor for GT-vs-GT pair i; sigma_u is solved
-so the model's implied aggregate variance across all pairs matches the
-observed one, via Gauss-Hermite quadrature (nonlinear in u, so the mean
-itself shifts with sigma -- a closed form does not exist) and a Brent
-root-find. Never raises: an already-underdispersed calibration set (or one
-whose dispersion exceeds anything sigma_u in [0, 5] can produce) yields
-sigma_u = 0 and a diagnostic flag instead of a spurious "fit".
+The regression targets 2*beta directly: fit_beta_regression_nocontext.py's
+PyMC likelihood is k_i ~ Binomial(n_i, sigmoid(eta_i)) with no factor of
+two anywhere, because k_i/n_i (non-tie count over valid trials) *is* an
+observation of 2*beta_i. So this module's residual u_q lives on that same
+logit(2*beta) scale as eta_i, and everything here -- logitnormal_moments,
+solve_sigma_u -- operates on p = expit(eta + u) with no division. Only the
+*downstream* consumer (substantive.estimator.beta_from_coefs) halves the
+result once, at the very end, to get the actual beta_q <= 0.5 that
+Rogan-Gladen needs; halving here as well would silently refit sigma_u
+against a mean half the size of the real k_i/n_i rate, inflating the
+apparent overdispersion (caught empirically: fitting against real
+GT-vs-GT pairs gave a 3.0x ratio against a /2 version of this code,
+against the spec-quoted 1.36-1.6x once the /2 was removed).
+
+eta_i is the posterior-mean linear predictor for GT-vs-GT pair i; sigma_u
+is solved so the model's implied aggregate variance across all pairs
+matches the observed one, via Gauss-Hermite quadrature (nonlinear in u, so
+the mean itself shifts with sigma -- a closed form does not exist) and a
+Brent root-find. Never raises: an already-underdispersed calibration set
+(or one whose dispersion exceeds anything sigma_u in [0, 5] can produce)
+yields sigma_u = 0 and a diagnostic flag instead of a spurious "fit".
 """
 
 from __future__ import annotations
@@ -32,20 +44,24 @@ _ROOT_TOL = 1e-9
 
 
 def logitnormal_moments(eta, sigma, *, n_quad: int = _GH_DEGREE):
-    """E[p] and E[p^2] for p = expit(eta + u) / 2, u ~ N(0, sigma^2).
+    """E[p] and E[p^2] for p = expit(eta + u), u ~ N(0, sigma^2).
+
+    p is on the same scale as eta -- the logit(2*beta) scale the regression
+    fits on, i.e. what k_i/n_i in the GT-pair data actually measures. No
+    factor of two: see the module docstring for why that would be wrong.
 
     Gauss-Hermite quadrature: E[f(u)] = (1/sqrt(pi)) * sum_j w_j f(sqrt(2)*sigma*x_j).
     sigma <= 0 collapses to the point mass at u = 0 (no quadrature needed).
     """
     eta = np.asarray(eta, dtype=float)
     if sigma <= 0:
-        p = expit(eta) / 2.0
+        p = expit(eta)
         return p, p ** 2
 
     nodes, weights = (_GH_NODES, _GH_WEIGHTS) if n_quad == _GH_DEGREE else hermgauss(n_quad)
     u = np.sqrt(2.0) * sigma * nodes                       # (n_quad,)
     z = eta[:, None] + u[None, :]                          # (n_pairs, n_quad)
-    p = expit(z) / 2.0
+    p = expit(z)
     w = weights / np.sqrt(np.pi)
     p_bar = p @ w
     e_p2 = (p ** 2) @ w

@@ -43,6 +43,15 @@ Usage
   --target-accept FLOAT         (default: 0.9)
   --seed INT                    (default: 17)
   --dry-run                     Print data summaries; no sampling
+  --save-draws PATH              Save the flattened (b0, b_len, u_frame) coefficient
+                                 draws plus the moment-matched residual scale sigma_u
+                                 (substantive-uncertainty-spec.md §4) to an npz bank.
+                                 Default: on, path derived as
+                                 beta_reliability/beta_draws_{judge}__{version}.npz
+                                 (substantive.artifacts.beta_draws_path). Pass "" to
+                                 skip.
+  --thin INT                     Draws to keep in the saved bank (default: 2000);
+                                 evenly subsampled if more are available.
 
 Output
 ------
@@ -109,6 +118,13 @@ from pathlib import Path
 import numpy as np
 
 SCRIPT_DIR = Path(__file__).parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from naming import sanitize  # noqa: E402
+from substantive import artifacts as substantive_artifacts  # noqa: E402
+from substantive.residual import solve_sigma_u  # noqa: E402
+
 BETA_RELIABILITY_DIR = SCRIPT_DIR / "beta_reliability"
 DEFAULT_BENCHMARK = SCRIPT_DIR.parent / "booksample" / "chronologic_en_0.3.jsonl"
 
@@ -332,6 +348,45 @@ def fit_model(data, draws=2000, tune=1000, chains=4, target_accept=0.9, seed=17)
     return trace
 
 
+def save_draw_bank(trace, data, *, path, thin, judge_model, judge_effort,
+                   benchmark_path, seed) -> dict:
+    """Flatten the coefficient posterior, moment-match sigma_u, and save.
+
+    This is the only place the fitting pairs (n_i, k_i) and the
+    posterior-mean linear predictor eta_i coexist (spec §4), so sigma_u is
+    computed here rather than re-derived downstream. Full-precision
+    mu_loglen/sd_loglen and the FRAME_TYPES order are saved alongside the
+    coefficients -- the JSON output at write time rounds to 4dp, which is
+    too coarse for a covariate the estimator will re-apply per draw.
+    """
+    b0_draws = trace.posterior["b0"].values.flatten()
+    b_len_draws = trace.posterior["b_len"].values.flatten()
+    u_frame_draws = trace.posterior["u_frame"].values.reshape(-1, len(FRAME_TYPES))
+    n_draws_source = len(b0_draws)
+
+    n_keep = min(thin, n_draws_source)
+    rng = np.random.default_rng(seed)
+    idx = np.sort(rng.choice(n_draws_source, size=n_keep, replace=False))
+    b0_thin, b_len_thin, u_frame_thin = b0_draws[idx], b_len_draws[idx], u_frame_draws[idx]
+
+    eta_fit = (float(np.mean(b0_draws)) + np.mean(u_frame_draws, axis=0)[data["frame_idx"]]
+              + float(np.mean(b_len_draws)) * data["z_loglen"])
+    sigma_u, residual_diagnostics = solve_sigma_u(data["k"], data["n"], eta_fit)
+
+    meta = substantive_artifacts.base_meta(
+        produced_by="fit_beta_regression_nocontext.py",
+        seed=seed, judge=judge_model, judge_effort=judge_effort,
+        benchmark_path=str(benchmark_path), benchmark_version=data["benchmark_version"],
+        n_draws=n_keep, n_draws_source=n_draws_source, thin=thin,
+        frame_types=list(FRAME_TYPES),
+        standardization={"mu_loglen": data["mu_loglen"], "sd_loglen": data["sd_loglen"]},
+        sigma_u=sigma_u, sigma_u_diagnostics=residual_diagnostics,
+    )
+    substantive_artifacts.save_npz(
+        path, {"b0": b0_thin, "b_len": b_len_thin, "u_frame": u_frame_thin}, meta)
+    return meta
+
+
 # ---------------------------------------------------------------------------
 # Post-stratification and output assembly
 # ---------------------------------------------------------------------------
@@ -521,6 +576,10 @@ def main():
                         dest="target_accept")
     parser.add_argument("--seed",    metavar="INT", type=int, default=17)
     parser.add_argument("--dry-run", action="store_true", dest="dry_run")
+    parser.add_argument("--save-draws", metavar="PATH", default=None, dest="save_draws",
+                        help='Draw-bank output path; "" skips saving. Default: derived.')
+    parser.add_argument("--thin", metavar="INT", type=int, default=2000,
+                        help="Draws to keep in the saved bank (default: 2000).")
 
     args = parser.parse_args()
 
@@ -566,13 +625,10 @@ def main():
     judge_model     = data["judge_model"]
     bench_version   = data["benchmark_version"]
 
-    def _sanitize(s):
-        return s.replace("/", "_").replace(":", "_").replace(" ", "_")
-
     output_path = (
         Path(args.output) if args.output
         else BETA_RELIABILITY_DIR / (
-            f"beta_regression_{_sanitize(judge_model)}__{bench_version}.json"
+            f"beta_regression_{sanitize(judge_model)}__{bench_version}.json"
         )
     )
     BETA_RELIABILITY_DIR.mkdir(exist_ok=True)
@@ -585,6 +641,19 @@ def main():
         draws=args.draws, tune=args.tune, chains=args.chains,
         target_accept=args.target_accept, seed=args.seed,
     )
+
+    # --- Save the coefficient draw bank + sigma_u ---
+    if args.save_draws != "":
+        draws_path = (Path(args.save_draws) if args.save_draws
+                     else substantive_artifacts.beta_draws_path(judge_model, args.benchmark))
+        draw_meta = save_draw_bank(
+            trace, data, path=draws_path, thin=args.thin, judge_model=judge_model,
+            judge_effort=data["reasoning_effort"], benchmark_path=args.benchmark, seed=args.seed,
+        )
+        print(f"\nDraw bank: {draws_path.resolve()}  "
+              f"(n_draws={draw_meta['n_draws']}/{draw_meta['n_draws_source']}, "
+              f"sigma_u={draw_meta['sigma_u']:.4f}, "
+              f"overdispersion_ratio={draw_meta['sigma_u_diagnostics']['overdispersion_ratio']:.3f})")
 
     # --- Post-stratify ---
     print("Post-stratifying over benchmark population...")
