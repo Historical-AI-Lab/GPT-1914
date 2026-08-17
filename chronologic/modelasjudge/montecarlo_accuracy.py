@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
-"""montecarlo_accuracy.py — Bias-corrected AND-accuracy via MOM + Bernoulli bootstrap.
+"""
+DEPRECATED — superseded by score_substantive.py, which implements the
+Rogan-Gladen estimator over p_q (substantive-uncertainty-spec.md). The
+multiplicative three-aspect model this module discounts and range-normalizes
+no longer describes the pipeline: with only one aspect the correction is
+algebraically self-cancelling (see the spec's Context section), so this
+module's final number is now a near no-op. Kept only because tests/
+test_montecarlo_accuracy.py and comments elsewhere reference it. Do not use
+this as the final scoring stage.
+
+montecarlo_accuracy.py — Bias-corrected AND-accuracy via MOM + Bernoulli bootstrap.
 
 For each question, inverts the observation channel (method of moments) to obtain a
 bias-corrected per-question pass probability for each aspect, then estimates the overall
@@ -52,6 +62,15 @@ def _locate_judge(ctag: str, version: str, override: str | None) -> Path:
     plain = sorted(SCORED_DIR.glob(f"judge_*__{ctag}__{version}*.json"))
     if plain:
         return plain[0]
+    # ctag may be just the model name while the file was scored with a full path
+    # (e.g. /projects/bdfx/models/Qwen2.5-72B-Instruct → _projects_bdfx_models_Qwen2.5-72B-Instruct).
+    # Fall back to any judge file whose stem contains the ctag and version.
+    human = sorted(p for p in SCORED_DIR.glob(f"judge_*{version}*_human.json") if ctag in p.name)
+    if human:
+        return human[0]
+    plain = sorted(p for p in SCORED_DIR.glob(f"judge_*{version}*.json") if ctag in p.name)
+    if plain:
+        return plain[0]
     raise FileNotFoundError(f"No judge file for {ctag} v{version} in {SCORED_DIR}")
 
 
@@ -59,6 +78,9 @@ def _locate_discrim(ctag: str, version: str, override: str | None) -> Path:
     if override:
         return Path(override)
     matches = sorted(SCORED_DIR.glob(f"discrim_*__{ctag}__{version}.json"))
+    if matches:
+        return matches[0]
+    matches = sorted(p for p in SCORED_DIR.glob(f"discrim_*{version}.json") if ctag in p.name)
     if matches:
         return matches[0]
     raise FileNotFoundError(f"No discrim file for {ctag} v{version} in {SCORED_DIR}")

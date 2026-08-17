@@ -1,4 +1,10 @@
 """
+DEPRECATED — superseded by stylejudge/typicality.py, the style judge that
+score_substantive.py's report presents side by side with substantive
+scoring (substantive-uncertainty-spec.md §7). Kept only because
+tests/ reference it and comments elsewhere describe the earlier design.
+Do not use this as the final style scoring stage.
+
 discriminative_scoring.py — Score free-generated answers using the DeBERTa discriminative judge.
 
 For each question the script computes the log-odds gap Δ = logit(Q_m) − logit(Q_gt)
