@@ -36,6 +36,10 @@ Usage
   --limit N                 Process only N questions (for testing).
   --seed INT                RNG seed (default: 17; unused here since positions are forced).
   --debug                   Print full judge responses.
+  --questions LIST_OR_@FILE Restrict to these question numbers: a comma-separated
+                            list (matching bt_context_scoring.py's --questions), or
+                            @path/to/file.txt with one question number per line.
+                            Default: every question in --benchmark.
 
 Output
 ------
@@ -75,6 +79,8 @@ sys.path.insert(0, str(SCRIPT_DIR))
 
 from judge_prompts_nocontext import score_one_comparison
 from openrouter_client import is_openrouter_model, make_openrouter_client
+from naming import benchmark_version as _parse_benchmark_version
+from naming import sanitize as _sanitize
 
 RELIABILITY_DIR = SCRIPT_DIR / "llm_reliability"
 DEFAULT_BENCHMARK = SCRIPT_DIR.parent / "booksample" / "chronologic_en_0.2.jsonl"
@@ -84,14 +90,21 @@ PENALTIES_PATH = SCRIPT_DIR / "distractor_penalties.txt"
 # Helpers (exported for judge_beta_reliability_nocontext.py)
 # ---------------------------------------------------------------------------
 
-def _sanitize(s):
-    return re.sub(r"[^a-zA-Z0-9_\-.]", "_", s)
+def _parse_questions_arg(questions_arg):
+    """Comma-separated list, or "@path" with one question number per line.
 
-
-def _parse_benchmark_version(path):
-    name = Path(path).stem
-    m = re.search(r'(\d+\.\d+)', name)
-    return m.group(1) if m else "unknown"
+    Matches bt_context_scoring.py's --questions convention (comma list),
+    plus the @file extension needed here so the orchestrator can pass a
+    79-question subset without hitting an argv length limit. Returns a
+    set[str], or None if questions_arg is falsy (no restriction).
+    """
+    if not questions_arg:
+        return None
+    if questions_arg.startswith("@"):
+        path = Path(questions_arg[1:])
+        return {line.strip() for line in path.read_text(encoding="utf-8").splitlines()
+               if line.strip()}
+    return {q.strip() for q in questions_arg.split(",") if q.strip()}
 
 
 def _is_openai_model(model_id):
@@ -348,6 +361,8 @@ def main():
     parser.add_argument("--limit", metavar="N", type=int, default=None)
     parser.add_argument("--seed", metavar="INT", type=int, default=17)
     parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--questions", metavar="LIST_OR_@FILE", default=None,
+                        help="Comma list or @file; restrict to these question numbers.")
 
     args = parser.parse_args()
 
@@ -382,6 +397,13 @@ def main():
 
     questions = _load_benchmark(args.benchmark)
     print(f"Loaded {len(questions)} questions from {args.benchmark}")
+
+    wanted = _parse_questions_arg(args.questions)
+    if wanted is not None:
+        before = len(questions)
+        questions = [q for i, q in enumerate(questions)
+                    if str(q.get("question_number", i)) in wanted]
+        print(f"  --questions restricts to {len(questions)}/{before} questions.")
 
     if existing_per_question:
         before = len(questions)

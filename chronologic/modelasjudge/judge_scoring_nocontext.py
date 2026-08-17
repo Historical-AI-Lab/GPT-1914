@@ -43,6 +43,10 @@ Usage
   --limit N                 Process only N questions (useful for testing).
   --seed INT                Random seed for A/B position assignment (default: 17).
   --debug                   Print full judge responses.
+  --route {pass-fail,all}   pass-fail scores only the questions routed to the binary
+                            channel (substantive.routing); all scores every question
+                            in FREE_GEN_FILE regardless of channel (default: all, for
+                            back-compat with existing callers).
 
 Output
 ------
@@ -111,6 +115,7 @@ from naming import (
     latest_benchmark as _latest_benchmark,
     scored_answers_filename as _scored_answers_filename,
 )
+from substantive.routing import route_questions
 
 SCORED_DIR = SCRIPT_DIR / "scored_answers"
 RELIABILITY_DIR = SCRIPT_DIR / "llm_reliability"
@@ -225,32 +230,24 @@ def _load_reliability(path):
 
 
 def _load_context_scored_qnums(benchmark_path):
-    """Return qnums (str) that receive human context scoring.
+    """Return qnums (str) routed to the partial-credit (BT) channel.
 
-    A question is context-scored only when it is both:
-      - frame_type == 'book_context'  (has a book passage to evaluate against)
-      - reasoning_type == 'constrained_generation'
-
-    Other book_context reasoning types (character_modeling, topic_sentence) get no
-    context score; absent context_fit is treated as an automatic pass downstream.
-    world_context/constrained_generation is excluded because there is no book passage
-    to judge context against.
+    Delegates to substantive.routing.route_questions, which resolves the
+    precedence partial_credit -> context_judged -> the legacy
+    frame_type/reasoning_type rule (plan §0). This must agree with
+    bt_context_scoring.load_benchmark, since both delegate to the same
+    routing module now -- previously each kept its own copy of the legacy
+    rule and both had silently diverged from `partial_credit`, dropping
+    157 questions from the partial-credit channel on chronologic_en_0.7.
+    Absent context_fit is treated as an automatic pass downstream.
     """
-    qnums = set()
-    with open(benchmark_path, encoding="utf-8") as fh:
-        for i, line in enumerate(fh):
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                rec = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            qnum = str(rec.get("question_number", i))
-            if (rec.get("frame_type") == "book_context"
-                    and rec.get("reasoning_type") == "constrained_generation"):
-                qnums.add(qnum)
-    return qnums
+    return set(route_questions(benchmark_path).partial)
+
+
+def _load_pass_fail_qnums(benchmark_path):
+    """Return qnums (str) routed to the binary pass/fail channel -- the
+    complement of _load_context_scored_qnums. Used by --route pass-fail."""
+    return set(route_questions(benchmark_path).pass_fail)
 
 
 def _load_benchmark_frames(benchmark_path):
@@ -507,6 +504,9 @@ def main():
     parser.add_argument("--limit", metavar="N", type=int, default=None)
     parser.add_argument("--seed", metavar="INT", type=int, default=17)
     parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--route", choices=["pass-fail", "all"], default="all",
+                        help="pass-fail scores only the questions routed to the binary "
+                             "channel (default: all, for back-compat with existing callers).")
 
     args = parser.parse_args()
 
@@ -561,6 +561,12 @@ def main():
     book_context_qnums = sorted(_load_context_scored_qnums(args.benchmark))
     print(f"  {len(book_context_qnums)} constrained_generation context-scored questions found.")
     bench_frames = _load_benchmark_frames(args.benchmark)
+
+    if args.route == "pass-fail":
+        pass_fail_qnums = _load_pass_fail_qnums(args.benchmark)
+        before = len(answers)
+        answers = {k: v for k, v in answers.items() if k in pass_fail_qnums}
+        print(f"  --route pass-fail restricts scoring to {len(answers)}/{before} questions.")
 
     output_path = (
         Path(args.output) if args.output
