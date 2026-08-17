@@ -158,28 +158,3 @@ def write_json(path, obj: dict) -> None:
 
 def read_json(path) -> dict:
     return json.loads(Path(path).read_text(encoding="utf-8"))
-
-
-class ArtifactMismatch(RuntimeError):
-    """A shared meta key disagrees across draw banks being combined."""
-
-
-def verify_compatible(metas: dict[str, dict], keys: list[str]) -> None:
-    """Raise ArtifactMismatch if any of `keys` disagrees across `metas`.
-
-    metas: {role: meta_dict}. A key absent from a given meta is ignored for
-    that role (older artifacts may predate a field) but any two roles that
-    both carry the key must agree.
-    """
-    for key in keys:
-        seen: dict = {}
-        for role, meta in metas.items():
-            if key not in meta:
-                continue
-            seen[role] = meta[key]
-        values = list(seen.values())
-        if len(values) > 1 and any(v != values[0] for v in values):
-            raise ArtifactMismatch(
-                f"{key!r} disagrees across artifacts: "
-                + ", ".join(f"{role}={val!r}" for role, val in seen.items())
-            )
