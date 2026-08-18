@@ -16,6 +16,29 @@ export JUDGE=anthropic/claude-sonnet-4-6
 export BTJUDGE=anthropic/claude-sonnet-5
 ```
 
+## Observed costs (empirical — append a row each time you have a real number)
+
+Nothing in this codebase logs token usage or cost from past API calls (checked
+2026-08-17: `openrouter_client.py` sends `max_tokens` as a request parameter
+but never reads back `usage`; the judgment logs record comparison metadata,
+not tokens or cost). So there is no way to derive a cost estimate from local
+data alone — these rows are the only ground truth we have, and are worth
+recording every time a stage actually runs for real.
+
+| date | stage | model | effort | calls | total cost | $/call |
+|---|---|---|---|---:|---:|---:|
+| 2026-08-18 | anchor_fit | anthropic/claude-sonnet-5 | medium | ~9,000 | ~$25 | ~$0.0028 |
+
+Sonnet 5 pricing at time of that run: $2/$10 per 1M input/output tokens.
+That $/call is *lower* than even the most optimistic bracket in this
+session's pre-run estimate (which assumed a floor of ~300 reasoning tokens/
+call and came out around $0.0046/call) — medium-effort reasoning on this
+pairwise-comparison task is apparently using less of its thinking budget
+than assumed. Treat the bracket-estimate method (input tokens measured from
+a real prompt sample, output tokens guessed across a range) as a fallback
+for a stage with no observed row yet, not as more reliable than an actual
+observed row.
+
 No command below carries a trailing `#` comment — interactive zsh has
 `INTERACTIVE_COMMENTS` off by default, and a pasted `#` gets read as an
 argument. `setopt interactivecomments` first if you want inline comments to
