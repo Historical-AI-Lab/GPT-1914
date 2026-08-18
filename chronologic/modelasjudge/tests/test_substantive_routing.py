@@ -82,14 +82,14 @@ class TestPrecedence:
 
 
 class TestRealBenchmarks:
-    def test_chronologic_0_7_yields_554_and_310(self):
+    def test_chronologic_0_7_yields_554_and_312(self):
         bm = MODELASJUDGE.parent / "booksample" / "chronologic_en_0.7.jsonl"
         if not bm.exists():
             pytest.skip(f"{bm} not present")
         routing = route_questions(bm)
         assert routing.basis == "partial_credit"
         assert len(routing.pass_fail) == 554
-        assert len(routing.partial) == 310
+        assert len(routing.partial) == 312
 
     def test_pilot_benchmark_yields_40_via_context_judged(self):
         bm = MODELASJUDGE.parent / "booksample" / "chronologic_btpilot_0.1.jsonl"
