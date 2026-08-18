@@ -98,6 +98,25 @@ def _newer(a, b) -> bool:
     return a.exists() and b.exists() and a.stat().st_mtime > b.stat().st_mtime
 
 
+def _expected_alpha_trials(rec: dict, penalties: dict) -> int:
+    """Mirrors judge_alpha_reliability_nocontext.py's compute_reliability
+    trial count (len(valid_distractors) * len(ground_truths) * 2 slot
+    orders), without making any judge calls. Used to detect a question
+    whose content changed since its reliability data was seeded from an
+    older benchmark version -- a stale key can't be told from a fresh one
+    by presence alone, since a copied-forward seed file has the qnum
+    either way."""
+    answer_strings = rec.get("answer_strings", [])
+    answer_types = rec.get("answer_types", [])
+    gts = [s for s, t in zip(answer_strings, answer_types) if t == "ground_truth"]
+    distractors = [(s, t) for s, t in zip(answer_strings, answer_types) if t != "ground_truth"]
+    if not gts and answer_strings:
+        gts = [answer_strings[0]]
+        distractors = list(zip(answer_strings[1:], answer_types[1:]))
+    n_valid_distractors = sum(1 for _, t in distractors if t in penalties)
+    return n_valid_distractors * len(gts) * 2
+
+
 # ---------------------------------------------------------------------------
 # Stage / SkipResult
 # ---------------------------------------------------------------------------
@@ -246,8 +265,22 @@ def build_stages(args) -> list[Stage]:
 
     # ---- stage 2: judge_alpha_reliability_nocontext ----------------------
     existing_reliability = _json_get(reliability_target) or _json_get(reliability_seed) or {}
-    existing_alpha_qnums = set((existing_reliability or {}).get("per_question", {}))
-    missing_alpha_qnums = sorted(pf_qnums - existing_alpha_qnums, key=int)
+    existing_per_question = (existing_reliability or {}).get("per_question", {})
+    existing_alpha_qnums = set(existing_per_question)
+    new_alpha_qnums = pf_qnums - existing_alpha_qnums
+
+    # A qnum can be a stale key, not a fresh one: seeding copies whatever was
+    # keyed under the source version forward verbatim, so a question whose
+    # ground-truth/distractor set changed since then still shows up as
+    # "already scored" by presence alone. Recompute the trial count current
+    # content implies and compare against what's stored.
+    stale_alpha_qnums = sorted(
+        (qnum for qnum in (pf_qnums & existing_alpha_qnums)
+         if existing_per_question[qnum].get("question_total")
+         != _expected_alpha_trials(routing.pass_fail[qnum], penalties)),
+        key=int,
+    )
+    missing_alpha_qnums = sorted(new_alpha_qnums | set(stale_alpha_qnums), key=int)
     pending_questions_path = RELIABILITY_DIR / f"_pending_{naming.judge_tag(judge)}__{bver}.txt"
 
     def _prepare_stage_2():
@@ -257,14 +290,33 @@ def build_stages(args) -> list[Stage]:
             shutil.copyfile(reliability_target, backup)
             print(f"Backed up {reliability_target} to {backup} "
                  f"(compute_reliability's write is non-atomic, plan §5)")
+            if stale_alpha_qnums:
+                data = _json_get(reliability_target) or {}
+                per_q = data.get("per_question", {})
+                removed = [q for q in stale_alpha_qnums if per_q.pop(q, None) is not None]
+                if removed:
+                    # judge_alpha_reliability_nocontext.py's own resume logic
+                    # unconditionally drops any qnum already present as a key
+                    # in per_question, regardless of --questions -- so a
+                    # stale entry has to be deleted here, not just listed as
+                    # pending, or it would be silently re-skipped downstream.
+                    substantive_artifacts.write_json(reliability_target, data)
+                    print(f"Removed {len(removed)} stale per_question entries "
+                         f"(content changed since seeding): {removed}")
         pending_questions_path.parent.mkdir(parents=True, exist_ok=True)
         pending_questions_path.write_text("\n".join(missing_alpha_qnums) + "\n", encoding="utf-8")
 
+    if not missing_alpha_qnums:
+        reason = "all pass/fail qnums already in per_question with matching content"
+    else:
+        reason = f"{len(new_alpha_qnums)} missing"
+        if stale_alpha_qnums:
+            reason += f" + {len(stale_alpha_qnums)} stale (content changed since seeding: {stale_alpha_qnums})"
+        reason += " pass/fail reliability qnums"
+
     stages.append(Stage(
         2, "alpha_reliability", "instrument",
-        skip=SkipResult(not missing_alpha_qnums,
-                        "all pass/fail qnums already in per_question" if not missing_alpha_qnums
-                        else f"{len(missing_alpha_qnums)} pass/fail qnums missing reliability data"),
+        skip=SkipResult(not missing_alpha_qnums, reason),
         argv=[py, "judge_alpha_reliability_nocontext.py", "--judge", judge,
              "--benchmark", str(benchmark_path), "--reasoning-effort", judge_effort,
              "--questions", f"@{pending_questions_path}"],

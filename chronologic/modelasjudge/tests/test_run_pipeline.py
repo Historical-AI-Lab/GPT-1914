@@ -194,14 +194,14 @@ def _write_benchmark(path, pf_qnums, pc_qnums):
                 "question_number": int(q), "partial_credit": 0, "frame_type": "world_context",
                 "question_category": "knowledge",
                 "answer_types": ["ground_truth", "same_book"],
-                "answer_strings": ["a ground truth answer"],
+                "answer_strings": ["a ground truth answer", "a same-book distractor"],
             }) + "\n")
         for q in pc_qnums:
             f.write(json.dumps({
                 "question_number": int(q), "partial_credit": 1, "frame_type": "book_context",
                 "question_category": "plot",
                 "answer_types": ["ground_truth", "same_book"],
-                "answer_strings": ["a ground truth answer"],
+                "answer_strings": ["a ground truth answer", "a same-book distractor"],
             }) + "\n")
 
 
@@ -282,10 +282,12 @@ class TestBuildStagesStage1And2:
         assert stages[1].skip.skip
 
     def test_stage2_skips_when_all_pf_qnums_scored(self, workspace):
+        # fixture pf questions: 1 ground_truth + 1 same_book distractor ->
+        # expected trial count = 1 distractor * 1 gt * 2 slot orders = 2.
         target = workspace["tmp_path"] / "llm_reliability" / "testjudge__0.7.json"
         target.write_text(json.dumps({
             "reasoning_effort": "medium",
-            "per_question": {q: {"question_correct": 8, "question_total": 8}
+            "per_question": {q: {"question_correct": 2, "question_total": 2}
                              for q in workspace["pf_qnums"]},
         }))
         stages = rp.build_stages(make_args(workspace))
@@ -295,6 +297,46 @@ class TestBuildStagesStage1And2:
         stages = rp.build_stages(make_args(workspace))
         assert not stages[2].skip.skip
         assert stages[2].est_calls == len(workspace["pf_qnums"]) * rp.AVG_TRIALS_PER_ALPHA_Q
+
+    def test_stage2_flags_stale_content_as_needing_rescoring(self, workspace):
+        """A qnum present in per_question with a trial count that no longer
+        matches current content (e.g. a ground truth was added) must not be
+        silently treated as 'already scored' -- this is the exact class of
+        bug that would have let a stale alpha estimate for one question
+        persist indefinitely."""
+        target = workspace["tmp_path"] / "llm_reliability" / "testjudge__0.7.json"
+        per_q = {q: {"question_correct": 2, "question_total": 2} for q in workspace["pf_qnums"]}
+        stale_qnum = workspace["pf_qnums"][0]
+        per_q[stale_qnum]["question_total"] = 999  # no longer matches current content
+        target.write_text(json.dumps({"reasoning_effort": "medium", "per_question": per_q}))
+
+        stages = rp.build_stages(make_args(workspace))
+        assert not stages[2].skip.skip
+        assert stale_qnum in stages[2].skip.reason
+        assert "stale" in stages[2].skip.reason
+
+    def test_stage2_pre_action_removes_stale_entry_before_rescoring(self, workspace):
+        """judge_alpha_reliability_nocontext.py's own resume logic drops any
+        qnum already present as a key in per_question, regardless of
+        --questions -- so the stale entry must be deleted from the file on
+        disk, not just listed as pending, or it gets silently re-skipped a
+        second time downstream."""
+        target = workspace["tmp_path"] / "llm_reliability" / "testjudge__0.7.json"
+        per_q = {q: {"question_correct": 2, "question_total": 2} for q in workspace["pf_qnums"]}
+        stale_qnum = workspace["pf_qnums"][0]
+        per_q[stale_qnum]["question_total"] = 999
+        target.write_text(json.dumps({"reasoning_effort": "medium", "per_question": per_q}))
+
+        stages = rp.build_stages(make_args(workspace))
+        stage2 = stages[2]
+        stage2.pre_action()
+
+        data = json.loads(target.read_text())
+        assert stale_qnum not in data["per_question"]
+        pending_path = Path(stage2.argv[-1].lstrip("@"))
+        assert stale_qnum in pending_path.read_text().split()
+        backups = list(target.parent.glob(f"{target.stem}.json.bak-*"))
+        assert len(backups) == 1
 
 
 class TestBuildStagesStage8And9:
