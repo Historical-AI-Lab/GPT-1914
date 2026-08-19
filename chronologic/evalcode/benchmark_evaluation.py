@@ -2165,8 +2165,10 @@ def _generate_openrouter(prompt, model_id, api_key, max_tokens=4096, max_retries
                 return fallback or ""
             return content
         except Exception as exc:
-            retryable = any(kw in str(exc).lower()
-                            for kw in ("rate", "json", "502", "503", "connection", "timeout"))
+            import json as _json
+            retryable = isinstance(exc, _json.JSONDecodeError) or any(
+                kw in str(exc).lower()
+                for kw in ("rate", "json", "502", "503", "connection", "timeout"))
             if attempt < max_retries - 1 and retryable:
                 import time as _time
                 wait = 2 ** attempt
@@ -2242,7 +2244,12 @@ def mcq_eval_openrouter(model_id, path_to_jsonl, cred_path=None,
         prompt_text, answer_order, correct_letter = _build_mcq_prompt(
             question, use_metadata=True, include_negation=include_negation
         )
-        response_text = _generate_openrouter(prompt_text, model_id, api_key)
+        # deepseek-r1 (and distills) emit chain-of-thought as ordinary visible
+        # content unconditionally; the 4096-token default isn't always enough
+        # headroom for a 70B distill's full reasoning trace before its letter pick.
+        mcq_max_tokens = 25000 if model_id.startswith("deepseek/deepseek-r1") else 4096
+        response_text = _generate_openrouter(prompt_text, model_id, api_key,
+                                              max_tokens=mcq_max_tokens)
         chosen_letter = _parse_mcq_response(response_text)
 
         if chosen_letter is None:
