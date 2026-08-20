@@ -4,11 +4,12 @@ pipeline (plan §3/§5/§8).
     run_pipeline.py --candidate MODEL [options]
 
 Runs the thirteen stages in dependency order (instrument column, then
-candidate column, then the opt-in style batch), skipping any stage whose
-output already satisfies its content-based skip predicate. Every stage is a
-separate subprocess: each of the long-running scripts installs its own
-SIGINT handler and resumes from its own output file, and importing them
-into one process would mean only one SIGINT handler survives (plan §3).
+candidate column, then a per-candidate style-judge score that runs by
+default), skipping any stage whose output already satisfies its
+content-based skip predicate. Every stage is a separate subprocess: each of
+the long-running scripts installs its own SIGINT handler and resumes from
+its own output file, and importing them into one process would mean only
+one SIGINT handler survives (plan §3).
 
 `build_stages()` only reads the filesystem (safe to call under --dry-run);
 all writes and subprocess calls happen in `execute()`.
@@ -17,7 +18,6 @@ all writes and subprocess calls happen in `execute()`.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import shutil
 import subprocess
@@ -41,11 +41,14 @@ from judge_alpha_reliability_nocontext import (
 )
 from judge_scoring_nocontext import SCORED_DIR
 from substantive import artifacts as substantive_artifacts
+from substantive import ledger as substantive_ledger
 from substantive.routing import route_questions
 from bt_context_scoring import stratified_subsample as _bt_stratified_subsample
 
 BOOKSAMPLE_DIR = SCRIPT_DIR.parent / "booksample"
 GENERATED_ANSWERS_DIR = SCRIPT_DIR / "generated_answers"
+RESULTS_DIR = SCRIPT_DIR / "results"
+STYLEJUDGE_DIR = SCRIPT_DIR.parent / "stylejudge"
 
 DEFAULT_JUDGE = "anthropic/claude-sonnet-4-6"
 DEFAULT_BT_JUDGE = "anthropic/claude-sonnet-5"
@@ -96,6 +99,22 @@ def _newer(a, b) -> bool:
     """True if path `a` exists, `b` exists, and a's mtime > b's mtime."""
     a, b = Path(a), Path(b)
     return a.exists() and b.exists() and a.stat().st_mtime > b.stat().st_mtime
+
+
+def _ledger_has_style(bver, candidate_label, candidate_effort, judge, judge_effort, bt_tag) -> bool:
+    """True iff the ledger row matching this 6-tuple key has a non-empty
+    style_period_fidelity -- safe under --dry-run (read-only CSV scan)."""
+    path = substantive_artifacts.ledger_path()
+    if not path.exists():
+        return False
+    import csv
+    target = tuple(str(x) for x in (bver, candidate_label, candidate_effort, judge, judge_effort, bt_tag))
+    with open(path, newline="", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            key = tuple(str(row.get(c, "")) for c in substantive_ledger.KEY_COLUMNS)
+            if key == target and row.get("style_period_fidelity"):
+                return True
+    return False
 
 
 def _expected_alpha_trials(rec: dict, penalties: dict) -> int:
@@ -480,39 +499,58 @@ def build_stages(args) -> list[Stage]:
         cwd=SCRIPT_DIR,
     ))
 
-    # ---- stage 12: style refresh (batch, opt-in) --------------------------
-    style_dir = SCRIPT_DIR.parent / "stylejudge"
-    cohort_stems = sorted(p.stem for p in GENERATED_ANSWERS_DIR.glob("free_gen_*.json"))
-    cohort_id = hashlib.sha256("\n".join(cohort_stems).encode("utf-8")).hexdigest()[:16]
+    # ---- stage 12: style_score (per-candidate, runs by default) -----------
+    style_json_path = RESULTS_DIR / f"style_report_{naming.sanitize(candidate_label)}__{bver}.json"
+    style_report_path = RESULTS_DIR / f"style_report_{naming.sanitize(candidate_label)}__{bver}.md"
 
-    def _refresh_style(runner):
-        answers_q = style_dir / "answers_q.jsonl"
-        benchmark_answers = style_dir / "benchmark_answers.jsonl"
-        report_path = SCRIPT_DIR / "results" / f"style_report_{cohort_id}.md"
-        stats_out = SCRIPT_DIR / "results" / f"style_report_stats_{cohort_id}.json"
-        (SCRIPT_DIR / "results").mkdir(parents=True, exist_ok=True)
-        steps = [
-            [py, "diagnose_e1_stats.py", "sample-benchmark-answers", "--out", str(benchmark_answers)],
-            [py, "typicality.py", "qscore", "--answers", str(benchmark_answers), "--out", str(answers_q)],
-            [py, "typicality.py", "model-report", "--answers-q", str(answers_q),
-             "--report", str(report_path), "--stats-out", str(stats_out)],
+    style_fresh = _newer(style_json_path, free_gen_path)
+    style_in_ledger = _ledger_has_style(bver, candidate_label, candidate_effort, judge, judge_effort, tag)
+    style_skip = args.no_style or (style_fresh and style_in_ledger)
+
+    if args.no_style:
+        style_reason = "disabled with --no-style"
+    elif not style_fresh:
+        style_reason = f"{style_json_path.name} missing or stale vs {free_gen_path.name}"
+    elif not style_in_ledger:
+        style_reason = f"{style_json_path.name} fresh but its ledger columns are missing"
+    else:
+        style_reason = f"{style_json_path.name} newer than {free_gen_path.name} and merged into the ledger"
+
+    def _run_style_score(runner):
+        RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+        score_argv = [
+            py, "score_style.py", "--free-gen", str(free_gen_path), "--benchmark", str(benchmark_path),
+            "--candidate-label", candidate_label, "--json-out", str(style_json_path),
+            "--report", str(style_report_path), "--n-boot", str(args.style_n_boot),
+            "--n-null", str(args.style_n_null), "--device", args.style_device,
         ]
-        for step_argv in steps:
-            result = runner(step_argv, cwd=str(style_dir))
-            if getattr(result, "returncode", 0) != 0:
-                sys.exit(f"style refresh step failed: {' '.join(step_argv)}")
-        print(f"Style cohort {cohort_id}: wrote {stats_out}.")
-        print("Ledger style columns were NOT auto-updated -- the join between "
-             "typicality.py's per-model stats and the ledger's candidate_label/"
-             "candidate_model columns is not yet wired (plan §5's style_cohort_id "
-             f"is {cohort_id}; update results/chronologic_scores.csv by hand or "
-             "extend this stage once that join is verified).")
+        result = runner(score_argv, cwd=str(STYLEJUDGE_DIR))
+        rc = getattr(result, "returncode", 0)
+        if rc != 0:
+            sys.exit(f"style_score step failed: {' '.join(score_argv)}")
+
+        merge_argv = [
+            py, "merge_style_row.py", "--style-json", str(style_json_path),
+            "--benchmark-version", bver, "--candidate-label", candidate_label,
+            "--candidate-effort", candidate_effort, "--judge", judge,
+            "--judge-effort", judge_effort, "--bt-tag", tag,
+        ]
+        result = runner(merge_argv, cwd=str(SCRIPT_DIR))
+        rc = getattr(result, "returncode", 0)
+        if rc == 2:
+            # merge_style_row.py's contract: the key resolved but no ledger
+            # row matched yet (e.g. --only style_score before stage 11 has
+            # ever run). Non-fatal -- the two-part skip predicate above
+            # keeps this stage un-skippable until the columns actually land.
+            print(f"wrote {style_json_path}; no ledger row matched yet -- run score_substantive first")
+        elif rc != 0:
+            sys.exit(f"merge_style_row step failed: {' '.join(merge_argv)}")
 
     stages.append(Stage(
-        12, "style_refresh", "batch",
-        skip=SkipResult(not args.refresh_style, "opt-in via --refresh-style"),
-        argv=None, action=_refresh_style, cwd=style_dir,
-        note=f"style_cohort_id={cohort_id}",
+        12, "style_score", "candidate",
+        skip=SkipResult(style_skip, style_reason),
+        argv=None, action=_run_style_score, cwd=STYLEJUDGE_DIR,
+        note=f"n_boot={args.style_n_boot} n_null={args.style_n_null}; zero API calls",
     ))
 
     return stages
@@ -604,7 +642,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pilot-labels", default=None, metavar="PATH",
                         help="Namespaced pilot LOO labels (see `bt_context_scoring.py "
                              "emit-pilot-labels`); used with --pool-pilot.")
-    parser.add_argument("--refresh-style", action="store_true")
+    parser.add_argument("--no-style", action="store_true",
+                        help="Skip stage 12 (style_score) -- escape hatch when the E2 "
+                             "checkpoint or RPS isn't on this machine.")
+    parser.add_argument("--style-n-boot", type=int, default=1000)
+    parser.add_argument("--style-n-null", type=int, default=2000)
+    parser.add_argument("--style-device", default="auto")
     parser.add_argument("--only", default=None, metavar="STAGE[,...]")
     parser.add_argument("--stop-after", default=None, metavar="STAGE")
     parser.add_argument("--force", default=None, metavar="STAGE[,...]")

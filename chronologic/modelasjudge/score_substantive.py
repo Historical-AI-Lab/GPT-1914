@@ -40,7 +40,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import naming
 from substantive import artifacts as substantive_artifacts
-from substantive import drawbank, estimator, ledger, report
+from substantive import drawbank, estimator, groups as group_defs, ledger, report
 from substantive.drawbank import ArtifactMismatch
 
 BOOKSAMPLE_DIR = SCRIPT_DIR.parent / "booksample"
@@ -120,6 +120,7 @@ def _compute(bank: "drawbank.Bank", args):
         frame_idx=bank.frame_idx, z_loglen=bank.z_loglen, delta_draws=bank.delta_draws,
         coef_b0=bank.coef_b0, coef_b_len=bank.coef_b_len, coef_u_frame=bank.coef_u_frame,
         cal_a=bank.cal_a, cal_b=bank.cal_b, alpha_prior=args.alpha_prior, floor=args.floor,
+        auto_pf=bank.auto_pf, auto_pc=bank.auto_pc,
     )
     boot = estimator.bootstrap(
         v_hat=bank.v_hat, n_v=bank.n_v, k_alpha=bank.k_alpha, n_alpha=bank.n_alpha,
@@ -127,6 +128,7 @@ def _compute(bank: "drawbank.Bank", args):
         delta_draws=bank.delta_draws, coef_b0=bank.coef_b0, coef_b_len=bank.coef_b_len,
         coef_u_frame=bank.coef_u_frame, cal_a=bank.cal_a, cal_b=bank.cal_b, sigma_u=bank.sigma_u,
         alpha_prior=args.alpha_prior, n_boot=args.n_boot, seed=args.seed,
+        auto_pf=bank.auto_pf, auto_pc=bank.auto_pc,
     )
     return pt, boot
 
@@ -142,11 +144,12 @@ def cmd_score(args):
 
     pt, boot = _compute(bank, args)
     provenance = drawbank.provenance(bank)
+    group_results = _group_breakdown(bank, pt, boot, args)
 
     report_path = (Path(args.report) if args.report
                    else substantive_artifacts.report_path(resolved["candidate_label"], resolved["benchmark_path"]))
     row = report.write_report(
-        report_path, point=pt, boot=boot, bank=bank, provenance=provenance,
+        report_path, point=pt, boot=boot, bank=bank, provenance=provenance, groups=group_results,
         candidate_label=resolved["candidate_label"], candidate_model=resolved["candidate_model"],
         candidate_effort=resolved["candidate_effort"], judge=resolved["judge"],
         judge_effort=resolved["judge_effort"], bt_tag=resolved["bt_tag"] or "",
@@ -179,6 +182,9 @@ def cmd_score(args):
 
     print(f"\n{resolved['candidate_label']}: pass/fail {pt.passfail:.1%}  "
           f"partial {pt.partial:.1%}  pooled(equal) {pt.pooled_equal:.1%}")
+    print("  " + "  ".join(
+        f"{group_defs.GROUP_LABELS[g]} {group_results[g].point:.1%}" for g in group_defs.GROUPS
+    ))
     print(f"Report: {report_path}")
 
 
@@ -260,13 +266,23 @@ def _calibration_length_significance(bank) -> str:
     return "length-covariate calibration draws not carried into this bank; re-check the calib-draws path."
 
 
-def _per_slice(bank, boot, args) -> str:
+def _kept_pf_qnums(bank, pt) -> list:
+    """bank.qnums_pf filtered to the questions plugin_point kept (not
+    excluded below the informativeness floor) -- the alignment
+    boot.p_binary_qr and pt.p_binary actually use (estimator.py's
+    `keep = ~excluded_mask`), which is a strict subset of bank.qnums_pf
+    whenever pt.n_excluded_floor > 0."""
+    return [q for q, ex in zip(bank.qnums_pf, pt.excluded_mask) if not ex]
+
+
+def _per_slice(bank, pt, boot, args) -> str:
+    kept_pf = _kept_pf_qnums(bank, pt)
     slices = [s.strip() for s in args.slices.split(",") if s.strip()]
     lines = []
     for field in slices:
-        values = sorted({str(bank.routing.pass_fail[q].get(field, "")) for q in bank.qnums_pf})
+        values = sorted({str(bank.routing.pass_fail[q].get(field, "")) for q in kept_pf})
         for v in values:
-            mask = np.array([str(bank.routing.pass_fail[q].get(field, "")) == v for q in bank.qnums_pf])
+            mask = np.array([str(bank.routing.pass_fail[q].get(field, "")) == v for q in kept_pf])
             if mask.sum() == 0:
                 continue
             sl = estimator.slice_scores(boot.p_binary_qr, mask, rng=np.random.default_rng(args.seed))
@@ -274,17 +290,48 @@ def _per_slice(bank, boot, args) -> str:
     return "pass/fail channel, per slice:\n" + "\n".join(lines) if lines else "no slices computed."
 
 
+def _group_breakdown(bank, pt, boot, args) -> dict:
+    """Reasoning-type breakdown (substantive/groups.py): count-weighted
+    score per group, combining both channels. Raises UnmappedReasoningType
+    (via group_defs.group_of) if a routed question's reasoning_type isn't
+    in the map -- fail loud rather than silently drop it from every group.
+    """
+    kept_pf = _kept_pf_qnums(bank, pt)
+    group_pf = [group_defs.group_of(bank.routing.pass_fail[q], qnum=q) for q in kept_pf]
+    group_pc = [group_defs.group_of(bank.routing.partial[q], qnum=q) for q in bank.qnums_pc]
+
+    rng = np.random.default_rng(args.seed)
+    result = {}
+    for g in group_defs.GROUPS:
+        mask_pf = np.array([gg == g for gg in group_pf], dtype=bool)
+        mask_pc = np.array([gg == g for gg in group_pc], dtype=bool)
+        result[g] = estimator.group_scores(
+            pt.p_binary, pt.p_partial, boot.p_binary_qr, boot.p_partial_qr,
+            mask_pf, mask_pc, rng=rng,
+        )
+    return result
+
+
+def _format_group_breakdown(group_results) -> str:
+    lines = [f"  {group_defs.GROUP_LABELS[g]}: {r.point:.3f} [{r.lo:.3f}, {r.hi:.3f}] "
+            f"(n={r.n}, pf={r.n_pf}, pc={r.n_pc})"
+            for g, r in group_results.items()]
+    return "\n".join(lines)
+
+
 def cmd_checks(args):
     resolved = _resolve(args)
     bank = _assemble(args, resolved)
     pt, boot = _compute(bank, args)
+    group_results = _group_breakdown(bank, pt, boot, args)
 
     checks = {
         "layer ablation (spec §10)": _layer_ablation(bank, args),
         "Jeffreys vs uniform (spec §8.5, §10)": _jeffreys_vs_uniform(bank, args),
         "alpha x1.5 sensitivity (spec §8.1, §10)": _alpha_inflation(bank, args),
         "2- vs 3-parameter calibration (spec §2.1, §10)": _calibration_length_significance(bank),
-        "per-slice calibration (spec §2.1, §10)": _per_slice(bank, boot, args),
+        "per-slice calibration (spec §2.1, §10)": _per_slice(bank, pt, boot, args),
+        "reasoning-type breakdown": _format_group_breakdown(group_results),
     }
     for name, result in checks.items():
         print(f"\n{name}:\n  {result}")

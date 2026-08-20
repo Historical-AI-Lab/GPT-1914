@@ -59,6 +59,7 @@ from openrouter_client import (
     is_openrouter_model,
     make_openrouter_client,
     call_openrouter_chat,
+    always_reasons,
 )
 from naming import benchmark_version as _benchmark_version, candidate_tag as _candidate_tag
 
@@ -379,6 +380,11 @@ def generate_answer_openrouter(question, model_id, client, reasoning_effort="non
         tuple: (answer_str, length_spec_str)
     """
     system_str, user_str, max_tokens, length_spec = build_prompts(question)
+    # Some OpenRouter models (e.g. deepseek-r1-distill) always emit visible
+    # chain-of-thought regardless of the reasoning_effort flag; the answer-sized
+    # cap from build_prompts is nowhere near enough budget for those.
+    if always_reasons(model_id):
+        max_tokens = max(max_tokens, 25000)
     answer = call_openrouter_chat(
         client, model_id,
         user_content=user_str,
@@ -527,6 +533,7 @@ def run_free_generation(
     num_questions=None,
     device=None,
     device_map=None,
+    candidate_label=None,
 ):
     """Generate free-text answers for benchmark questions and write a JSON report.
 
@@ -550,21 +557,30 @@ def run_free_generation(
         num_questions:               cap on questions to process (for testing).
         device_map:                  passed to HF from_pretrained for multi-GPU sharding
                                      (e.g. 'auto'); overrides device when set.
+        candidate_label:             Human-readable label for the candidate (used in filenames
+                                     and downstream metadata).  Defaults to model_id.  Use this
+                                     to distinguish fine-tuned variants from their base model
+                                     (e.g. 'Qwen2.5-7B-Instruct-ft').
 
     Returns:
         str: absolute path to the written JSON output file.
     """
+    if candidate_label is None:
+        candidate_label = model_id
+
     questions = _load_questions(path_to_jsonl)
     if num_questions is not None:
         questions = questions[:num_questions]
 
+    bver = _benchmark_version(path_to_jsonl)
+    bpath = str(Path(path_to_jsonl).resolve())
+
     # Auto-name output file using stable {candidate}__{version} convention.
     if output_path is None:
-        ver = _benchmark_version(path_to_jsonl)
-        ctag = _candidate_tag(model_id)
+        ctag = _candidate_tag(candidate_label)
         out_dir = Path(output_dir) if output_dir else _GENERATED_DIR
         out_dir.mkdir(parents=True, exist_ok=True)
-        output_path = out_dir / f"free_gen_{ctag}__{ver}.json"
+        output_path = out_dir / f"free_gen_{ctag}__{bver}.json"
     output_path = Path(output_path)
 
     # Load existing results for resume
@@ -578,7 +594,15 @@ def run_free_generation(
         already_answered = set()
         answers = {}
 
-    output_data = {"model": model_id, "reasoning_effort": reasoning_effort, "answers": answers}
+    output_data = {
+        "model": model_id,
+        "candidate_label": candidate_label,
+        "benchmark_version": bver,
+        "benchmark_path": bpath,
+        "lora_adapter": lora_adapter,
+        "reasoning_effort": reasoning_effort,
+        "answers": answers,
+    }
 
     # Determine backend
     use_openai = is_openai_model(model_id)
@@ -729,6 +753,12 @@ def main():
         '--device-map', metavar='MAP', dest='device_map',
         help="HF device_map for multi-GPU sharding (e.g. 'auto').",
     )
+    parser.add_argument(
+        '--candidate-label', metavar='LABEL', dest='candidate_label', default=None,
+        help="Human-readable label stored in the output JSON and used in filenames. "
+             "Use to distinguish fine-tuned variants from their base model "
+             "(e.g. 'Qwen2.5-7B-Instruct-ft'). Defaults to model_id.",
+    )
 
     args = parser.parse_args()
 
@@ -758,6 +788,7 @@ def main():
         num_questions=args.num_questions,
         device=args.device,
         device_map=args.device_map,
+        candidate_label=args.candidate_label,
     )
 
 

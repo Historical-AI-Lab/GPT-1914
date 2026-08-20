@@ -1,11 +1,21 @@
 """
-judge_prompts_nocontext.py — Question-only judging primitives (no context fit).
+judge_prompts_nocontext.py — Judging primitives for the PASS/FAIL path.
 
 For use by judge_scoring_nocontext.py, judge_alpha_reliability_nocontext.py,
 and judge_beta_reliability_nocontext.py.
 
-Identical public API to judge_prompts.py but evaluates only question fit. 
-Context is still passed to the prompt for reference, but not judged separately.
+Identical public API to judge_prompts.py, but asks for a single verdict rather
+than two. The criteria are factual accuracy and relevance to the question
+(instruction following); the prompt explicitly tells the judge NOT to weigh
+period style. The historical context is still shown, because accuracy is
+judged *within* it -- an answer can only be right or wrong relative to the
+source's period and situation.
+
+The richer criteria -- fit to the discursive and socio-historical context,
+resolved on a continuous scale -- belong to the partial-credit path
+(bt_context_scoring.py). That path covers a superset of what this one covers.
+The "nocontext" in this filename is historical: it means "does not emit a
+separate context verdict", not "ignores the context".
 
 Public API
 ----------
@@ -112,17 +122,18 @@ _REASONING_TYPES_NEEDING_ABSTENTION = {"knowledge", "abstention"}
 # ---------------------------------------------------------------------------
 
 def build_judge_prompt(context, question, answer_a, answer_b, reasoning_type):
-    """Build the question-only judge prompt for one A/B comparison.
+    """Build the pass/fail judge prompt for one A/B comparison.
 
     Args:
-        context:        is still used, even though we don't judge it separately..
+        context:        shown to the judge -- accuracy is judged *within* the
+                        period context -- but not scored as a separate verdict.
         question:       The main_question string.
         answer_a:       Text placed in the "Answer A" slot.
         answer_b:       Text placed in the "Answer B" slot.
         reasoning_type: Question reasoning_type string.
 
     Returns:
-        str: fully formatted judge prompt (question fit only).
+        str: fully formatted pass/fail judge prompt.
     """
     abstention_clause = (
         _ABSTENTION_CLAUSE

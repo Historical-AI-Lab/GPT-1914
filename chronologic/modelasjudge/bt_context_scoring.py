@@ -1,7 +1,24 @@
-"""bt_context_scoring.py — CLI for the Bradley-Terry context judge.
+"""bt_context_scoring.py — CLI for the PARTIAL-CREDIT scoring path.
 
 Thin argparse wrapper over the bt/ package. See bt-context-judge-plan.md
-and bradley/bradley-terry-spec.md for the full design.
+and bradley/bradley-terry-spec.md for the full design, and
+estimator_and_calibration_explained.md for how p_fit is produced and what
+its scale means.
+
+This is the richer of ChronoLogic's two scoring paths. Where
+judge_scoring_nocontext.py returns a binary verdict on instruction following
+and factual accuracy, this path resolves a continuous score by running a
+Bradley-Terry round robin over the question's own answer options -- so it
+covers a superset of those criteria, adding fit to the historical context.
+(The rubric in bt/prompts.py still *asks* only about context fit; the superset
+holds because the anchor pool contains every distractor, including
+instruction-following failures like negation and same_book.)
+
+Automatic verdicts: a candidate verbatim-identical to a ground truth scores
+exactly 1.0, and one identical to any probability-0 distractor scores 0.0,
+both without a single judge call (substantive/verdicts.py). Every
+probability-0 distractor counts here, unlike on the pass/fail path, because
+this path does measure period fidelity.
 
 Subcommands
 -----------
@@ -12,8 +29,12 @@ Subcommands
   validate     Threshold sweep, AUC + question bootstrap, bias stats, QC
                flags. Pure post-processing of anchor-fit/loo artifacts.
   calibrate    Fit p_fit = sigma(intercept + slope * Delta_cg) from LOO deltas.
-  score        Score one candidate's free-generated answers, filling
-               context_fit in a scored_answers file.
+               By default the intercept is PINNED so ground-truth parity
+               (Delta=0) scores 0.90, and ground truths are weighted to match
+               the non-ground-truths in total; see bt/calibrate.py.
+  score        Score one candidate's free-generated answers, filling the
+               partial-credit results into a scored_answers file (under the
+               historical key `context_fit`).
   simulate     Fully synthetic recovery tests / reports (no network ever).
 
 Global flags (all networked subcommands)
@@ -68,6 +89,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+from scipy.special import expit
 
 MODELASJUDGE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(MODELASJUDGE_DIR))
@@ -84,6 +106,11 @@ from bt.validate import (LooRecord, bias_stats, bootstrap_auc, dedupe_judgments,
                          restrict_counts, roc_from_loo)
 from substantive.routing import is_legacy_context_scored, route_questions
 from substantive import artifacts as substantive_artifacts
+from substantive import verdicts
+
+# Placeholder stored in delta_draws_by_qnum for a short-circuited question; the
+# npz save loop replaces it with a NaN row of the run's common length.
+_AUTO_DELTA_SENTINEL = object()
 
 # Kept as an alias so any external caller of the old name keeps working.
 is_context_scored = is_legacy_context_scored
@@ -342,10 +369,17 @@ def cmd_score(args):
     cache = None if args.no_cache else PromptCache(artifacts.cache_dir())
     judge_call = make_judge_call_from_args(args)
 
+    # The calibration design travels with the scores it produced, so a scored
+    # file built against an anchored curve can never be silently combined with
+    # draws fit under a free intercept (drawbank.COMPATIBILITY_KEYS).
+    calib_pin_p = calib.get("pin_p")
+    calib_class_balance = bool(calib.get("class_balance", False))
+
     context_fit = dict(scored.get("context_fit", {}))
     calib_rows = []
     delta_draws_by_qnum: dict[str, object] = {}   # spec §9 item 4: persist, don't discard
     c_len_by_qnum: dict[str, int] = {}
+    auto_by_qnum: dict[str, float] = {}           # qnum -> 1.0/0.0 for short-circuits
     for qnum in sorted(book_context_qnums & benchmark_records.keys() & set(free_gen.get("answers", {}))):
         rec = benchmark_records[qnum]
         items = items_from_question(rec)
@@ -362,6 +396,50 @@ def cmd_score(args):
         items_by_id["cand"] = cand
 
         if args.dry_run:
+            continue
+
+        # Automatic verdicts, before the first call that costs money. Everything
+        # above this point is free local computation; run_comparisons below is
+        # the first thing that spends. `withdrawn` must already exist, which is
+        # why this sits after build_candidate_design rather than before it.
+        verdict = verdicts.auto_verdict(
+            cand.text,
+            [it.text for it in items if it.kind == "ground_truth"],
+            verdicts.autofail_strings_partial(rec),
+            qnum=qnum,
+        )
+        if verdict is not None:
+            p = 1.0 if verdict == "pass" else 0.0
+            context_fit[qnum] = {
+                # not f"bt:{args.judge}" -- no judge was consulted, and this
+                # makes short-circuits greppable the way the pass/fail path's
+                # judge="identity" already is.
+                "judge": "bt:identity", "r_q": default_r_q,
+                "judgments": [], "scores": [p],
+                "gt_positions": [None], "gt_indices": [None],
+                "bt": {
+                    "p_fit": p, "p_fit_ci": [p, p],
+                    "tau_mean": p, "tau_ci": [p, p],
+                    # null, not NaN: json.dumps emits a bare `NaN` literal that
+                    # jq and strict JSON parsers reject. NaN belongs only in the
+                    # npz arrays below, where it is load-bearing.
+                    "delta_cg_mean": None, "delta_cg_ci": [None, None],
+                    "reference_gt": reference_gt, "withdrawn_gts": withdrawn,
+                    "n_comparisons": 0, "dropped_pairs": 0,
+                    "artifacts_tag": tag,
+                    "auto_verdict": ("gt_identity" if verdict == "pass"
+                                     else "distractor_identity"),
+                    "pin_p": calib_pin_p, "class_balance": calib_class_balance,
+                },
+            }
+            # Sentinel, not zeros: Delta=0 literally means "exactly GT-level", so
+            # zeros would make any reader that ignores auto__ compute sigma(a) for
+            # a question whose true value is 0.0 or 1.0 -- wrong and silent. NaN
+            # is loud everywhere. Filled to the run's common row length at save
+            # time, since drawbank rejects unequal-length rows.
+            delta_draws_by_qnum[qnum] = _AUTO_DELTA_SENTINEL
+            c_len_by_qnum[qnum] = len(cand.text)
+            auto_by_qnum[qnum] = p
             continue
 
         def build(comp, _items_by_id=items_by_id, _withdrawn=set(withdrawn), _rec=rec,
@@ -421,6 +499,11 @@ def cmd_score(args):
     )
     out_path.write_text(json.dumps(out, indent=1), encoding="utf-8")
     print(f"Wrote {out_path}")
+    if auto_by_qnum:
+        n_pass = sum(1 for v in auto_by_qnum.values() if v == 1.0)
+        print(f"  {len(auto_by_qnum)} automatic verdicts, no judge calls "
+              f"({n_pass} ground-truth matches, {len(auto_by_qnum) - n_pass} "
+              f"distractor matches).")
 
     if args.emit_calibration_row and calib_rows:
         artifacts.append_jsonl(Path(args.emit_calibration_row), calib_rows)
@@ -430,14 +513,26 @@ def cmd_score(args):
         candidate_effort = scored.get("candidate_reasoning_effort", "none")
         rng = np.random.default_rng(args.seed)
         thin = args.thin
+        # Short-circuited questions get a NaN row of the same length as every
+        # judged row -- drawbank rejects unequal lengths, and their value comes
+        # from auto__{qnum} rather than from Delta.
+        judged_lengths = {len(np.asarray(d)) for q, d in delta_draws_by_qnum.items()
+                          if d is not _AUTO_DELTA_SENTINEL}
+        row_len = min(min(judged_lengths), thin) if judged_lengths else thin
+
         arrays = {}
         for qnum, draws in delta_draws_by_qnum.items():
-            draws = np.asarray(draws, dtype=np.float32)
-            if draws.shape[0] > thin:
-                idx = np.sort(rng.choice(draws.shape[0], size=thin, replace=False))
-                draws = draws[idx]
+            if draws is _AUTO_DELTA_SENTINEL:
+                draws = np.full(row_len, np.nan, dtype=np.float32)
+            else:
+                draws = np.asarray(draws, dtype=np.float32)
+                if draws.shape[0] > thin:
+                    idx = np.sort(rng.choice(draws.shape[0], size=thin, replace=False))
+                    draws = draws[idx]
             arrays[f"delta__{qnum}"] = draws
             arrays[f"c_len__{qnum}"] = np.array(c_len_by_qnum[qnum], dtype=np.int64)
+        for qnum, value in auto_by_qnum.items():
+            arrays[f"auto__{qnum}"] = np.array(value, dtype=np.float64)
         meta = substantive_artifacts.base_meta(
             produced_by="bt_context_scoring.py score",
             seed=args.seed, judge=args.judge, judge_effort=args.judge_effort,
@@ -445,6 +540,7 @@ def cmd_score(args):
             bt_tag=tag, candidate_label=candidate_label, candidate_effort=candidate_effort,
             prior_scale=args.prior_scale, prior_dist=args.prior_dist, prior_df=args.prior_df,
             prompt_mode=args.prompt_mode, reference_policy=REFERENCE_POLICY, thin=thin,
+            pin_p=calib_pin_p, class_balance=calib_class_balance,
         )
         draws_path = (Path(args.save_delta_draws) if args.save_delta_draws
                      else substantive_artifacts.delta_draws_path(tag, candidate_label, candidate_effort))
@@ -673,13 +769,23 @@ def _attach_z_len(records: list[dict], benchmark_path) -> tuple[list[dict], dict
 
 
 def _cluster_bootstrap_calibration(records: list[dict], *, n_boot: int, seed: int,
-                                   use_length: bool) -> tuple[np.ndarray, int]:
+                                   use_length: bool, pin_p: float | None = None,
+                                   class_balance: bool = False) -> tuple[np.ndarray, int]:
     """Cluster-bootstrap (a, b[, c]) by qid -- resampling records, not qids in
     isolation, keeps every record from a sampled question together (spec §8.7:
     239 records over 40 pilot questions is a cluster sample, effective n
     nearer 40 than 239). Returns (draws (R, 2 or 3), n_zero_positive_replicates
     -- replicates with no positive-label record, where fit_calibration would
     degenerate; these are skipped and counted, not silently included).
+
+    pin_p and class_balance are forwarded to every replicate, so the draws
+    describe the same estimator as the point fit.  Class weights are
+    recomputed *inside* fit_calibration for each replicate, which is what we
+    want: the GT:non-GT ratio varies across resampled question sets, and
+    reusing the full-sample weights would misweight every replicate.  Under
+    pinning the resulting cal_a column is constant -- ground-truth parity is
+    a declared convention with no estimation error, so instrument-layer
+    uncertainty lives entirely in the slope.
     """
     by_qid: dict[str, list[dict]] = {}
     for r in records:
@@ -695,7 +801,8 @@ def _cluster_bootstrap_calibration(records: list[dict], *, n_boot: int, seed: in
         if not any(r["label"] > 0 for r in pooled):
             n_zero_positive += 1
             continue
-        fit = fit_calibration(pooled, use_length=use_length)
+        fit = fit_calibration(pooled, use_length=use_length,
+                              pin_p=pin_p, class_balance=class_balance)
         draws.append((fit["intercept"], fit["slope"], fit["length_slope"]) if use_length
                      else (fit["intercept"], fit["slope"]))
     return np.array(draws, dtype=float), n_zero_positive
@@ -727,7 +834,15 @@ def cmd_calibrate(args):
     if args.length_covariate:
         fit_records, length_standardization = _attach_z_len(records, args.benchmark)
 
-    calib = fit_calibration(fit_records, use_length=args.length_covariate)
+    pin_p = None if args.no_pin else args.pin_p
+    class_balance = not args.no_class_balance
+    if pin_p is not None and args.length_covariate:
+        sys.exit("--pin-p and --length-covariate cannot be combined yet: the length "
+                 "slope shifts the curve at Delta=0 by c*z_len, so pinning the "
+                 "intercept no longer pins ground-truth parity. Use --no-pin.")
+
+    calib = fit_calibration(fit_records, use_length=args.length_covariate,
+                            pin_p=pin_p, class_balance=class_balance)
     # Stamp the prior scale the LOO deltas were produced on. b is fitted on
     # that scale and only cancels it when applied on the same scale -- see
     # check_prior_scale_consistency.
@@ -742,12 +857,16 @@ def cmd_calibrate(args):
           f"intercept={calib['intercept']:.3f} slope={calib['slope']:.3f} "
           + (f"length_slope={calib['length_slope']:.3f} " if args.length_covariate else "")
           + f"n={calib['n']} {calib['n_by_source']}"
+          + (f" pin_p={pin_p}" if pin_p is not None else " pin_p=none (free intercept)")
+          + f" class_balance={class_balance}"
           + (f" prior_scale={ps}" if ps is not None else
              "  (no prior_scale in the LOO artifact; re-run `loo` to stamp it)"))
+    print(f"  ground-truth parity (p_fit at Delta=0) = {expit(calib['intercept']):.3f}")
 
     if args.bootstrap:
         draws, n_zero_positive = _cluster_bootstrap_calibration(
-            fit_records, n_boot=args.bootstrap, seed=args.seed, use_length=args.length_covariate)
+            fit_records, n_boot=args.bootstrap, seed=args.seed,
+            use_length=args.length_covariate, pin_p=pin_p, class_balance=class_balance)
         cal_a, cal_b = draws[:, 0], draws[:, 1]
         arrays = {"cal_a": cal_a, "cal_b": cal_b}
         if args.length_covariate:
@@ -762,6 +881,10 @@ def cmd_calibrate(args):
             reference_policy=calib["reference_policy"],
             n_boot=args.bootstrap, n_draws=int(draws.shape[0]), n_zero_positive=n_zero_positive,
             cluster_ids=[list(c) for c in cluster_ids], length_covariate=args.length_covariate,
+            # The calibration design must travel with the draws: drawbank's
+            # verify_compatible can only catch a mismatch when BOTH artifacts
+            # carry the key, so stamping only the calibration JSON is a no-op.
+            pin_p=pin_p, class_balance=class_balance,
         )
         draws_path = (Path(args.draws_out) if args.draws_out
                      else substantive_artifacts.calib_draws_path(tag))
@@ -899,7 +1022,21 @@ def build_parser():
                                   "0 disables.")
     p_calibrate.add_argument("--length-covariate", action="store_true",
                              help="Fit sigma(a + b*Delta + c*z_len) instead of the plain "
-                                  "2-parameter curve (spec §2.1).")
+                                  "2-parameter curve (spec §2.1). Cannot be combined "
+                                  "with a pinned intercept; pass --no-pin.")
+    p_calibrate.add_argument("--pin-p", type=float, default=0.90, metavar="P",
+                             help="Pin p_fit at Delta=0 (ground-truth parity) to this "
+                                  "value by fixing the intercept at logit(P) and solving "
+                                  "for the slope only. Default 0.90.")
+    p_calibrate.add_argument("--no-pin", action="store_true",
+                             help="Let the intercept float. Reproduces the pre-anchored "
+                                  "behavior; needed to rebuild older artifacts. Note the "
+                                  "free intercept absorbs the calibration set's good:bad "
+                                  "label odds, which is a benchmark design choice.")
+    p_calibrate.add_argument("--no-class-balance", action="store_true",
+                             help="Weight every LOO record equally instead of giving "
+                                  "ground truths and non-ground-truths equal total "
+                                  "weight. Reproduces the pre-anchored behavior.")
     p_calibrate.add_argument("--draws-out", default=None,
                              help="Calibration draw-bank path; default derived from the tag.")
     p_calibrate.set_defaults(func=cmd_calibrate)
