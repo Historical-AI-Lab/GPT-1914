@@ -16,6 +16,7 @@ from pathlib import Path
 import numpy as np
 
 from substantive import estimator
+from substantive import groups as group_defs
 
 
 def _ci(replicates):
@@ -23,7 +24,7 @@ def _ci(replicates):
     return float(lo), float(hi)
 
 
-def write_report(path, *, point, boot, bank, provenance, checks=None,
+def write_report(path, *, point, boot, bank, provenance, checks=None, groups=None,
                  candidate_label="", candidate_model="", candidate_effort="",
                  judge="", judge_effort="", bt_tag="", alpha_prior="jeffreys",
                  prior_scale=None, run_date="", seed=None, n_boot=None,
@@ -32,6 +33,10 @@ def write_report(path, *, point, boot, bank, provenance, checks=None,
     bank: drawbank.Bank. provenance: drawbank.provenance(bank).
     checks: optional dict from score_substantive.py's `checks` subcommand,
     {check_name: human-readable result string}.
+    groups: optional dict {group_name: estimator.GroupResult} from
+    score_substantive.py's `_group_breakdown` (substantive/groups.py's
+    reasoning-type breakdown). When given, adds a "Scores by reasoning
+    type" section and 5 ledger columns per group.
 
     Returns the flat ledger-row dict (spec §7's four scores + diagnostics).
     """
@@ -53,6 +58,10 @@ def write_report(path, *, point, boot, bank, provenance, checks=None,
         "bt_tag": bt_tag, "alpha_prior": alpha_prior, "prior_scale": prior_scale,
         "n_passfail": point.n_passfail, "n_partial": point.n_partial,
         "n_excluded_floor": point.n_excluded_floor,
+        # How much of the headline came from certainties rather than judgments:
+        # a score that is largely verbatim recall should be visible as such.
+        "n_auto_passfail": int(np.count_nonzero(~np.isnan(bank.auto_pf))),
+        "n_auto_partial": int(np.count_nonzero(~np.isnan(bank.auto_pc))),
         "passfail": point.passfail, "passfail_lo": pf_lo, "passfail_hi": pf_hi,
         "partial": point.partial, "partial_lo": pc_lo, "partial_hi": pc_hi,
         "pooled_count": point.pooled_count, "pooled_count_lo": pcount_lo, "pooled_count_hi": pcount_hi,
@@ -61,6 +70,15 @@ def write_report(path, *, point, boot, bank, provenance, checks=None,
         "sigma_u": bank.sigma_u, "mean_alpha": mean_alpha,
         "n_boot": n_boot, "seed": seed, "report_path": report_path,
     }
+
+    if groups:
+        for g, gr in groups.items():
+            prefix = group_defs.LEDGER_PREFIX[g]
+            row[f"{prefix}_score"] = gr.point
+            row[f"{prefix}_lo"] = gr.lo
+            row[f"{prefix}_hi"] = gr.hi
+            row[f"{prefix}_n_pf"] = gr.n_pf
+            row[f"{prefix}_n_pc"] = gr.n_pc
 
     L = []
     L.append(f"# Substantive score: {candidate_label}\n")
@@ -82,6 +100,20 @@ def write_report(path, *, point, boot, bank, provenance, checks=None,
     L.append(f"| **pooled, equal-weight (headline)** | **{point.pooled_equal:.1%}** | "
              f"[{pequal_lo:.1%}, {pequal_hi:.1%}] |\n")
 
+    if groups:
+        L.append("\n## Scores by reasoning type\n")
+        L.append("\nCount-weighted over both channels within each group. These do not average "
+                 "back to the equal-weight headline above -- this is a breakdown, not a "
+                 "decomposition. Counts exclude questions below the informativeness floor.\n")
+        L.append("\n| reasoning type | score | 95% CI | n (pass/fail + partial) |\n|---|---:|---|---|\n")
+        for g in group_defs.GROUPS:
+            gr = groups.get(g)
+            if gr is None:
+                continue
+            label = group_defs.GROUP_LABELS[g]
+            L.append(f"| {label} | {gr.point:.1%} | [{gr.lo:.1%}, {gr.hi:.1%}] | "
+                     f"{gr.n} ({gr.n_pf} + {gr.n_pc}) |\n")
+
     L.append("\n## Diagnostics (spec §8.6 -- reported, not folded into intervals)\n")
     L.append(f"\n- sigma_u (beta residual scale): {bank.sigma_u:.4f}\n")
     L.append(f"- clip rate (replicates landing exactly at 0 or 1): {clip_rate:.2%}\n")
@@ -100,5 +132,10 @@ def write_report(path, *, point, boot, bank, provenance, checks=None,
         L.append(f"\n- `{role}`: produced by `{entry.get('produced_by')}` "
                  f"at {entry.get('produced_at')} (git `{entry.get('git_head')}`)\n")
 
-    Path(path).write_text("".join(L), encoding="utf-8")
+    # Create the results directory the way ledger.py already does: the report is
+    # the last thing written after the whole estimate has been computed, so a
+    # missing directory here throws away a completed run.
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("".join(L), encoding="utf-8")
     return row

@@ -1,19 +1,26 @@
 """
 judge_alpha_reliability_nocontext.py — Compute per-question LLM-judge reliability
-(question fit only) for ChronoLogic.
+for the ChronoLogic pass/fail path.
 
 For each benchmark question, compares the ground truth answer against every distractor
 (all answer_strings[1:]) in both slot orderings (GT in A, GT in B).
 
-Every distractor contributes to the question-fit denominator.  The distractor type
-(from distractor_penalties.txt) controls only whether a *tie* counts as a correct
-judgment on question fit:
+Every distractor contributes to the denominator.  The distractor type (from
+distractor_penalties.txt) records WHICH CRITERIA that type violates, and so
+controls whether a *tie* counts as a correct judgment on this path:
 
-  "both"     → tie is wrong on question fit
-  "question" → tie is wrong on question fit
-  "context"  → tie is CORRECT on question fit
+  "both"     → tie is wrong  (the type fails on accuracy/instructions too)
+  "question" → tie is wrong  (e.g. negation, same_book -- wrong answer)
+  "context"  → tie is CORRECT (e.g. anachronistic_* -- an accurate, relevant
+               answer whose only flaw is period fidelity, which this path
+               does not measure)
 
 A distractor-wins outcome is always wrong regardless of type.
+
+The same three classes now also drive the pass/fail auto-fail rule in
+substantive/verdicts.py: a candidate verbatim-identical to a "question" or
+"both" distractor is an automatic zero, while a "context" match is judged
+normally.  Both uses rest on the same fact -- what the type gets wrong.
 
 Per-question weight: max(2*r - 1, 0)²
 
@@ -81,6 +88,7 @@ from judge_prompts_nocontext import score_one_comparison
 from openrouter_client import is_openrouter_model, make_openrouter_client
 from naming import benchmark_version as _parse_benchmark_version
 from naming import sanitize as _sanitize
+from substantive import verdicts as _verdicts
 
 RELIABILITY_DIR = SCRIPT_DIR / "llm_reliability"
 DEFAULT_BENCHMARK = SCRIPT_DIR.parent / "booksample" / "chronologic_en_0.2.jsonl"
@@ -184,20 +192,13 @@ def _write_output(path, data):
 
 
 def _load_distractor_penalties(path=PENALTIES_PATH):
-    """Return {answer_type: 'both'|'question'|'context'} from the TSV file."""
-    penalties = {}
-    with open(path, encoding="utf-8") as fh:
-        for line in fh:
-            line = line.rstrip("\n")
-            if not line.strip() or line.lstrip().startswith("#"):
-                continue
-            parts = line.split("\t")
-            if len(parts) < 2:
-                continue
-            atype, penalty = parts[0].strip(), parts[1].strip().lower()
-            if penalty in ("both", "question", "context"):
-                penalties[atype] = penalty
-    return penalties
+    """Return {answer_type: 'both'|'question'|'context'} from the TSV file.
+
+    The parser moved to substantive/verdicts.py, which uses the same file to
+    decide which distractor matches are automatic pass/fail failures. This
+    wrapper keeps the existing signature and default.
+    """
+    return _verdicts.load_distractor_penalties(path)
 
 
 # ---------------------------------------------------------------------------
@@ -206,7 +207,7 @@ def _load_distractor_penalties(path=PENALTIES_PATH):
 
 def compute_reliability(questions, judge_call, distractor_penalties=None,
                         limit=None, debug=False, on_progress=None):
-    """Compute per-question judge reliability (question fit only).
+    """Compute per-question judge reliability for the pass/fail path.
 
     For each distractor the judge is called *twice*: once with GT in slot A and
     once with GT in slot B.  The penalty type controls whether a tie counts as
@@ -270,8 +271,9 @@ def compute_reliability(questions, judge_call, distractor_penalties=None,
                     unknown_types.add(atype)
                 continue
 
-            # Tie is correct on question fit only when the distractor doesn't
-            # penalize question fit (i.e., its penalty is "context").
+            # A tie is correct only when the distractor does not violate this
+            # path's criteria -- i.e. its penalty class is "context", meaning it
+            # fails on period fidelity, which this path does not measure.
             q_tie_ok = (penalty == "context")
 
             for gt in gts:
@@ -342,7 +344,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Compute per-question LLM-judge reliability (question fit only).",
+        description="Compute per-question LLM-judge reliability for the pass/fail path.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )

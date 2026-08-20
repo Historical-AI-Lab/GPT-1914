@@ -137,24 +137,50 @@ class PlugPoint:
     excluded_mask: np.ndarray
 
 
+def _as_auto(auto, n):
+    """Normalize an optional override array to shape (n,), all-NaN when absent."""
+    if auto is None:
+        return np.full(n, np.nan)
+    auto = np.asarray(auto, dtype=float)
+    if auto.size == 0:
+        return np.full(n, np.nan)
+    if auto.shape[0] != n:
+        raise ValueError(f"auto override has {auto.shape[0]} entries, expected {n}")
+    return auto
+
+
 def plugin_point(*, v_hat, n_v, k_alpha, n_alpha, frame_idx, z_loglen,
                  delta_draws, coef_b0, coef_b_len, coef_u_frame, cal_a, cal_b,
-                 alpha_prior: str = "jeffreys", floor: float = 0.2) -> PlugPoint:
-    """Posterior-mean everything, no resampling -- the number to actually quote."""
+                 alpha_prior: str = "jeffreys", floor: float = 0.2,
+                 auto_pf=None, auto_pc=None) -> PlugPoint:
+    """Posterior-mean everything, no resampling -- the number to actually quote.
+
+    auto_pf / auto_pc carry automatic verdicts (1.0 or 0.0) for questions whose
+    answer was verbatim identical to a ground truth or to a probability-0
+    distractor, NaN elsewhere. Those are certainties, not judge readings, so
+    they replace the corrected value rather than being corrected: Rogan-Gladen
+    on a v_hat of 1.0 returns (1-alpha)/(1-alpha-beta) > 1, which is a real
+    number this pipeline used to emit. They are also exempt from the
+    informativeness floor, which measures the *judge* -- no judge was consulted.
+    """
     v_hat = np.asarray(v_hat, dtype=float)
     frame_idx = np.asarray(frame_idx, dtype=int)
     z_loglen = np.asarray(z_loglen, dtype=float)
     delta_draws = np.asarray(delta_draws, dtype=float)
+    auto_pf = _as_auto(auto_pf, v_hat.shape[0])
+    auto_pc = _as_auto(auto_pc, delta_draws.shape[0])
 
     a_pt = alpha_point(k_alpha, n_alpha, prior=alpha_prior)
     b_pt = beta_from_coefs(coef_b0.mean(), coef_b_len.mean(), coef_u_frame.mean(axis=0),
                            frame_idx=frame_idx, z_loglen=z_loglen)
-    excluded = floor_mask(a_pt, b_pt, floor)
+    excluded = floor_mask(a_pt, b_pt, floor) & np.isnan(auto_pf)
     keep = ~excluded
 
     p_binary_all = rogan_gladen(v_hat, a_pt, b_pt)
+    p_binary_all = np.where(np.isnan(auto_pf), p_binary_all, auto_pf)
     p_binary = p_binary_all[keep]
     p_partial = expit(cal_a.mean() + cal_b.mean() * delta_draws.mean(axis=1))
+    p_partial = np.where(np.isnan(auto_pc), p_partial, auto_pc)
 
     n_pf, n_pc = int(p_binary.size), int(p_partial.size)
     passfail = float(np.clip(p_binary.mean(), 0.0, 1.0)) if n_pf else float("nan")
@@ -190,7 +216,8 @@ def bootstrap(*, v_hat, n_v, k_alpha, n_alpha, frame_idx, z_loglen, excluded_mas
              delta_draws, coef_b0, coef_b_len, coef_u_frame, cal_a, cal_b,
              sigma_u: float = 0.0, alpha_prior: str = "jeffreys",
              layers=("judgment", "instrument", "item"),
-             n_boot: int = 2000, seed: int = 0, return_indices: bool = False) -> BootstrapResult:
+             n_boot: int = 2000, seed: int = 0, return_indices: bool = False,
+             auto_pf=None, auto_pc=None) -> BootstrapResult:
     """One call = n_boot replicates over both channels at once.
 
     layers is a tuple, not three booleans (plan §1): dropping "instrument"
@@ -209,7 +236,13 @@ def bootstrap(*, v_hat, n_v, k_alpha, n_alpha, frame_idx, z_loglen, excluded_mas
     frame_idx = np.asarray(frame_idx, dtype=int)
     z_loglen = np.asarray(z_loglen, dtype=float)
     delta_draws = np.asarray(delta_draws, dtype=float)
-    keep = ~np.asarray(excluded_mask, dtype=bool)
+    auto_pf = _as_auto(auto_pf, v_hat.shape[0])
+    auto_pc = _as_auto(auto_pc, delta_draws.shape[0])
+    # excluded_mask comes from plugin_point, which already exempts automatic
+    # verdicts from the floor; re-exempt defensively so a caller that passes a
+    # bare floor_mask cannot drop a question whose verdict is certain.
+    keep = ~np.asarray(excluded_mask, dtype=bool) | ~np.isnan(auto_pf)
+    auto_pf_k = auto_pf[keep]
 
     has_judgment = "judgment" in layers
     has_instrument = "instrument" in layers
@@ -251,6 +284,12 @@ def bootstrap(*, v_hat, n_v, k_alpha, n_alpha, frame_idx, z_loglen, excluded_mas
     beta_qr = beta_from_coefs(b0_r, blen_r, uframe_r, frame_idx=fidx_k, z_loglen=zlen_k,
                               residual=u_qr)
     p_binary_qr = rogan_gladen(v_qr, alpha_qr, beta_qr)          # (n_pf, R)
+    # Applied to the per-question replicate array, not the channel mean:
+    # slice_scores and group_scores consume p_binary_qr / p_partial_qr, so
+    # overriding only the aggregate would make every breakdown disagree with
+    # the headline it decomposes.
+    p_binary_qr = np.where(np.isnan(auto_pf_k)[:, None], p_binary_qr,
+                           auto_pf_k[:, None])
 
     # ---- BT channel: layer 1, one Delta index per question, per replicate ----
     n_delta = delta_draws.shape[1]
@@ -260,6 +299,7 @@ def bootstrap(*, v_hat, n_v, k_alpha, n_alpha, frame_idx, z_loglen, excluded_mas
         delta_idx = np.zeros((n_pc, R), dtype=int)
     delta_qr = np.take_along_axis(delta_draws, delta_idx, axis=1)  # (n_pc, R)
     p_partial_qr = expit(cal_a_r[None, :] + cal_b_r[None, :] * delta_qr)
+    p_partial_qr = np.where(np.isnan(auto_pc)[:, None], p_partial_qr, auto_pc[:, None])
 
     # ---- layer 3: item resampling, separately per channel (spec §6 step 3) ----
     if has_item:
@@ -325,3 +365,79 @@ def slice_scores(p_qr, mask, *, item_resample: bool = True, rng=None,
     rep_means = np.clip(sub.mean(axis=0), 0.0, 1.0) if n_slice else np.full(p_qr.shape[1], np.nan)
     lo, hi = np.percentile(rep_means, ci) if n_slice else (float("nan"), float("nan"))
     return SliceResult(point=point, lo=float(lo), hi=float(hi), n=n_slice)
+
+
+# ---------------------------------------------------------------------------
+# Group scores (reasoning-type breakdown), combining both channels per group
+# ---------------------------------------------------------------------------
+
+@dataclass
+class GroupResult:
+    point: float
+    lo: float
+    hi: float
+    n: int
+    n_pf: int
+    n_pc: int
+
+
+def group_scores(p_binary_pt, p_partial_pt, p_binary_qr, p_partial_qr,
+                 mask_pf, mask_pc, *, rng=None, ci=(2.5, 97.5)) -> GroupResult:
+    """Count-weighted score for a group spanning both scoring channels.
+
+    p_binary_pt / p_partial_pt: the plugin-point per-question arrays
+    (PlugPoint.p_binary / p_partial). p_binary_pt is aligned to the *kept*
+    pass/fail questions (excluded_mask already applied); p_partial_pt is
+    aligned to bank.qnums_pc. mask_pf / mask_pc select this group's
+    questions from those same alignments.
+
+    p_binary_qr / p_partial_qr: the corresponding bootstrap replicate
+    arrays (BootstrapResult.p_binary_qr / p_partial_qr) -- same row
+    alignment as the _pt arrays, R columns shared across channels within
+    one bootstrap() call (same beta_idx/cal_idx per replicate), so column
+    r is a coherent joint replicate.
+
+    The point estimate is taken from the plugin arrays rather than the
+    mean of the qr arrays: Rogan-Gladen is nonlinear in alpha, so the qr
+    mean is Jensen-biased relative to the plugin point, and these numbers
+    get quoted directly (report + ledger). This also means a count-weighted
+    average of GroupResult.point over a partition of groups reconstructs
+    the aggregate pooled_count exactly (modulo aggregate clipping).
+    Intervals come from the qr arrays: item-resample within group-and-
+    channel separately (layer 3, scoped to the group), then combine per
+    replicate the same way pooled_count combines channels.
+    """
+    mask_pf = np.asarray(mask_pf, dtype=bool)
+    mask_pc = np.asarray(mask_pc, dtype=bool)
+
+    pf_pt = np.asarray(p_binary_pt)[mask_pf]
+    pc_pt = np.asarray(p_partial_pt)[mask_pc]
+    n_pf, n_pc = int(pf_pt.size), int(pc_pt.size)
+    n = n_pf + n_pc
+
+    if n == 0:
+        return GroupResult(point=float("nan"), lo=float("nan"), hi=float("nan"),
+                           n=0, n_pf=0, n_pc=0)
+
+    point = float(np.clip((pf_pt.sum() + pc_pt.sum()) / n, 0.0, 1.0))
+
+    pf_qr = np.asarray(p_binary_qr)[mask_pf] if n_pf else None
+    pc_qr = np.asarray(p_partial_qr)[mask_pc] if n_pc else None
+    R = pf_qr.shape[1] if pf_qr is not None else pc_qr.shape[1]
+    rng = rng or np.random.default_rng()
+
+    if pf_qr is not None:
+        idx = rng.integers(0, n_pf, size=(n_pf, R))
+        pf_means = np.take_along_axis(pf_qr, idx, axis=0).mean(axis=0)
+    else:
+        pf_means = np.zeros(R)
+
+    if pc_qr is not None:
+        idx = rng.integers(0, n_pc, size=(n_pc, R))
+        pc_means = np.take_along_axis(pc_qr, idx, axis=0).mean(axis=0)
+    else:
+        pc_means = np.zeros(R)
+
+    rep = np.clip((n_pf * pf_means + n_pc * pc_means) / n, 0.0, 1.0)
+    lo, hi = np.percentile(rep, ci)
+    return GroupResult(point=point, lo=float(lo), hi=float(hi), n=n, n_pf=n_pf, n_pc=n_pc)

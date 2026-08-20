@@ -1,5 +1,14 @@
 # ChronoLogic Free Generation Judging Strategy
 
+> **Superseded.** This document describes the original human-in-the-loop (HITL)
+> workflow: three multiplicative judgments (question fit, context fit, style)
+> scored via a hierarchical PyMC model. `new-spec-integrating-bt.md` replaced
+> that with the current fully-automated pipeline -- pass/fail + Bradley-Terry
+> partial-credit substantive scoring (`substantive-uncertainty-spec.md`,
+> `substantive_scoring_runbook.md`) reported separately from style. Kept here
+> for historical context; do not use it as a description of the current
+> pipeline.
+
 Allowing the model to freely generate an answer is in a sense the fairest judging strategy, since the model receives no help
 
 The model-as-judge workflow requires three separate judgments for each free-generated answer. First, an LLM judge (Claude Sonnet 4.6 for all non-Claude models; a GPT for Claude family models) evaluates two dimensions in a single forced-choice prompt: *question fit* — whether the answer is substantively correct — and *context fit* — whether the answer is consistent with the historical source (author, date, genre) specified in the metadata frame. It does this by comparing the model-generated answer to ground truth and deciding which is a better fit. If the model wins *or ties* the ground truth, it passes.

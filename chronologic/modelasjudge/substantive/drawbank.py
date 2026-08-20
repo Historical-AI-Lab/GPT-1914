@@ -66,6 +66,11 @@ class ArtifactMismatch(RuntimeError):
 COMPATIBILITY_KEYS = [
     "benchmark_version", "routing_basis", "prompt_mode", "prior_dist",
     "prior_df", "prior_scale", "judge_effort", "frame_types",
+    # The calibration design. Delta draws are pre-calibration, but cmd_score
+    # stamps the design it scored against onto them, so a scored file built on
+    # the anchored curve cannot be combined with draws fit under a free
+    # intercept -- the two put ground-truth parity at 0.90 and 0.345.
+    "pin_p", "class_balance",
 ]
 
 
@@ -128,6 +133,13 @@ class Bank:
     delta_draws: np.ndarray
     cal_a: np.ndarray
     cal_b: np.ndarray
+    # Automatic verdicts: 1.0 or 0.0 where a candidate answer was verbatim
+    # identical to a ground truth or to a probability-0 distractor, NaN where
+    # the question was actually judged. Aligned to qnums_pf / qnums_pc. All-NaN
+    # for any artifact written before automatic verdicts existed, which is what
+    # makes those artifacts reproduce their old numbers exactly.
+    auto_pf: np.ndarray = field(default_factory=lambda: np.zeros(0))
+    auto_pc: np.ndarray = field(default_factory=lambda: np.zeros(0))
     metas: dict = field(default_factory=dict)   # role -> meta dict
 
 
@@ -166,6 +178,7 @@ def assemble(*, scored_file, benchmark_path, reliability_path,
 
     qnums_pf = sorted(routing.pass_fail, key=int)
     v_hat, n_v, k_alpha, n_alpha, frame_idx, z_loglen = [], [], [], [], [], []
+    auto_pf = []
     for qnum in qnums_pf:
         if qnum not in question_fit:
             raise KeyError(f"pass/fail question {qnum} routed but not present in {scored_file}")
@@ -175,6 +188,12 @@ def assemble(*, scored_file, benchmark_path, reliability_path,
         scores = question_fit[qnum]["scores"]
         v_hat.append(float(np.mean(scores)))
         n_v.append(len(scores))
+        # An automatic verdict is a certainty, not a noisy judge reading, so it
+        # bypasses Rogan-Gladen downstream rather than being corrected by it.
+        _auto = question_fit[qnum].get("auto_verdict")
+        auto_pf.append(1.0 if _auto == "gt_identity"
+                       else 0.0 if _auto == "distractor_identity"
+                       else np.nan)
         alpha_rec = per_question_alpha[qnum]
         # alpha's k is the ERROR count, not the correct count: the Beta
         # posterior models P(judge wrongly passes a distractor), and the
@@ -195,12 +214,15 @@ def assemble(*, scored_file, benchmark_path, reliability_path,
 
     qnums_pc = sorted(routing.partial, key=int)
     delta_rows = []
+    auto_pc = []
     n_delta_draws = None
     for qnum in qnums_pc:
         key = f"delta__{qnum}"
         if key not in delta_arrays:
             raise KeyError(f"BT question {qnum} routed but missing {key!r} in {delta_draws_path}")
         row = delta_arrays[key]
+        auto_pc.append(float(delta_arrays[f"auto__{qnum}"])
+                       if f"auto__{qnum}" in delta_arrays else np.nan)
         if n_delta_draws is None:
             n_delta_draws = row.shape[0]
         elif row.shape[0] != n_delta_draws:
@@ -219,6 +241,7 @@ def assemble(*, scored_file, benchmark_path, reliability_path,
         coef_u_frame=beta_arrays["u_frame"], sigma_u=float(beta_meta["sigma_u"]),
         qnums_pc=qnums_pc, delta_draws=delta_draws,
         cal_a=calib_arrays["cal_a"], cal_b=calib_arrays["cal_b"],
+        auto_pf=np.array(auto_pf, dtype=float), auto_pc=np.array(auto_pc, dtype=float),
         metas={"beta_draws": beta_meta, "calib_draws": calib_meta, "delta_draws": delta_meta},
     )
 
@@ -235,17 +258,28 @@ def provenance(bank: Bank) -> dict:
 def freeze(bank: Bank, path) -> None:
     """Write one self-describing archival npz: every draw set, alpha
     counts, verdicts, and merged provenance, so a published number
-    reproduces bit-for-bit after the producing artifacts move (plan §4)."""
+    reproduces bit-for-bit after the producing artifacts move (plan §4).
+
+    reasoning_pf / reasoning_pc carry each question's reasoning_type,
+    positionally aligned to qnums_pf / qnums_pc, so the reasoning-type
+    breakdown (substantive/groups.py) still works when scoring is redone
+    from a frozen bank -- without them load_frozen's stub records would
+    have nothing for groups.group_of to read.
+    """
     arrays = {
         "v_hat": bank.v_hat, "n_v": bank.n_v, "k_alpha": bank.k_alpha, "n_alpha": bank.n_alpha,
         "frame_idx": bank.frame_idx, "z_loglen": bank.z_loglen,
         "coef_b0": bank.coef_b0, "coef_b_len": bank.coef_b_len, "coef_u_frame": bank.coef_u_frame,
         "delta_draws": bank.delta_draws, "cal_a": bank.cal_a, "cal_b": bank.cal_b,
+        "auto_pf": bank.auto_pf, "auto_pc": bank.auto_pc,
     }
+    reasoning_pf = [bank.routing.pass_fail[q].get("reasoning_type") for q in bank.qnums_pf]
+    reasoning_pc = [bank.routing.partial[q].get("reasoning_type") for q in bank.qnums_pc]
     meta = artifacts.base_meta(
         produced_by="substantive.drawbank.freeze",
         routing_basis=bank.routing.basis, sigma_u=bank.sigma_u,
         qnums_pf=bank.qnums_pf, qnums_pc=bank.qnums_pc,
+        reasoning_pf=reasoning_pf, reasoning_pc=reasoning_pc,
         source_metas=bank.metas,
     )
     artifacts.save_npz(path, arrays, meta)
@@ -253,9 +287,18 @@ def freeze(bank: Bank, path) -> None:
 
 def load_frozen(path) -> Bank:
     arrays, meta = artifacts.load_npz(path)
-    routing = Routing(basis=meta["routing_basis"],
-                      pass_fail={q: {} for q in meta["qnums_pf"]},
-                      partial={q: {} for q in meta["qnums_pc"]})
+    if "reasoning_pf" not in meta or "reasoning_pc" not in meta:
+        raise KeyError(
+            f"{path}: frozen bank predates the reasoning-type breakdown "
+            "(no reasoning_pf/reasoning_pc in meta) -- re-run "
+            "`score_substantive.py score --freeze-bank ...` against the "
+            "producing artifacts to regenerate it."
+        )
+    pass_fail = {q: {"reasoning_type": rt}
+                 for q, rt in zip(meta["qnums_pf"], meta["reasoning_pf"])}
+    partial = {q: {"reasoning_type": rt}
+              for q, rt in zip(meta["qnums_pc"], meta["reasoning_pc"])}
+    routing = Routing(basis=meta["routing_basis"], pass_fail=pass_fail, partial=partial)
     return Bank(
         routing=routing, qnums_pf=list(meta["qnums_pf"]),
         v_hat=arrays["v_hat"], n_v=arrays["n_v"],
@@ -265,5 +308,11 @@ def load_frozen(path) -> Bank:
         coef_u_frame=arrays["coef_u_frame"], sigma_u=float(meta["sigma_u"]),
         qnums_pc=list(meta["qnums_pc"]), delta_draws=arrays["delta_draws"],
         cal_a=arrays["cal_a"], cal_b=arrays["cal_b"],
+        # Banks frozen before automatic verdicts existed carry neither array;
+        # all-NaN is exactly "nothing was short-circuited", so they reproduce.
+        auto_pf=arrays["auto_pf"] if "auto_pf" in arrays
+                else np.full(len(meta["qnums_pf"]), np.nan),
+        auto_pc=arrays["auto_pc"] if "auto_pc" in arrays
+                else np.full(len(meta["qnums_pc"]), np.nan),
         metas=meta.get("source_metas", {}),
     )

@@ -34,6 +34,22 @@ def _is_anthropic_openrouter(model_id):
     return model_id.startswith("anthropic/")
 
 
+# Models that emit chain-of-thought as ordinary visible content unconditionally
+# (baked into training, not gated by the API's reasoning.effort/enable_thinking
+# flags). These need a large max_tokens regardless of the caller's
+# reasoning_effort setting, or the CoT alone will exhaust the budget before any
+# answer is produced.
+ALWAYS_REASONS_PREFIXES = (
+    "deepseek/deepseek-r1",
+    "qwen/qwq",
+)
+
+
+def always_reasons(model_id):
+    """Return True if model_id is known to always emit visible chain-of-thought."""
+    return any(model_id.startswith(p) for p in ALWAYS_REASONS_PREFIXES)
+
+
 # ---------------------------------------------------------------------------
 # Credentials
 # ---------------------------------------------------------------------------
@@ -155,6 +171,7 @@ def _build_extra_body(model_id, reasoning_effort, max_tokens):
 def call_openrouter_chat(
     client, model_id, user_content, system_content="",
     max_tokens=400, max_retries=3, debug=False, reasoning_effort="none",
+    response_format=None,
 ):
     """Call the OpenRouter chat completions endpoint with retry on rate limits.
 
@@ -178,6 +195,15 @@ def call_openrouter_chat(
         reasoning_effort: one of "none", "low", "medium", "high". Anthropic models
                           receive this as verbosity; other providers receive it as
                           reasoning.effort.
+        response_format:  optional structured-output spec, passed through to the API
+                          unchanged. For a JSON schema the chat-completions shape is
+                          {"type": "json_schema",
+                           "json_schema": {"name": ..., "strict": True, "schema": {...}}}
+                          -- note this nests under "json_schema", unlike the flat
+                          Responses-API "text_format" used in evalcode/. When set,
+                          provider.require_parameters is also sent, so routing skips
+                          providers of this model that lack structured-output support.
+                          None (the default) leaves every existing caller unaffected.
 
     Returns:
         str: the assistant message content, or "" if content is None/empty.
@@ -199,11 +225,20 @@ def call_openrouter_chat(
                 f"verbosity={verbosity!r}, thinking_budget={thinking_budget}"
             )
             print(f"  [debug] prompt (first 300 chars): {user_content[:300]!r}")
+        kwargs = {}
+        if response_format is not None:
+            kwargs["response_format"] = response_format
+            # The same model is served by several providers and only some support
+            # structured outputs; require_parameters keeps routing to the ones that do.
+            extra_body.setdefault("provider", {})["require_parameters"] = True
+            if debug:
+                print(f"  [debug] response_format: {response_format}")
         return client.chat.completions.create(
             model=model_id,
             messages=messages,
             max_tokens=effective_max,
             extra_body=extra_body,
+            **kwargs,
         )
 
     def _extract(response):

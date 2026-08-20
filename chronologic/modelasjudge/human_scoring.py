@@ -1,17 +1,28 @@
 """
 human_scoring.py — Interactive human judging for questions flagged by judge_scoring.
 
+NOTE ON VOCABULARY: the aspect names below ("question_fit", "context_fit") are
+historical keys carried by stored artifacts. They no longer name two different
+constructs. ChronoLogic now has two scoring PATHS -- a binary pass/fail path
+(judge_scoring_nocontext.py) and a continuous partial-credit path
+(bt_context_scoring.py) whose criteria are a superset of the first's. The keys
+survive because renaming them would strand every scored file, humeval rating
+sheet, and ledger row already on disk.
+
+Also historical: the partial-credit path is now judged by the Bradley-Terry
+model rather than by humans. This script remains the way to re-judge
+low-reliability questions and to collect human ratings for validation.
+
 This script handles two kinds of human judgment:
 
-1. **Question fit re-judging**: when judge_scoring_nocontext.py finds the LLM
-   judge's per-question reliability is below 0.65 for question_fit, it records
-   those questions in `needs_human`.  This script replaces the low-reliability
-   LLM score with a human judgment.
+1. **Pass/fail re-judging**: when judge_scoring_nocontext.py finds the LLM
+   judge's per-question reliability is below 0.65, it records those questions
+   in `needs_human`.  This script replaces the low-reliability LLM score with
+   a human judgment.
 
-2. **Context fit judging**: all questions with frame_type "book_context" need a
-   human context judgment regardless of reliability.  judge_scoring_nocontext.py
-   records them in needs_human with aspect "context_fit".  The human judges
-   whether the candidate answer is something the specified source might say.
+2. **Partial-credit judging** (recorded under aspect "context_fit"): the human
+   judges whether the candidate answer is something the specified source might
+   say.
 
 Judgment vocabulary:
   - "y" / yes  → judgment "tie",  score 1

@@ -1,16 +1,48 @@
 """
-judge_scoring_nocontext.py — Score free-generated answers using an LLM judge
-(question fit only).
+judge_scoring_nocontext.py — Score free-generated answers on the PASS/FAIL path.
 
-Pairs a free-generation output file (from free_generation.py) with an LLM judge to
-evaluate each candidate answer against the ground truth on question fit only.
+Pairs a free-generation output file (from free_generation.py) with an LLM judge
+that decides, for each candidate answer, whether it is as good as the ground
+truth: a binary verdict per comparison.
 
-Context fit is NOT scored by the LLM judge.  Instead, context_fit judgments are
-collected by human_scoring.py for questions that are both frame_type "book_context"
-AND reasoning_type "constrained_generation" (~98 questions).  Other book_context
-reasoning types (character_modeling, topic_sentence) receive no context score
-(NA → treated as a pass downstream), as do "world_context" and "passage_context"
-questions.
+The two scoring paths
+---------------------
+ChronoLogic scores a question on one of two paths, chosen by
+substantive/routing.py. They are not two different constructs -- earlier
+versions of this file described a "question fit" vs "context fit" divide that
+the project no longer claims. The difference is how much the path can express:
+
+  PASS/FAIL (this module)      instruction following + factual accuracy,
+                               as a binary verdict.
+  PARTIAL CREDIT               the same criteria PLUS fit to the historical
+  (bt_context_scoring.py,      context, resolved on a continuous scale by a
+   bt/)                        Bradley-Terry round robin over the question's
+                               own answer options.
+
+So the partial-credit path covers a superset of what this one covers. Which
+path a question takes is an editorial property of the question (`partial_credit`
+in the benchmark), not a statement about which criteria matter for it.
+
+One consequence shows up in this module's auto-fail rule below: matching an
+`anachronistic_*` distractor is not a pass/fail failure, because anachronism is
+not something this path measures. It is a failure on the partial-credit path.
+
+(A caveat worth keeping visible: the BT rubric in bt/prompts.py still *asks*
+the judge only about context fit. The superset holds because the anchor pool
+contains every distractor, including instruction-following failures like
+`negation` and `same_book`, so a candidate must out-rank those to score well.
+Revising that rubric would invalidate every anchor fit and is deliberately not
+done here.)
+
+Automatic verdicts
+------------------
+Two conditions skip the judge entirely (see substantive/verdicts.py):
+an answer verbatim identical to a ground truth is an automatic pass, and one
+verbatim identical to a probability-0 distractor of penalty class "question" or
+"both" is an automatic fail. Both are recorded with judge="identity", r_q=0.999,
+and an `auto_verdict` field, and cost no API calls. Downstream they bypass the
+Rogan-Gladen judge-noise correction, because a string comparison is a certainty
+rather than a noisy reading.
 
 For questions with multiple ground truths the judge runs multiple comparisons:
   - Odd #GTs: each GT tested once (random A/B position).
@@ -21,8 +53,10 @@ For questions with multiple ground truths the judge runs multiple comparisons:
 Per-question LLM-judge reliability (q_r) is joined from the pre-computed
 reliability file in llm_reliability/.  Questions below the reliability threshold
 (0.65) are collected in a "needs_human" list so human_scoring.py knows which to
-re-judge.  Constrained-generation book_context questions also appear in needs_human
-with aspect "context_fit" so human_scoring.py requests context judgments for them.
+re-judge.  Partial-credit questions also appear there under the legacy aspect
+name "context_fit" -- a historical key, kept because it is written into stored
+artifacts, not a claim that a separate construct is being judged.  Questions
+with an automatic verdict never appear: their verdict is certain.
 
 Usage
 -----
@@ -116,6 +150,7 @@ from naming import (
     scored_answers_filename as _scored_answers_filename,
 )
 from substantive.routing import route_questions
+from substantive import verdicts as _verdicts
 
 SCORED_DIR = SCRIPT_DIR / "scored_answers"
 RELIABILITY_DIR = SCRIPT_DIR / "llm_reliability"
@@ -127,11 +162,9 @@ _QUESTION_FIT_THRESHOLD = 0.65
 # Helpers
 # ---------------------------------------------------------------------------
 
-_PUNCT_TABLE = str.maketrans("", "", string.punctuation)
-
-
-def _normalize_for_identity(s):
-    return (s or "").lower().translate(_PUNCT_TABLE).strip()
+# The verdict rules now live in substantive/verdicts.py so both scoring paths
+# share one definition; this alias keeps existing callers and tests working.
+_normalize_for_identity = _verdicts.normalize_for_identity
 
 
 def _parse_benchmark_version(path):
@@ -332,8 +365,15 @@ def run_panel(
     on_progress=None,
     debug=False,
     frame_overrides=None,
+    autofail_strings=None,
 ):
-    """Score answers against ground truth using an LLM judge (question fit only).
+    """Score answers on the pass/fail channel using an LLM judge.
+
+    Two conditions short-circuit the judge entirely (substantive.verdicts):
+    an answer identical to a ground truth is an automatic pass, and one
+    identical to a probability-0 distractor whose penalty class is
+    "question" or "both" is an automatic fail. Both are recorded with
+    judge="identity" and an `auto_verdict` field, and cost no API calls.
 
     Args:
         judge_model:        judge model ID string.
@@ -346,9 +386,13 @@ def run_panel(
         limit:              max questions to process.
         on_progress:        optional callback(qnum, qf_entry).
         debug:              passed to judge_call_factory.
+        autofail_strings:   optional {qnum: [distractor strings]} whose verbatim
+                            match is an automatic fail. Omit (the default) and
+                            only the ground-truth auto-pass applies.
 
     Returns:
-        dict mapping qnum -> {judge, r_q, judgments, scores, gt_positions, gt_indices}.
+        dict mapping qnum -> {judge, r_q, judgments, scores, gt_positions,
+        gt_indices[, auto_verdict]}.
     """
     qf_scores = {}
 
@@ -379,9 +423,9 @@ def run_panel(
 
         plan = _build_comparison_plan(len(ground_truths), rng)
 
-        norm_candidate = _normalize_for_identity(candidate)
-        identity_match = norm_candidate != "" and any(
-            _normalize_for_identity(gt) == norm_candidate for gt in ground_truths
+        verdict = _verdicts.auto_verdict(
+            candidate, ground_truths,
+            (autofail_strings or {}).get(str(qnum)), qnum=qnum,
         )
 
         qf_judgments = []
@@ -389,11 +433,15 @@ def run_panel(
         qf_positions = []
         gt_indices = []
 
-        if identity_match:
+        if verdict is not None:
+            # Fabricate the comparison plan the judge would have produced, so
+            # the entry has the same shape as a judged one -- v_hat downstream
+            # is mean(scores), and n_v is len(scores).
+            outcome, score = ("tie", 1) if verdict == "pass" else ("loss", 0)
             for gt_idx, force_pos in plan:
                 pos = force_pos if force_pos is not None else rng.choice(("A", "B"))
-                qf_judgments.append("tie")
-                qf_scores_list.append(1)
+                qf_judgments.append(outcome)
+                qf_scores_list.append(score)
                 qf_positions.append(pos)
                 gt_indices.append(gt_idx)
         else:
@@ -418,8 +466,10 @@ def run_panel(
                 qf_positions.append(result["gt_position"])
                 gt_indices.append(gt_idx)
 
-        effective_judge = "identity" if identity_match else judge_model
-        effective_r_q = 0.999 if identity_match else q_r
+        # A certain verdict needs no human review, so r_q is set above the
+        # threshold and _rebuild_needs_human leaves these questions out.
+        effective_judge = "identity" if verdict is not None else judge_model
+        effective_r_q = 0.999 if verdict is not None else q_r
 
         qf_entry = {
             "judge": effective_judge,
@@ -429,6 +479,10 @@ def run_panel(
             "gt_positions": qf_positions,
             "gt_indices": gt_indices,
         }
+        if verdict is not None:
+            qf_entry["auto_verdict"] = (
+                "gt_identity" if verdict == "pass" else "distractor_identity"
+            )
         qf_scores[qnum] = qf_entry
 
         if on_progress:
@@ -473,7 +527,8 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Score free-generated answers using an LLM judge (question fit only).",
+        description="Score free-generated answers on the pass/fail path "
+                    "(instruction following + factual accuracy, binary verdict).",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
@@ -561,6 +616,17 @@ def main():
     book_context_qnums = sorted(_load_context_scored_qnums(args.benchmark))
     print(f"  {len(book_context_qnums)} constrained_generation context-scored questions found.")
     bench_frames = _load_benchmark_frames(args.benchmark)
+
+    # Distractor strings whose verbatim match is an automatic fail. The free-gen
+    # file carries only ground_truths, so these have to come from the benchmark.
+    _penalties = _verdicts.load_distractor_penalties()
+    autofail_strings = {}
+    for _qnum, _rec in route_questions(args.benchmark).pass_fail.items():
+        _strings = _verdicts.autofail_strings_passfail(_rec, _penalties)
+        if _strings:
+            autofail_strings[str(_qnum)] = _strings
+    print(f"  {len(autofail_strings)} questions carry auto-fail distractors "
+          f"(penalty class 'question' or 'both').")
 
     if args.route == "pass-fail":
         pass_fail_qnums = _load_pass_fail_qnums(args.benchmark)
@@ -653,10 +719,18 @@ def main():
         on_progress=on_progress,
         debug=args.debug,
         frame_overrides=bench_frames,
+        autofail_strings=autofail_strings,
     )
 
     _rebuild_needs_human(output_data)
     _write_output(output_path, output_data)
+
+    n_auto_pass = sum(1 for e in qf_scores.values() if e.get("auto_verdict") == "gt_identity")
+    n_auto_fail = sum(1 for e in qf_scores.values()
+                      if e.get("auto_verdict") == "distractor_identity")
+    if n_auto_pass or n_auto_fail:
+        print(f"Automatic verdicts (no judge calls): {n_auto_pass} ground-truth "
+              f"matches, {n_auto_fail} distractor matches.")
 
     total_scored = len(qf_scores)
     needs_human_count = len(output_data["needs_human"])
