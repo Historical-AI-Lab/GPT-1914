@@ -13,7 +13,7 @@ PyMC model actually fits (k_i ~ Binomial(n_i, sigmoid(eta_i)), no factor
 of two in that likelihood either). Dividing by 2 inside this module was
 tried and empirically falsified: against the real
 gt_pairs_anthropic_claude-sonnet-4-6__0.4.jsonl data (k-distribution
-{0:84, 1:9, 2:7} at n=2, matching substantive-uncertainty-spec.md's own
+{0:84, 1:9, 2:7} at n=2, matching deprecated/substantive-uncertainty-spec.md's own
 example) it produced a 3.0x overdispersion ratio against the spec-quoted
 1.36-1.6x; removing the /2 reproduced 1.555x exactly in range.
 """
@@ -98,7 +98,7 @@ class TestOverdispersionRatio:
     def test_real_gt_pair_data_reproduces_spec_quoted_range(self):
         """The exact scenario that caught the /2 bug: real GT-vs-GT pairs,
         k-distribution {0:84, 1:9, 2:7} at n=2 (matching
-        substantive-uncertainty-spec.md's own worked example), should give
+        deprecated/substantive-uncertainty-spec.md's own worked example), should give
         an overdispersion ratio in the spec-quoted 1.36-1.6 range."""
         path = MODELASJUDGE / "beta_reliability" / "gt_pairs_anthropic_claude-sonnet-4-6__0.4.jsonl"
         if not path.exists():

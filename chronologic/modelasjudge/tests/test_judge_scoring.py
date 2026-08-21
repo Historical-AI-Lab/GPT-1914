@@ -548,3 +548,94 @@ class TestIdentityShortCircuit:
         assert _normalize_for_identity("AUTHOR ONE!") == "author one"
         assert _normalize_for_identity("") == ""
         assert _normalize_for_identity(None) == ""
+
+
+# ---------------------------------------------------------------------------
+# Distractor auto-fail (the inverse short-circuit)
+# ---------------------------------------------------------------------------
+
+class TestDistractorAutoFail:
+    """A verbatim match to a probability-0 distractor of penalty class
+    "question" or "both" is an automatic zero, with no judge call. Matches to
+    "context"-class distractors (anachronistic_*) must still be judged --
+    the pass/fail path does not measure period fidelity."""
+
+    BASE = {
+        "metadata_frame": "This is context one.",
+        "main_question": "Who wrote it?",
+        "ground_truths": ["Author One"],
+        "reasoning_type": "knowledge",
+    }
+
+    def test_distractor_match_skips_the_judge(self):
+        factory = _make_exploding_judge_factory()
+        qf = run_panel("test-judge", {"1": {**self.BASE, "answer": "Author Two"}},
+                       factory, reliability={}, seed=17,
+                       autofail_strings={"1": ["Author Two"]})
+        assert qf["1"]["judge"] == "identity"
+        assert qf["1"]["auto_verdict"] == "distractor_identity"
+        assert all(s == 0 for s in qf["1"]["scores"])
+        assert all(j == "loss" for j in qf["1"]["judgments"])
+        assert qf["1"]["r_q"] == 0.999
+
+    def test_distractor_match_is_normalization_insensitive(self):
+        factory = _make_exploding_judge_factory()
+        qf = run_panel("test-judge", {"1": {**self.BASE, "answer": "  author two!  "}},
+                       factory, reliability={}, seed=17,
+                       autofail_strings={"1": ["Author Two"]})
+        assert qf["1"]["auto_verdict"] == "distractor_identity"
+
+    def test_unlisted_distractor_reaches_the_judge(self):
+        """The negative control: a context-class distractor is not in
+        autofail_strings, so it must be judged normally."""
+        factory = _make_stub_judge_factory("C")
+        qf = run_panel("test-judge",
+                       {"1": {**self.BASE, "answer": "An anachronistic answer"}},
+                       factory, reliability={}, seed=17,
+                       autofail_strings={"1": ["Author Two"]})
+        assert qf["1"]["judge"] == "test-judge"
+        assert "auto_verdict" not in qf["1"]
+        assert all(s == 1 for s in qf["1"]["scores"])
+
+    def test_ground_truth_wins_over_a_distractor_match(self):
+        factory = _make_exploding_judge_factory()
+        qf = run_panel("test-judge", {"1": {**self.BASE, "answer": "Author One"}},
+                       factory, reliability={}, seed=17,
+                       autofail_strings={"1": ["Author One"]})
+        assert qf["1"]["auto_verdict"] == "gt_identity"
+        assert all(s == 1 for s in qf["1"]["scores"])
+
+    def test_empty_answer_does_not_auto_fail(self):
+        factory = _make_stub_judge_factory("A")
+        qf = run_panel("test-judge", {"1": {**self.BASE, "answer": ""}},
+                       factory, reliability={}, seed=17,
+                       autofail_strings={"1": [""]})
+        assert qf["1"]["judge"] == "test-judge"
+        assert "auto_verdict" not in qf["1"]
+
+    def test_omitting_autofail_strings_preserves_old_behavior(self):
+        factory = _make_stub_judge_factory("C")
+        qf = run_panel("test-judge", {"1": {**self.BASE, "answer": "Author Two"}},
+                       factory, reliability={}, seed=17)
+        assert qf["1"]["judge"] == "test-judge"
+        assert "auto_verdict" not in qf["1"]
+
+    def test_autofail_entry_shape_matches_a_judged_one(self):
+        """v_hat downstream is mean(scores) and n_v is len(scores), so the
+        fabricated plan must have the same length as a real one."""
+        judged = run_panel("test-judge", {"1": {**self.BASE, "answer": "Other"}},
+                           _make_stub_judge_factory("A"), reliability={}, seed=17)
+        auto = run_panel("test-judge", {"1": {**self.BASE, "answer": "Author Two"}},
+                         _make_exploding_judge_factory(), reliability={}, seed=17,
+                         autofail_strings={"1": ["Author Two"]})
+        assert len(auto["1"]["scores"]) == len(judged["1"]["scores"])
+        assert set(auto["1"]) >= set(judged["1"])
+
+    def test_multi_ground_truth_question_still_fabricates_a_full_plan(self):
+        entry = {**self.BASE, "ground_truths": ["A", "B", "C", "D"],
+                 "answer": "Author Two"}
+        qf = run_panel("test-judge", {"1": entry}, _make_exploding_judge_factory(),
+                       reliability={}, seed=17, autofail_strings={"1": ["Author Two"]})
+        # Even #GTs -> one doubled -> odd total, same rule as the judged path.
+        assert len(qf["1"]["scores"]) == 5
+        assert all(s == 0 for s in qf["1"]["scores"])

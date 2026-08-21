@@ -211,9 +211,12 @@ def workspace(tmp_path, monkeypatch):
     monkeypatch.setattr(rp, "PENALTIES_PATH", tmp_path / "distractor_penalties.txt")
     monkeypatch.setattr(rp, "SCORED_DIR", tmp_path / "scored_answers")
     monkeypatch.setattr(rp, "GENERATED_ANSWERS_DIR", tmp_path / "generated_answers")
+    monkeypatch.setattr(rp, "RESULTS_DIR", tmp_path / "results")
+    monkeypatch.setattr(rp, "STYLEJUDGE_DIR", tmp_path / "stylejudge")
     monkeypatch.setattr(bt_artifacts, "ARTIFACT_DIR", tmp_path / "bt_artifacts")
     monkeypatch.setattr(substantive_artifacts, "BETA_RELIABILITY_DIR", tmp_path / "beta_reliability")
     monkeypatch.setattr(substantive_artifacts, "SUBSTANTIVE_ARTIFACTS_DIR", tmp_path / "substantive_artifacts")
+    monkeypatch.setattr(substantive_artifacts, "RESULTS_DIR", tmp_path / "results")
 
     (tmp_path / "llm_reliability").mkdir()
     (tmp_path / "distractor_penalties.txt").write_text(
@@ -243,7 +246,10 @@ def make_args(ws, **overrides):
     a.loo_subsample = 4
     a.pool_pilot = False
     a.pilot_labels = None
-    a.refresh_style = False
+    a.no_style = False
+    a.style_n_boot = 1000
+    a.style_n_null = 2000
+    a.style_device = "auto"
     a.python = sys.executable
     a.seed_reliability_from = "0.4"
     for k, v in overrides.items():
@@ -361,11 +367,100 @@ class TestBuildStagesStage11And12:
         stages = rp.build_stages(make_args(workspace))
         assert not stages[11].skip.skip
 
-    def test_stage12_skipped_unless_refresh_style(self, workspace):
+    def test_stage12_runs_when_no_style_json(self, workspace):
+        stages = rp.build_stages(make_args(workspace))
+        assert stages[12].name == "style_score"
+        assert stages[12].scope == "candidate"
+        assert not stages[12].skip.skip
+        assert "missing or stale" in stages[12].skip.reason
+
+    def test_stage12_skipped_when_fresh_and_merged(self, workspace, tmp_path):
+        style_json = workspace["tmp_path"] / "results" / "style_report_cand__0.7.json"
+        style_json.parent.mkdir(parents=True, exist_ok=True)
+        style_json.write_text("{}")
+        gen_dir = workspace["tmp_path"] / "generated_answers"
+        gen_dir.mkdir(exist_ok=True)
+        free_gen = gen_dir / "free_gen_cand__0.7.json"
+        free_gen.write_text(json.dumps({"answers": {}}))
+        import os
+        import time
+        old = time.time() - 10
+        os.utime(free_gen, (old, old))
+
+        ledger_path = workspace["tmp_path"] / "results" / "chronologic_scores.csv"
+        with open(ledger_path, "w", newline="") as f:
+            f.write("benchmark_version,candidate_label,candidate_effort,judge,judge_effort,"
+                   "bt_tag,style_period_fidelity\n")
+            args = make_args(workspace)
+            tag = rp.bt_artifacts.bt_tag(args.bt_judge, workspace["benchmark"], args.judge_effort,
+                                         prompt_mode=args.prompt_mode, prior_dist="normal")
+            f.write(f"0.7,cand,none,testjudge,medium,{tag},82.4\n")
+
         stages = rp.build_stages(make_args(workspace))
         assert stages[12].skip.skip
-        stages = rp.build_stages(make_args(workspace, refresh_style=True))
+        assert "merged into the ledger" in stages[12].skip.reason
+
+    def test_stage12_runs_when_fresh_but_ledger_column_empty(self, workspace):
+        """The interrupted-run pin: a style JSON newer than free_gen but with
+        no matching (or empty) ledger row must still run -- freshness alone
+        is not sufficient, since the two subprocesses are separate and a run
+        interrupted between them leaves a fresh JSON and an unmerged row."""
+        gen_dir = workspace["tmp_path"] / "generated_answers"
+        gen_dir.mkdir(exist_ok=True)
+        free_gen = gen_dir / "free_gen_cand__0.7.json"
+        free_gen.write_text(json.dumps({"answers": {}}))
+
+        style_json = workspace["tmp_path"] / "results" / "style_report_cand__0.7.json"
+        style_json.parent.mkdir(parents=True, exist_ok=True)
+        style_json.write_text("{}")  # written after free_gen -> newer mtime
+
+        stages = rp.build_stages(make_args(workspace))
         assert not stages[12].skip.skip
+        assert "ledger columns are missing" in stages[12].skip.reason
+
+    def test_stage12_disabled_by_no_style(self, workspace):
+        stages = rp.build_stages(make_args(workspace, no_style=True))
+        assert stages[12].skip.skip
+        assert stages[12].skip.reason == "disabled with --no-style"
+
+    def test_stage12_action_runs_score_then_merge_in_order(self, workspace):
+        stages = rp.build_stages(make_args(workspace))
+        stage12 = stages[12]
+        assert stage12.argv is None
+        assert stage12.action is not None
+
+        calls = []
+
+        class FakeResult:
+            returncode = 0
+
+        def fake_runner(argv, cwd=None):
+            calls.append((argv, cwd))
+            return FakeResult()
+
+        stage12.action(fake_runner)
+        assert len(calls) == 2
+        assert calls[0][0][:2] == [sys.executable, "score_style.py"]
+        assert str(workspace["tmp_path"] / "stylejudge") == calls[0][1]
+        assert calls[1][0][:2] == [sys.executable, "merge_style_row.py"]
+        assert calls[1][1] == str(rp.SCRIPT_DIR)
+
+    def test_stage12_action_treats_merge_exit_2_as_non_fatal(self, workspace, capsys):
+        stages = rp.build_stages(make_args(workspace))
+        stage12 = stages[12]
+
+        class Rc:
+            def __init__(self, rc):
+                self.returncode = rc
+
+        results = iter([Rc(0), Rc(2)])
+
+        def fake_runner(argv, cwd=None):
+            return next(results)
+
+        stage12.action(fake_runner)  # must not raise/exit
+        out = capsys.readouterr().out
+        assert "no ledger row matched yet" in out
 
 
 class TestStageNumbersAreSequential:

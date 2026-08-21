@@ -1,5 +1,12 @@
 # model-as-judge workflow: status and remaining steps
 
+> **Superseded.** This maps the old HITL/PyMC pipeline (`bayes_correction.py`,
+> `bootstrap_confidence.py`, the three-way question-fit/context-fit/style
+> split). `new-spec-integrating-bt.md` replaced that with the current
+> pipeline; the equivalent map for what's actually running now is
+> `substantive_scoring_runbook.md` plus the `substantive/` package. Kept for
+> historical context -- do not use it to figure out which script to run.
+
 This document is the map for the multi-stage scoring pipeline. Each section
 lists the script, its status, canonical input/output paths, and open work items.
 

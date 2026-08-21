@@ -258,3 +258,145 @@ class TestLegacyCoefficientNames:
         from bt.calibrate import calibration_coefficients
         with pytest.raises(KeyError):
             calibration_coefficients({"n": 10})
+
+
+# ---------------------------------------------------------------------------
+# The anchored scale: pinned intercept + class-balanced weights
+# ---------------------------------------------------------------------------
+
+def make_imbalanced_records(n_gt=10, n_dis=100, seed=3):
+    """Same Delta distributions as make_separable_records, but 10:1 imbalanced
+    and using the real "ground_truth" source string, which is what
+    class_weights keys off."""
+    rng = np.random.default_rng(seed)
+    records = [{"delta_mean": float(rng.normal(3, 1)), "label": 1.0,
+                "source": "ground_truth"} for _ in range(n_gt)]
+    records += [{"delta_mean": float(rng.normal(-3, 1)), "label": 0.0,
+                 "source": "distractor"} for _ in range(n_dis)]
+    return records
+
+
+class TestClassWeights:
+    def test_classes_receive_equal_total_weight(self):
+        from bt.calibrate import class_weights
+        recs = make_imbalanced_records(n_gt=10, n_dis=100)
+        w = class_weights(recs)
+        gt_total = w[:10].sum()
+        non_total = w[10:].sum()
+        assert gt_total == pytest.approx(non_total)
+        assert w.sum() == pytest.approx(len(recs))   # ridge stays comparable
+
+    def test_partials_are_grouped_with_distractors(self):
+        from bt.calibrate import class_weights
+        recs = [{"delta_mean": 1.0, "label": 1.0, "source": "ground_truth"},
+                {"delta_mean": 0.0, "label": 0.5, "source": "partial"},
+                {"delta_mean": -1.0, "label": 0.0, "source": "distractor"}]
+        w = class_weights(recs)
+        assert w[0] == pytest.approx(w[1] + w[2])
+
+    def test_empty_class_falls_back_to_flat_weights(self):
+        from bt.calibrate import class_weights
+        recs = [{"delta_mean": d, "label": 0.0, "source": "distractor"} for d in (-1.0, -2.0)]
+        assert np.allclose(class_weights(recs), np.ones(2))
+
+
+class TestPinnedIntercept:
+    def test_intercept_is_exactly_logit_of_pin_p(self):
+        from scipy.special import logit
+        fit = fit_calibration(make_separable_records(), pin_p=0.90)
+        assert fit["intercept"] == pytest.approx(float(logit(0.90)), abs=1e-12)
+        assert fit["slope"] > 0
+        assert fit["converged"]
+
+    def test_pinning_actually_constrains(self):
+        """The free fit on this data lands elsewhere; the pinned one must not move."""
+        from scipy.special import expit, logit
+        recs = make_imbalanced_records()
+        free = fit_calibration(recs)
+        pinned = fit_calibration(recs, pin_p=0.90)
+        assert abs(free["intercept"] - float(logit(0.90))) > 0.1
+        assert pinned["intercept"] == pytest.approx(float(logit(0.90)), abs=1e-12)
+        # Ground-truth parity is exactly the declared constant.
+        assert expit(pinned["intercept"]) == pytest.approx(0.90)
+
+    def test_pin_p_recorded_in_the_artifact(self):
+        fit = fit_calibration(make_separable_records(), pin_p=0.75, class_balance=True)
+        assert fit["pin_p"] == 0.75
+        assert fit["class_balance"] is True
+
+    def test_pin_p_outside_the_open_unit_interval_raises(self):
+        for bad in (0.0, 1.0, -0.5, 1.5):
+            with pytest.raises(ValueError):
+                fit_calibration(make_separable_records(), pin_p=bad)
+
+    def test_pinned_length_covariate_still_fits_three_params(self):
+        recs = make_separable_records()
+        for r in recs:
+            r["z_len"] = 0.0
+        fit = fit_calibration(recs, use_length=True, pin_p=0.90)
+        assert "length_slope" in fit
+        assert fit["intercept"] == pytest.approx(fit["intercept"])
+
+
+class TestClassBalanceShiftsTheIntercept:
+    def test_balancing_moves_the_free_intercept_upward(self):
+        """The diagnosis this design rests on: with 10x more negatives than
+        positives, the free intercept absorbs the label odds. Rebalancing the
+        classes must move it up, and by roughly the log-odds shift."""
+        recs = make_imbalanced_records(n_gt=10, n_dis=100)
+        free = fit_calibration(recs)
+        balanced = fit_calibration(recs, class_balance=True)
+        assert balanced["intercept"] > free["intercept"]
+        expected_shift = np.log(100 / 10)     # label log-odds goes to ~0
+        assert balanced["intercept"] - free["intercept"] == pytest.approx(
+            expected_shift, rel=0.5)
+
+    def test_balancing_barely_moves_the_slope(self):
+        """Case-control: the slope is consistently estimated, the intercept is not."""
+        recs = make_imbalanced_records(n_gt=10, n_dis=100)
+        free = fit_calibration(recs)
+        balanced = fit_calibration(recs, class_balance=True)
+        assert balanced["slope"] == pytest.approx(free["slope"], rel=0.6)
+
+
+class TestDefaultsStayAtTheCLILayer:
+    """A bare call must fit exactly what it always did. The production
+    defaults live in cmd_calibrate, so flipping them cannot silently change
+    what _cluster_bootstrap_calibration or any other bare caller fits."""
+
+    def test_bare_call_is_unpinned_and_unweighted(self):
+        fit = fit_calibration(make_separable_records())
+        assert fit["pin_p"] is None
+        assert fit["class_balance"] is False
+
+    def test_bare_call_matches_explicit_off(self):
+        recs = make_imbalanced_records()
+        bare = fit_calibration(recs)
+        explicit = fit_calibration(recs, pin_p=None, class_balance=False)
+        assert bare["intercept"] == pytest.approx(explicit["intercept"], abs=1e-12)
+        assert bare["slope"] == pytest.approx(explicit["slope"], abs=1e-12)
+
+
+class TestBootstrapUnderPinning:
+    def test_cal_a_is_constant_when_pinned(self):
+        from scipy.special import logit
+        recs = make_imbalanced_records()
+        for i, r in enumerate(recs):
+            r["qid"] = str(i % 12)
+        draws, n_zero = _cluster_bootstrap_calibration(
+            recs, n_boot=40, seed=5, use_length=False,
+            pin_p=0.90, class_balance=True)
+        assert draws.shape[0] > 0
+        assert draws[:, 0].std() == pytest.approx(0.0, abs=1e-12)
+        assert draws[:, 0][0] == pytest.approx(float(logit(0.90)), abs=1e-12)
+        # All instrument-layer uncertainty is now in the slope.
+        assert draws[:, 1].std() > 0
+
+    def test_unpinned_bootstrap_still_varies_both(self):
+        recs = make_imbalanced_records()
+        for i, r in enumerate(recs):
+            r["qid"] = str(i % 12)
+        draws, _ = _cluster_bootstrap_calibration(
+            recs, n_boot=40, seed=5, use_length=False)
+        assert draws[:, 0].std() > 0
+        assert draws[:, 1].std() > 0

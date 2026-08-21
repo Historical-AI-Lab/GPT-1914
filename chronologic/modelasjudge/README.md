@@ -4,7 +4,7 @@
 > workflow: three multiplicative judgments (question fit, context fit, style)
 > scored via a hierarchical PyMC model. `new-spec-integrating-bt.md` replaced
 > that with the current fully-automated pipeline -- pass/fail + Bradley-Terry
-> partial-credit substantive scoring (`substantive-uncertainty-spec.md`,
+> partial-credit substantive scoring (`direct-binary-scoring-spec.md`,
 > `substantive_scoring_runbook.md`) reported separately from style. Kept here
 > for historical context; do not use it as a description of the current
 > pipeline.

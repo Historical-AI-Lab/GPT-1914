@@ -435,3 +435,124 @@ class TestEmitPilotLabels:
         unnamespaced_cluster_ids = [["3", "0.1"], ["3", "0.7"]]
         with pytest.raises(ArtifactMismatch, match="more than one benchmark version"):
             verify_compatible({"calib": {"cluster_ids": unnamespaced_cluster_ids}})
+
+
+# ---------------------------------------------------------------------------
+# Automatic verdicts on the partial-credit path
+# ---------------------------------------------------------------------------
+
+def _rewrite_free_gen(ws, answer):
+    ws["free_gen"].write_text(json.dumps({
+        "model": "cand",
+        "answers": {"1": {"answer": answer}, "2": {"answer": "unrelated answer"}},
+    }))
+
+
+class TestAutoVerdictShortCircuit:
+    """A verbatim match to an answer option is a certainty, so it must produce
+    its verdict without spending a single judge call."""
+
+    def test_ground_truth_match_scores_one_with_no_judge_calls(self, workspace):
+        _rewrite_free_gen(workspace, "gt text zero")
+        cli.cmd_score(make_args(workspace))
+
+        out = json.loads((workspace["scored"].parent /
+                          f"{workspace['scored'].stem}_btcontext.json").read_text())
+        entry = out["context_fit"]["1"]
+        assert entry["scores"] == [1.0]
+        assert entry["judge"] == "bt:identity"
+        assert entry["bt"]["p_fit"] == 1.0
+        assert entry["bt"]["auto_verdict"] == "gt_identity"
+        assert entry["bt"]["n_comparisons"] == 0
+        assert workspace["call_counter"]["n"] == 0     # spent nothing
+
+    def test_distractor_match_scores_zero_with_no_judge_calls(self, workspace):
+        _rewrite_free_gen(workspace, "distractor text zero")
+        cli.cmd_score(make_args(workspace))
+
+        entry = json.loads((workspace["scored"].parent /
+                            f"{workspace['scored'].stem}_btcontext.json").read_text()
+                           )["context_fit"]["1"]
+        assert entry["scores"] == [0.0]
+        assert entry["bt"]["auto_verdict"] == "distractor_identity"
+        assert entry["bt"]["n_comparisons"] == 0
+        assert workspace["call_counter"]["n"] == 0
+
+    def test_context_class_distractor_still_auto_fails_here(self, workspace):
+        """anachronistic_x is "context" class -- exempt on the pass/fail path,
+        but the partial-credit path covers context fit, so it fails."""
+        _rewrite_free_gen(workspace, "distractor text zero")
+        cli.cmd_score(make_args(workspace))
+        entry = json.loads((workspace["scored"].parent /
+                            f"{workspace['scored'].stem}_btcontext.json").read_text()
+                           )["context_fit"]["1"]
+        assert entry["scores"] == [0.0]
+
+    def test_normalization_insensitive(self, workspace):
+        _rewrite_free_gen(workspace, "  GT Text Zero.  ")
+        cli.cmd_score(make_args(workspace))
+        entry = json.loads((workspace["scored"].parent /
+                            f"{workspace['scored'].stem}_btcontext.json").read_text()
+                           )["context_fit"]["1"]
+        assert entry["bt"]["auto_verdict"] == "gt_identity"
+        assert workspace["call_counter"]["n"] == 0
+
+    def test_a_normal_candidate_still_spends(self, workspace):
+        """Control: without a verbatim match, judging proceeds as before."""
+        cli.cmd_score(make_args(workspace))
+        entry = json.loads((workspace["scored"].parent /
+                            f"{workspace['scored'].stem}_btcontext.json").read_text()
+                           )["context_fit"]["1"]
+        assert "auto_verdict" not in entry["bt"]
+        assert entry["bt"]["n_comparisons"] > 0
+        assert workspace["call_counter"]["n"] > 0
+
+    def test_auto_entry_keeps_the_full_bt_key_set(self, workspace):
+        """Downstream readers index these unconditionally."""
+        cli.cmd_score(make_args(workspace))
+        judged = json.loads((workspace["scored"].parent /
+                             f"{workspace['scored'].stem}_btcontext.json").read_text()
+                            )["context_fit"]["1"]["bt"]
+        _rewrite_free_gen(workspace, "gt text zero")
+        cli.cmd_score(make_args(workspace))
+        auto = json.loads((workspace["scored"].parent /
+                           f"{workspace['scored'].stem}_btcontext.json").read_text()
+                          )["context_fit"]["1"]["bt"]
+        assert set(judged) <= set(auto)
+
+    def test_delta_cg_is_json_null_not_nan(self, workspace):
+        """json.dumps writes a bare NaN literal that strict parsers reject."""
+        _rewrite_free_gen(workspace, "gt text zero")
+        cli.cmd_score(make_args(workspace))
+        raw = (workspace["scored"].parent /
+               f"{workspace['scored'].stem}_btcontext.json").read_text()
+        assert "NaN" not in raw
+        entry = json.loads(raw)["context_fit"]["1"]
+        assert entry["bt"]["delta_cg_mean"] is None
+
+
+class TestAutoVerdictDeltaDraws:
+    def test_auto_key_written_and_delta_row_is_nan(self, workspace):
+        _rewrite_free_gen(workspace, "gt text zero")
+        draws_path = workspace["tmp_path"] / "delta.npz"
+        cli.cmd_score(make_args(workspace, save_delta_draws=str(draws_path), thin=50))
+
+        arrays, meta = substantive_artifacts.load_npz(draws_path)
+        assert arrays["auto__1"] == 1.0
+        assert np.all(np.isnan(arrays["delta__1"]))
+        assert meta["pin_p"] is None            # this fixture's calibration is unpinned
+        assert meta["class_balance"] is False
+
+    def test_distractor_match_writes_zero(self, workspace):
+        _rewrite_free_gen(workspace, "distractor text zero")
+        draws_path = workspace["tmp_path"] / "delta.npz"
+        cli.cmd_score(make_args(workspace, save_delta_draws=str(draws_path), thin=50))
+        arrays, _ = substantive_artifacts.load_npz(draws_path)
+        assert arrays["auto__1"] == 0.0
+
+    def test_judged_question_writes_no_auto_key(self, workspace):
+        draws_path = workspace["tmp_path"] / "delta.npz"
+        cli.cmd_score(make_args(workspace, save_delta_draws=str(draws_path), thin=50))
+        arrays, _ = substantive_artifacts.load_npz(draws_path)
+        assert "auto__1" not in arrays
+        assert not np.any(np.isnan(arrays["delta__1"]))
