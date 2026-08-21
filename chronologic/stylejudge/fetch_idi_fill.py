@@ -141,6 +141,17 @@ def find_range(year, ranges):
     return None
 
 
+def is_continuing_resource(date_types_src):
+    """IDI's `date_types_src` marks serials ('Continuing resource ...') whose
+    single-year `date1_src` is the least trustworthy in the catalog — a
+    periodical run coded to one nominal year, not a monograph's actual
+    publication date. Flagged so `--continuing-resource-cap-fraction` can
+    throttle them at draw time instead of the reviewer catching it by hand
+    later (measured at 27.6% of the two existing idi_fill batches).
+    """
+    return "continuing resource" in str(date_types_src or "").lower()
+
+
 def is_exempt_author(author):
     """Blank, unknown, or anonymous authors are exempt from the per-author cap."""
     if author is None:
@@ -305,6 +316,7 @@ def cmd_sample(args):
     print("\nPass 2: drawing the sample...")
     selected = []
     per_year = Counter()
+    continuing_resource_per_year = Counter()
     author_counts = Counter()
     dup_seen = set()
     dropped = Counter()
@@ -323,6 +335,12 @@ def cmd_sample(args):
             cap = rng_tuple[2]
             if cap is not None and per_year[year] >= cap:
                 continue
+
+            if is_continuing_resource(d["date_types_src"][i]):
+                cr_cap = cap * args.continuing_resource_cap_fraction if cap is not None else None
+                if cr_cap is not None and continuing_resource_per_year[year] >= cr_cap:
+                    dropped["continuing_resource_capped"] += 1
+                    continue
 
             bc = normalize_barcode(d["barcode_src"][i])
             if bc in exclusions:
@@ -353,6 +371,8 @@ def cmd_sample(args):
             row["barcode_src"] = bc
             selected.append(row)
             per_year[year] += 1
+            if is_continuing_resource(d["date_types_src"][i]):
+                continuing_resource_per_year[year] += 1
             if not is_exempt_author(author):
                 author_counts[str(author).strip().lower()] += 1
             dup_seen.add(bc)
@@ -374,7 +394,9 @@ def cmd_sample(args):
                                                  x["barcode_src"])):
             w.writerow({k: (json.dumps(v) if isinstance(v, (list, dict)) else v)
                         for k, v in r.items()})
-    print(f"\n{len(selected)} volumes written to {args.out}")
+    n_cr = sum(continuing_resource_per_year.values())
+    print(f"\n{len(selected)} volumes written to {args.out} "
+          f"({n_cr} continuing-resource, cap fraction {args.continuing_resource_cap_fraction})")
 
     print("\nPer-year yield:")
     empty = []
@@ -571,6 +593,12 @@ def main():
                    help=f"float, or 'auto' for the p{OCR_AUTO_PERCENTILE} of eligible rows")
     s.add_argument("--max-per-author", type=int, default=MAX_BOOKS_PER_AUTHOR)
     s.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    s.add_argument("--continuing-resource-cap-fraction", type=float, default=0.0,
+                    help="cap on `date_types_src` = 'Continuing resource ...' rows, as a "
+                         "fraction of each year's --ranges cap; 0.0 (default) skips them "
+                         "entirely -- their date1_src is a serial's nominal year, not a "
+                         "monograph's actual publication date, and is the most work to "
+                         "hand-verify in export-for-review")
     s.set_defaults(func=cmd_sample)
 
     e = sub.add_parser("extract", help="pull text for the sampled barcodes")
