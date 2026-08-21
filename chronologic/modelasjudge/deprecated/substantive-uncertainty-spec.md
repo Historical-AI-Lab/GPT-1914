@@ -1,5 +1,14 @@
 # Uncertainty in the Substantive Score
 
+> **Superseded.** The binary (pass/fail) channel this spec describes no longer runs
+> through Rogan-Gladen: `direct-binary-scoring-spec.md` retires the correction, and the
+> binary score is the arithmetic mean of the observed judge verdicts. alpha and beta are
+> judge-validation quantities now (`substantive/judge_validation.py`,
+> `judge_validation_report.py`), never applied to a candidate score. The BT
+> (partial-credit) channel this spec describes is unchanged. Kept as a record of the
+> reasoning at the time. See `direct-binary-scoring-spec.md` and
+> `estimator_and_calibration_explained.md`.
+
 *A philosophical spec for the fully automated ChronoLogic scoring pipeline.*
 
 Approved 2026-08-17. This document deliberately contains **no code design** — that is the second-stage plan. What it fixes is the *vocabulary and the reasoning*: one quantity, three named layers of uncertainty, one mechanism. It is the companion to `new-spec-integrating-bt.md`, which states the goal; this one settles how uncertainty is talked about.
@@ -16,11 +25,37 @@ Approved 2026-08-17. This document deliberately contains **no code design** — 
 
 Routing is already decided: ChronoLogic 0.7 carries a `partial_credit` field, and **310 of its 864 questions have `partial_credit == 1`** (they go to Bradley-Terry; the other 554 go to the binary judge). The style judge already reports its own uncertainty and stays separate from substantive scoring.
 
+The two channels are not two constructs. The binary judge scores instruction following and factual accuracy; the Bradley-Terry judge scores a **superset** — those criteria plus fit to the historical context — on a continuous scale. Which channel a question uses is an editorial property of the question, not a claim about which criteria apply to it. (The stored keys `question_fit` / `context_fit` predate this framing and are kept only because artifacts on disk carry them.)
+
+### Amendment, 2026-08-19: the anchored p_fit scale
+
+`bt/calibrate.py` fits `p_fit = σ(a + b·Δ)` where `Δ = θ_candidate − mean(θ_ground_truths)`, so **Δ = 0 means "exactly as good as the ground truths" by construction**. The intercept is therefore the score a perfect answer receives, and left free it is not identified by anything about answer quality: it absorbs `log(good:bad odds)` of the calibration set, which is a benchmark design choice. Between ChronoLogic 0.1 and 0.7 the held-out-GT Δ distributions were nearly identical, yet `a` moved −1.341, of which −1.040 is exactly the label-mix log-odds shift (60:148 → 38:336). Ground-truth parity scored 0.669 on one version and 0.345 on the other for no reason connected to the judge.
+
+Two changes fix that, and both are now the production default:
+
+- **The intercept is pinned** at `logit(0.90)`, so ground-truth parity scores 0.90 exactly, as a declared convention with **zero estimation error**. `cal_a` is consequently a constant column in the calibration draw bank; the instrument layer of §3's decomposition carries only the slope's uncertainty on this channel. That narrowing is intended, not an artifact.
+- **Ground truths and non-ground-truths are weighted to equal total influence**, so a question's distractor count cannot move the curve.
+
+Neither changes any ranking — both are monotone re-scalings of the same Δ, and AUC is unaffected. `pin_p` and `class_balance` are stamped into the calibration artifact, the calibration draw bank, and the Δ draw bank, and appear in `drawbank.COMPATIBILITY_KEYS`, so scores produced under different designs fail loudly rather than pooling. `--no-pin --no-class-balance` reproduces the previous fit. Full derivation and the empirical decomposition: `estimator_and_calibration_explained.md` §6–7.
+
+### Amendment, 2026-08-19: automatic verdicts bypass both corrections
+
+A candidate answer verbatim identical (lowercased, punctuation-stripped) to one of the question's own answer options does not need a judge, and neither channel calls one. Ground-truth matches score 1.0; probability-0 distractor matches score 0.0 — on the binary channel only for penalty classes `question` and `both`, since that channel does not measure period fidelity, and on the partial-credit channel for every probability-0 match. Rules: `substantive/verdicts.py`.
+
+These are **certainties, not noisy readings**, so they enter the estimator as overrides rather than as observations, carried by `Bank.auto_pf` / `Bank.auto_pc` (NaN where a question was genuinely judged):
+
+- On the binary channel the override replaces the Rogan–Gladen result. This also repairs a real defect: §2's inversion applied to a `v_hat` of 1.0 returns `(1−α)/(1−α−β) > 1`, an out-of-range per-question contribution the pipeline previously emitted for every ground-truth match.
+- On the partial-credit channel it replaces `σ(a + b·Δ)`, and the question's Δ draws are written as NaN rather than zero — Δ = 0 would mean "exactly ground-truth level", which is false for an auto-fail and would be read silently by any consumer that ignored the override.
+- Both are **exempt from the §8.2 informativeness floor**, which measures the judge.
+- The override is applied to the per-question replicate arrays before item resampling, so §6's slice and group breakdowns agree with the headline they decompose. Judgment-layer variance for an overridden question is consequently zero, which is correct; item-layer variance is retained.
+
+Artifacts written before this existed carry neither array, load as all-NaN, and reproduce their previous numbers exactly. `n_auto_passfail` and `n_auto_partial` are reported in the ledger so a headline that is substantially verbatim recall is visible as such.
+
 What is missing is a coherent account of uncertainty on the substantive side. And the gap is larger than it looks, because of one thing I found while exploring.
 
 ### The finding that forces the issue
 
-The current final stage (`montecarlo_accuracy.py`) discounts each verdict by judge reliability (`π_q = r_q` if pass, `1 − r_q` if fail) and then rescales by the per-question floor and ceiling. For a **single** aspect that round trip is algebraically self-cancelling, and the existing outputs confirm it numerically — comparing `raw.question_fit` to `range_normalized.question_fit.norm_point` in `modelasjudge/scored_answers/mcacc_*__0.4.json`:
+The current final stage (`montecarlo_accuracy.py`) discounts each verdict by judge reliability (`π_q = r_q` if pass, `1 − r_q` if fail) and then rescales by the per-question floor and ceiling. For a **single** aspect that round trip is algebraically self-cancelling, and the existing outputs confirm it numerically — comparing `raw.question_fit` to `range_normalized.question_fit.norm_point` (`question_fit` here being the stored key for the pass/fail channel, not a distinct construct) in `modelasjudge/scored_answers/mcacc_*__0.4.json`:
 
 | model | raw judge pass rate | after discount + range-normalize |
 |---|---|---|
@@ -76,6 +111,8 @@ The parallel is real but it is not an identity, and the difference is worth stat
 **And the break points the same way on both sides.** α is measured on *benchmark distractors* and applied to *model answers*, so the pass/fail channel has the identical transport failure (§8.1). The two channels are alike in their correction *and* alike in their weakness. That symmetry is not a defect of the framing — it is the reason a single vocabulary is the right one.
 
 ### Consequence: the estimator for the pass/fail channel
+
+[This is all deprecated now -- edit Ted Underwood 8/21/26]
 
 Because α and β are a calibration map, we apply them as one. Let `v_q` be the judge's collapsed verdict for question *q* (a fraction in [0, 1] after averaging orderings and ground-truth indices — see §8.8). Then:
 
@@ -171,7 +208,9 @@ A replicate is then array indexing, not inference. Two thousand replicates over 
 2. Draw one shared set of β-regression coefficients — index into the cached array.
 3. Resample the 310 BT questions with replacement, and the 554 binary questions with replacement, **separately**. (That separation *is* the stratification: it holds each replicate's channel mix at the true proportion instead of letting composition noise inflate the interval.)
 4. For each sampled BT question: pick one index into its own Δ draws, apply σ(a + b·Δ). Indices are drawn **independently per question** — verified: `bt/fit.py` fits a separate per-question model with θ zero-sum *within* a question, so draw *i* means nothing in common across questions. (This resolves the open check Fable flagged.)
-5. For each sampled binary question: draw α_q from its Beta posterior; compute β_q from this replicate's coefficients **plus that question's own residual draw**; resample v_q to reflect its own binomial noise over the few orderings judged; then apply (v_q − α_q)/(1 − α_q − β_q). **No clipping here.**
+
+5. For each sampled binary question: draw α_q from its Beta posterior; compute β_q from this replicate's coefficients **plus that question's own residual draw**; resample v_q to reflect its own binomial noise over the few orderings judged; then apply (v_q − α_q)/(1 − α_q − β_q). **No clipping here.** [**This is deprecated** -- TU 8/21/26]
+
 6. Record four numbers for this replicate: the binary-channel mean, the BT-channel mean, the count-weighted pooled mean over all sampled questions, and the equal-weight average of the two channel means. Clip each to [0, 1] at this point.
 
 Repeat 2000 times; report the 2.5th and 97.5th percentiles.
@@ -192,6 +231,14 @@ Note the asymmetry that justifies the whole design: step 4's per-question draws 
 - pooled substantive, equal-weight channel average ← *the expected headline number*
 
 All four come out of the same bootstrap, so they are mutually consistent and no extra machinery is needed to keep all of them in the data.
+
+**Scores by reasoning type.** In addition to the channel breakdown above, the substantive score is also broken out by what kind of reasoning a question demands (`substantive/groups.py`), keyed on the benchmark's `reasoning_type` field:
+
+- **cloze** — a passage is given and the model fills in a blank (`phrase_cloze`, `sentence_cloze`, `topic_sentence`)
+- **constrained generation** — the model is given specs and produces a passage (`constrained_generation`, `character_modeling`)
+- **knowledge and inference** — answered with a fact or a term, including abstention (`knowledge`, `inference`, `abstention`/`refusal`)
+
+Each group spans both scoring channels unevenly (on 0.7: cloze is mostly pass/fail, constrained generation is mostly partial-credit, knowledge/inference is almost entirely pass/fail), so each group's score is the **count-weighted** mean of `p_q` over every question in the group, both channels — the same combination rule as the pooled count-weighted score above, applied within the group rather than across all questions. Consequently the three group scores do **not** average back to the equal-weight headline; this is a breakdown, not a decomposition, and the report says so next to the table. Questions excluded below the informativeness floor (§8.2) drop out of their group's count along with the headline's.
 
 **Style** — unchanged from `stylejudge/f1_reports/model_report.md`: T_E2, T_drift, T_KS, T_disp, and the fused (p_KS, p_E2) statistic.
 

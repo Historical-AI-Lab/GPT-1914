@@ -1,4 +1,4 @@
-"""substantive/report.py — the markdown report (spec §7).
+"""substantive/report.py — the markdown report.
 
 Renders already-computed numbers; no statistics happen here. House style
 follows report_bt_inversions.py: build a list of markdown fragments, join
@@ -11,11 +11,16 @@ checks (every ledger number must appear, formatted, in the report text).
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import numpy as np
 
-from substantive import estimator
+MODELASJUDGE_DIR = Path(__file__).resolve().parent.parent
+if str(MODELASJUDGE_DIR) not in sys.path:
+    sys.path.insert(0, str(MODELASJUDGE_DIR))
+
+from naming import judge_tag  # noqa: E402
 from substantive import groups as group_defs
 
 
@@ -26,7 +31,7 @@ def _ci(replicates):
 
 def write_report(path, *, point, boot, bank, provenance, checks=None, groups=None,
                  candidate_label="", candidate_model="", candidate_effort="",
-                 judge="", judge_effort="", bt_tag="", alpha_prior="jeffreys",
+                 judge="", judge_effort="", bt_tag="", benchmark_version="",
                  prior_scale=None, run_date="", seed=None, n_boot=None,
                  report_path="") -> dict:
     """point: estimator.PlugPoint. boot: estimator.BootstrapResult.
@@ -38,26 +43,27 @@ def write_report(path, *, point, boot, bank, provenance, checks=None, groups=Non
     reasoning-type breakdown). When given, adds a "Scores by reasoning
     type" section and 5 ledger columns per group.
 
-    Returns the flat ledger-row dict (spec §7's four scores + diagnostics).
+    Returns the flat ledger-row dict (the four scores + diagnostics).
     """
     pf_lo, pf_hi = _ci(boot.passfail)
     pc_lo, pc_hi = _ci(boot.partial)
     pcount_lo, pcount_hi = _ci(boot.pooled_count)
     pequal_lo, pequal_hi = _ci(boot.pooled_equal)
 
-    clip_rate = float(np.mean((boot.pooled_equal <= 0.0) | (boot.pooled_equal >= 1.0)))
-    near_floor_frac = float(point.n_excluded_floor / max(len(bank.v_hat), 1))
-    mean_alpha = (float(np.mean(estimator.alpha_point(bank.k_alpha, bank.n_alpha, prior=alpha_prior)))
-                 if bank.n_alpha.size else float("nan"))
+    n_binary_pass = int(np.count_nonzero(point.p_binary == 1.0))
+    n_binary_fail = int(np.count_nonzero(point.p_binary == 0.0))
+    n_binary_split = point.n_passfail - n_binary_pass - n_binary_fail
 
     row = {
-        "run_date": run_date, "benchmark_version": bank.metas.get("beta_draws", {}).get("benchmark_version", ""),
+        "run_date": run_date, "benchmark_version": benchmark_version,
         "routing_basis": bank.routing.basis,
         "candidate_label": candidate_label, "candidate_model": candidate_model,
         "candidate_effort": candidate_effort, "judge": judge, "judge_effort": judge_effort,
-        "bt_tag": bt_tag, "alpha_prior": alpha_prior, "prior_scale": prior_scale,
+        "bt_tag": bt_tag, "prior_scale": prior_scale,
+        "scoring_version": "direct_binary_v1",
         "n_passfail": point.n_passfail, "n_partial": point.n_partial,
-        "n_excluded_floor": point.n_excluded_floor,
+        "n_binary_pass": n_binary_pass, "n_binary_fail": n_binary_fail,
+        "n_binary_split": n_binary_split,
         # How much of the headline came from certainties rather than judgments:
         # a score that is largely verbatim recall should be visible as such.
         "n_auto_passfail": int(np.count_nonzero(~np.isnan(bank.auto_pf))),
@@ -66,8 +72,6 @@ def write_report(path, *, point, boot, bank, provenance, checks=None, groups=Non
         "partial": point.partial, "partial_lo": pc_lo, "partial_hi": pc_hi,
         "pooled_count": point.pooled_count, "pooled_count_lo": pcount_lo, "pooled_count_hi": pcount_hi,
         "pooled_equal": point.pooled_equal, "pooled_equal_lo": pequal_lo, "pooled_equal_hi": pequal_hi,
-        "clip_rate": clip_rate, "near_floor_frac": near_floor_frac,
-        "sigma_u": bank.sigma_u, "mean_alpha": mean_alpha,
         "n_boot": n_boot, "seed": seed, "report_path": report_path,
     }
 
@@ -82,14 +86,14 @@ def write_report(path, *, point, boot, bank, provenance, checks=None, groups=Non
 
     L = []
     L.append(f"# Substantive score: {candidate_label}\n")
-    L.append(f"\nJudge `{judge}` (effort `{judge_effort}`) · benchmark `{row['benchmark_version']}` "
-             f"· run {run_date}\n")
+    L.append(f"\nJudge `{judge}` (effort `{judge_effort}`) · benchmark `{benchmark_version}` "
+             f"· run {run_date} · scoring `direct_binary_v1`\n")
     L.append(f"\nRouting basis: `{bank.routing.basis}` -- {point.n_passfail} pass/fail questions, "
-             f"{point.n_partial} partial-credit questions, {point.n_excluded_floor} excluded "
-             f"below the informativeness floor.\n")
+             f"{point.n_partial} partial-credit questions.\n")
 
     L.append("\n## Scores\n")
-    L.append("\nAll intervals are 95% percentile (spec §7).\n")
+    L.append("\nAll intervals are 95% percentile. The pass/fail score is the arithmetic mean of "
+             "the observed judge verdicts -- no correction, no clipping.\n")
     L.append("\n| score | point | 95% CI |\n|---|---:|---|\n")
     L.append(f"| pass/fail ({point.n_passfail} qs) | {point.passfail:.1%} | "
              f"[{pf_lo:.1%}, {pf_hi:.1%}] |\n")
@@ -102,9 +106,10 @@ def write_report(path, *, point, boot, bank, provenance, checks=None, groups=Non
 
     if groups:
         L.append("\n## Scores by reasoning type\n")
-        L.append("\nCount-weighted over both channels within each group. These do not average "
-                 "back to the equal-weight headline above -- this is a breakdown, not a "
-                 "decomposition. Counts exclude questions below the informativeness floor.\n")
+        L.append("\nCount-weighted over both channels within each group. The count-weighted "
+                 "partition reconstructs the aggregate pooled(count) exactly; it does not "
+                 "reconstruct pooled(equal), which weights the two channels equally rather "
+                 "than by count -- this is a breakdown, not a decomposition of the headline.\n")
         L.append("\n| reasoning type | score | 95% CI | n (pass/fail + partial) |\n|---|---:|---|---|\n")
         for g in group_defs.GROUPS:
             gr = groups.get(g)
@@ -114,16 +119,18 @@ def write_report(path, *, point, boot, bank, provenance, checks=None, groups=Non
             L.append(f"| {label} | {gr.point:.1%} | [{gr.lo:.1%}, {gr.hi:.1%}] | "
                      f"{gr.n} ({gr.n_pf} + {gr.n_pc}) |\n")
 
-    L.append("\n## Diagnostics (spec §8.6 -- reported, not folded into intervals)\n")
-    L.append(f"\n- sigma_u (beta residual scale): {bank.sigma_u:.4f}\n")
-    L.append(f"- clip rate (replicates landing exactly at 0 or 1): {clip_rate:.2%}\n")
-    L.append(f"- n excluded below informativeness floor: {point.n_excluded_floor} "
-             f"({near_floor_frac:.1%} of pass/fail questions)\n")
-    if not np.isnan(mean_alpha):
-        L.append(f"- mean alpha (pass/fail channel, {alpha_prior} prior): {mean_alpha:.4f}\n")
+    L.append("\n## Diagnostics\n")
+    L.append(f"\n- pass/fail verdicts: {n_binary_pass} pass (v=1), {n_binary_fail} fail (v=0), "
+             f"{n_binary_split} fractional (0<v<1)\n")
+    L.append(f"- automatic verdicts (verbatim ground-truth or probability-0 distractor match, "
+             f"no judge call): {row['n_auto_passfail']} pass/fail, {row['n_auto_partial']} partial-credit\n")
+    L.append("\nJudge error rates characterize the evaluator and are not used to adjust model "
+             "scores. See "
+             f"`results/judge_validation_{judge_tag(judge)}__{benchmark_version}.md` "
+             "for the judge's false-pass (alpha) and false-fail (beta) rates.\n")
 
     if checks:
-        L.append("\n## Verification checks (spec §10)\n")
+        L.append("\n## Verification checks\n")
         for name, result in checks.items():
             L.append(f"\n**{name}**: {result}\n")
 

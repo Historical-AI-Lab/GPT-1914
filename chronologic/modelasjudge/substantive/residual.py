@@ -12,9 +12,11 @@ two anywhere, because k_i/n_i (non-tie count over valid trials) *is* an
 observation of 2*beta_i. So this module's residual u_q lives on that same
 logit(2*beta) scale as eta_i, and everything here -- logitnormal_moments,
 solve_sigma_u -- operates on p = expit(eta + u) with no division. Only the
-*downstream* consumer (substantive.estimator.beta_from_coefs) halves the
-result once, at the very end, to get the actual beta_q <= 0.5 that
-Rogan-Gladen needs; halving here as well would silently refit sigma_u
+*downstream* consumer (substantive.judge_validation.beta_from_coefs) halves
+the result once, at the very end, to get the actual beta_q <= 0.5 that is
+reported as judge-validation evidence (substantive/judge_validation.py) --
+never applied to a candidate score since direct-binary-scoring-spec.md
+retired Rogan-Gladen; halving here as well would silently refit sigma_u
 against a mean half the size of the real k_i/n_i rate, inflating the
 apparent overdispersion (caught empirically: fitting against real
 GT-vs-GT pairs gave a 3.0x ratio against a /2 version of this code,

@@ -11,7 +11,7 @@ questions -- a strict subset of the 310 that carry `partial_credit == 1`.
 That dropped 157 questions from the partial-credit channel and, because
 cmd_score intersects with the other loader's identically-broken set, from
 the pass/fail channel too. `partial_credit` is the field the spec names
-(substantive-uncertainty-spec.md §Context), so it takes precedence whenever
+(deprecated/substantive-uncertainty-spec.md §Context), so it takes precedence whenever
 present; `context_judged` is honoured next because it is an explicit
 editorial flag (see chronologic_btpilot_0.1.jsonl, which predates
 `partial_credit` but carries `context_judged` on all 40 of its questions);

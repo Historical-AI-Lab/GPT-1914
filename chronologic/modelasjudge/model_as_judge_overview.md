@@ -1,6 +1,14 @@
 model-as-judge workflow overview
 ==============================
 
+> **Superseded.** This describes the original HITL plan -- question fit /
+> context fit / style as three multiplicative, per-question judgments scored
+> via a hierarchical Bayesian model. `new-spec-integrating-bt.md` replaced
+> that with the current pipeline (pass/fail + Bradley-Terry partial-credit
+> substantive scoring, reported separately from style); see
+> `direct-binary-scoring-spec.md` and `substantive_scoring_runbook.md` for
+> what's actually running now. Kept for historical context.
+
 This is a complete overview of the plan for model-as-judge scoring of the ChronoLogic benchmark. Other plans will be written to cover specific parts of the code.
 
 ## The big picture: scoring a single model

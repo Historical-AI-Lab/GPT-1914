@@ -40,9 +40,11 @@ Two conditions skip the judge entirely (see substantive/verdicts.py):
 an answer verbatim identical to a ground truth is an automatic pass, and one
 verbatim identical to a probability-0 distractor of penalty class "question" or
 "both" is an automatic fail. Both are recorded with judge="identity", r_q=0.999,
-and an `auto_verdict` field, and cost no API calls. Downstream they bypass the
-Rogan-Gladen judge-noise correction, because a string comparison is a certainty
-rather than a noisy reading.
+and an `auto_verdict` field, and cost no API calls. Downstream, `v_q` for these
+questions already equals the verdict (1 or 0), so nothing further needs to
+happen to it -- there is no judge-noise correction left to bypass
+(direct-binary-scoring-spec.md retired Rogan-Gladen); a string comparison was
+never a noisy reading in the first place.
 
 For questions with multiple ground truths the judge runs multiple comparisons:
   - Odd #GTs: each GT tested once (random A/B position).
@@ -650,7 +652,7 @@ def main():
     reliability = _load_reliability(reliability_path)
     if not reliability:
         print(f"Warning: no reliability data found at {reliability_path}. "
-              "All questions will have r_q=null and be added to needs_human.")
+              "All questions will have r_q=null and be flagged for review.")
 
     # Load existing scores for resume.
     if output_path.exists():
@@ -738,8 +740,8 @@ def main():
         1 for item in output_data["needs_human"] if "context_fit" in item["aspects"]
     )
     print(f"\nDone. {total_scored} questions scored.")
-    print(f"  needs_human: {needs_human_count} questions")
-    print(f"    of which {book_ctx_needing_context} need human context_fit judgment")
+    print(f"  flagged for review: {needs_human_count} questions")
+    print(f"    of which {book_ctx_needing_context} need partial-credit context_fit judgment")
     print(f"Output: {output_path.resolve()}")
 
 

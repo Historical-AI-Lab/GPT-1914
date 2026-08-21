@@ -1,7 +1,7 @@
 """
 DEPRECATED — superseded by stylejudge/typicality.py, the style judge that
 score_substantive.py's report presents side by side with substantive
-scoring (substantive-uncertainty-spec.md §7). Kept only because
+scoring (deprecated/substantive-uncertainty-spec.md §7). Kept only because
 tests/ reference it and comments elsewhere describe the earlier design.
 Do not use this as the final style scoring stage.
 

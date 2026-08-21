@@ -1,5 +1,13 @@
 # Hierarchical Bias-Correction for ChronoLogic Binary Accuracy
 
+> **Superseded.** This document predates the current two-path framing. ChronoLogic
+> no longer claims a divide between a "question fit" construct and a "context fit"
+> construct; it has a binary **pass/fail path** (`judge_scoring_nocontext.py`,
+> instruction following + factual accuracy) and a continuous **partial-credit path**
+> (`bt_context_scoring.py`) whose criteria are a superset of those. The final scoring
+> stage is `score_substantive.py`. Kept as a record of the reasoning at the time.
+> See `direct-binary-scoring-spec.md` and `estimator_and_calibration_explained.md`.
+
 ## Purpose
 
 This document specifies a Bayesian hierarchical model for estimating the true binary accuracy of a model evaluated on the ChronoLogic benchmark, correcting for multiplicative bias introduced by noisy judge aggregation. The intended implementation is in PyMC. This is a self-contained brief: it should give a fresh LLM (or a fresh-eyed reader) everything needed to design and write the model without external context.

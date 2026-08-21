@@ -380,7 +380,9 @@ def cmd_score(args):
     delta_draws_by_qnum: dict[str, object] = {}   # spec §9 item 4: persist, don't discard
     c_len_by_qnum: dict[str, int] = {}
     auto_by_qnum: dict[str, float] = {}           # qnum -> 1.0/0.0 for short-circuits
-    for qnum in sorted(book_context_qnums & benchmark_records.keys() & set(free_gen.get("answers", {}))):
+    qnums_to_score = sorted(book_context_qnums & benchmark_records.keys() & set(free_gen.get("answers", {})))
+    total = len(qnums_to_score)
+    for i, qnum in enumerate(qnums_to_score, 1):
         rec = benchmark_records[qnum]
         items = items_from_question(rec)
         items_by_id = {it.item_id: it for it in items}
@@ -440,6 +442,8 @@ def cmd_score(args):
             delta_draws_by_qnum[qnum] = _AUTO_DELTA_SENTINEL
             c_len_by_qnum[qnum] = len(cand.text)
             auto_by_qnum[qnum] = p
+            if i % 10 == 0 or i == total:
+                print(f"  [{i}/{total}] qnum={qnum} bt: auto_verdict p={p:.2f}")
             continue
 
         def build(comp, _items_by_id=items_by_id, _withdrawn=set(withdrawn), _rec=rec,
@@ -479,6 +483,9 @@ def cmd_score(args):
                 "artifacts_tag": tag,
             },
         }
+        if i % 10 == 0 or i == total:
+            print(f"  [{i}/{total}] qnum={qnum} p_fit={p_mean:.2f} "
+                  f"n_comparisons={score.n_comparisons}")
         if args.emit_calibration_row:
             calib_rows.append({"qid": qnum, "item_id": "cand", "delta_mean": score.delta_mean,
                                "label": None, "source": "candidate"})

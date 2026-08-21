@@ -45,7 +45,9 @@ Usage
   --dry-run                     Print data summaries; no sampling
   --save-draws PATH              Save the flattened (b0, b_len, u_frame) coefficient
                                  draws plus the moment-matched residual scale sigma_u
-                                 (substantive-uncertainty-spec.md §4) to an npz bank.
+                                 (deprecated/substantive-uncertainty-spec.md §4; beta is a
+                                 judge-validation quantity now, see
+                                 estimator_and_calibration_explained.md §6) to an npz bank.
                                  Default: on, path derived as
                                  beta_reliability/beta_draws_{judge}__{version}.npz
                                  (substantive.artifacts.beta_draws_path). Pass "" to
@@ -122,6 +124,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from naming import sanitize  # noqa: E402
+from naming import benchmark_version as _benchmark_version  # noqa: E402
 from substantive import artifacts as substantive_artifacts  # noqa: E402
 from substantive.residual import solve_sigma_u  # noqa: E402
 
@@ -373,10 +376,23 @@ def save_draw_bank(trace, data, *, path, thin, judge_model, judge_effort,
               + float(np.mean(b_len_draws)) * data["z_loglen"])
     sigma_u, residual_diagnostics = solve_sigma_u(data["k"], data["n"], eta_fit)
 
+    # `benchmark_version` names the benchmark these coefficients are FOR -- the
+    # one whose questions they will be applied to -- because that is what
+    # drawbank.verify_compatible compares across the three banks. It is not the
+    # version of the GT-pairs the regression trained on: run_pipeline.py stage 3
+    # deliberately reuses an older pairs file (`--seed-reliability-from`, default
+    # 0.4) since beta is an instrument property regressed on frame_type and
+    # length rather than anything question-specific, and no newer pairs file
+    # exists. That training version is recorded separately as
+    # `pairs_benchmark_version` so the provenance is not lost. Stamping the
+    # pairs version here instead made every cross-version run fail the
+    # compatibility guard on a mismatch that was purely a labelling artifact.
     meta = substantive_artifacts.base_meta(
         produced_by="fit_beta_regression_nocontext.py",
         seed=seed, judge=judge_model, judge_effort=judge_effort,
-        benchmark_path=str(benchmark_path), benchmark_version=data["benchmark_version"],
+        benchmark_path=str(benchmark_path),
+        benchmark_version=_benchmark_version(benchmark_path),
+        pairs_benchmark_version=data["benchmark_version"],
         n_draws=n_keep, n_draws_source=n_draws_source, thin=thin,
         frame_types=list(FRAME_TYPES),
         standardization={"mu_loglen": data["mu_loglen"], "sd_loglen": data["sd_loglen"]},

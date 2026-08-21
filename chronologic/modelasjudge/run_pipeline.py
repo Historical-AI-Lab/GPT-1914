@@ -219,6 +219,34 @@ def check_judge_effort_matches_seed(judge: str, benchmark_version: str, judge_ef
         )
 
 
+def check_candidate_effort_matches_free_gen(candidate_label: str, benchmark_version: str,
+                                            candidate_effort: str) -> None:
+    """A free_gen file's reasoning_effort is fixed when first written; resuming
+    (or even --force free_generation) only fills in missing qnums, so an
+    existing fully-answered file is never regenerated for a new --candidate-effort
+    (stage 8's skip predicate only counts answers). Downstream stages then
+    diverge: judge_scoring derives its filename from the file's actual stored
+    effort while run_pipeline derives scored_path from the requested effort,
+    surfacing as a FileNotFoundError deep in stage 10 instead of here."""
+    ctag = naming.candidate_tag(candidate_label)
+    free_gen_path = GENERATED_ANSWERS_DIR / f"free_gen_{ctag}__{benchmark_version}.json"
+    data = _json_get(free_gen_path)
+    if data is None:
+        return
+    existing_effort = data.get("reasoning_effort", "none")
+    if existing_effort != candidate_effort:
+        sys.exit(
+            f"ERROR: {free_gen_path} already holds answers generated at "
+            f"reasoning_effort={existing_effort!r}, but --candidate-effort="
+            f"{candidate_effort!r} was requested. free_generation.py's resume "
+            f"logic only fills in missing questions, so it will not regenerate "
+            f"these under the new effort. Pass a distinct --candidate-label for "
+            f"this effort (e.g. '{candidate_label}_{candidate_effort}', matching "
+            f"the existing gpt-5.4_medium / gpt-5.4_none convention), or remove/"
+            f"rename {free_gen_path.name} if you intend to replace it."
+        )
+
+
 # ---------------------------------------------------------------------------
 # build_stages -- read-only; safe to call under --dry-run
 # ---------------------------------------------------------------------------
@@ -341,6 +369,7 @@ def build_stages(args) -> list[Stage]:
              "--questions", f"@{pending_questions_path}"],
         pre_action=_prepare_stage_2,
         cwd=SCRIPT_DIR, est_calls=len(missing_alpha_qnums) * AVG_TRIALS_PER_ALPHA_Q,
+        note="judge validation / diagnostic -- not a scoring dependency",
     ))
 
     # ---- stage 3: fit_beta_regression_nocontext --------------------------
@@ -356,6 +385,7 @@ def build_stages(args) -> list[Stage]:
         argv=[py, "fit_beta_regression_nocontext.py", str(pairs_path),
              "--benchmark", str(benchmark_path), "--save-draws", str(beta_draws_path)],
         cwd=SCRIPT_DIR, est_fits=1,
+        note="judge validation / diagnostic -- not a scoring dependency",
     ))
 
     # ---- stage 4: bt_context_scoring anchor-fit ---------------------------
@@ -667,6 +697,8 @@ def main():
     benchmark_path = Path(args.benchmark) if args.benchmark else naming.latest_benchmark(BOOKSAMPLE_DIR)
     bver = naming.benchmark_version(benchmark_path)
     check_judge_effort_matches_seed(args.judge, bver, args.judge_effort, args.seed_reliability_from)
+    check_candidate_effort_matches_free_gen(
+        args.candidate_label or args.candidate, bver, args.candidate_effort)
 
     stages = build_stages(args)
     stages = select_stages(stages, only=args.only, stop_after=args.stop_after)
