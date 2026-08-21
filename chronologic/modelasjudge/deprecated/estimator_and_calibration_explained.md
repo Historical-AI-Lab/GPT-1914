@@ -1,5 +1,13 @@
 # How the final score is actually computed
 
+> **Superseded.** §2's Rogan-Gladen inversion, its false-pass/false-fail machinery, and
+> its informativeness floor no longer run: `direct-binary-scoring-spec.md` retires the
+> correction, and the binary score is the arithmetic mean of the observed judge verdicts.
+> §3-§8's Bradley-Terry / calibration content (anchor fit, Δ, the pinned-intercept
+> anchoring, automatic verdicts) carries forward unchanged into the current document. Kept
+> as a record of the reasoning at the time. See the current
+> `estimator_and_calibration_explained.md`.
+
 *Written to be read straight through, not skimmed. Describes the pipeline as it
 stands after the 2026-08-19 calibration and auto-verdict changes; §6 explains why
 the scale changed.*

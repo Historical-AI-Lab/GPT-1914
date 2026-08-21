@@ -1,5 +1,12 @@
 # Substantive scoring — testing and production runbook
 
+> **Superseded.** Rogan-Gladen, the informativeness floor, `--alpha-prior`, and `--floor`
+> are gone from `score_substantive.py` (`direct-binary-scoring-spec.md`); the binary score
+> is the arithmetic mean of the observed judge verdicts. This runbook's Step 0 (the
+> 888/889 misroute), decision-gate checks 2-3 (Jeffreys-vs-uniform, alpha x1.5), and the
+> `n_excluded_floor` instruction no longer apply. Kept as a record of the reasoning at the
+> time. See the current `substantive_scoring_runbook.md`.
+
 The automated pipeline built from `substantive-uncertainty-spec.md` (design)
 and the `it-s-time-to-fuse-synchronous-squirrel` plan (implementation).
 Orchestrator: `run_pipeline.py`. Scoring CLI: `score_substantive.py`. This
@@ -221,6 +228,15 @@ are what you'd expect given the candidate's reputation, and that
 questions had an uninformative judge for this candidate — worth
 investigating, not silently accepting).
 
+The report also carries a "Scores by reasoning type" table (cloze,
+constrained generation, knowledge and inference — `substantive/groups.py`)
+right below the four headline numbers; the same three groups' `grp_cloze_*`,
+`grp_congen_*`, `grp_knowinf_*` columns land in the CSV ledger. Spot-check
+that `n_pf + n_pc` across the three groups sums to the report's stated
+pass/fail and partial-credit counts, and that no group's score is wildly out
+of line with the headline (a big outlier there is usually more diagnostic
+of what a candidate is bad at than the pooled number is).
+
 ---
 
 ## End-to-end sanity checks (run once, cheaply, before trusting the ledger)
@@ -286,18 +302,37 @@ doesn't silently change under it.
 - **`results/score_history.jsonl`** is the append-only audit trail with
   full provenance and every replicate array — keep it, don't prune it; it's
   what makes a published number re-derivable later.
-- **Style is opt-in and cohort-scoped**, not per-row automatic. Run it
-  once you have your full candidate set assembled:
+- **Style is per-candidate and runs by default** (stage 12, `style_score`) —
+  every full `run_pipeline.py` pass scores that candidate's style against
+  the Reference Prediction Set and merges `style_*` columns into the same
+  ledger row `score_substantive` writes, keyed on the same six-column key.
+  `--no-style` skips it (escape hatch when the E2 checkpoint or RPS isn't on
+  this machine). To re-score style alone for a candidate already scored
+  substantively:
 
   ```bash
-  $PY run_pipeline.py --candidate placeholder --benchmark $BM \
-      --only style_refresh --force style_refresh --refresh-style
+  $PY run_pipeline.py --candidate MODEL --benchmark $BM \
+      --only style_score --force style_score
   ```
 
-  This writes `results/style_report_<cohort>.md` and
-  `results/style_report_stats_<cohort>.json` but does **not** write style
-  columns into the ledger (see Known gaps) — pull the numbers in by hand
-  for now.
+  This writes `results/style_report_<candidate>__<version>.md` and `.json`
+  (the two 0-100 headline scores — Period Fidelity, Authenticity Fidelity —
+  plus drift/dispersion in both raw-year and conformal units) and merges the
+  `style_*` columns into that candidate's ledger row. Re-running stage 11
+  (`score_substantive`) afterward does not blank these columns:
+  `substantive/ledger.py`'s `upsert_row` preserves any `style_*` column the
+  new row doesn't itself supply.
+
+  **Null-stability validation (one-time, 2026-08-20, candidate gpt-5.4, benchmark 0.7,
+  n_replicates=50, n_null=2000):** `score_style.py`'s style score holds W0 (the null-mean W1)
+  fixed at its point estimate inside every bootstrap replicate rather than recomputing it per
+  replicate (see the Method note in any `style_report_*.md`). `--diagnose-null-stability 50`
+  measured `sd(W0^(b)) = 0.00078` against this candidate's reported `w1_ci95` width of ~0.047
+  (≈1.7% of the CI) and `Corr(W_obs^(b), W0^(b)) = 0.035` — essentially uncorrelated, not the
+  strongly positive correlation the plan's variance argument treats as the concerning case. Both
+  findings point the same way: the fixed-W0 approximation is validated empirically for this
+  benchmark/reference, not just argued for. Re-run `--diagnose-null-stability` if the RPS or
+  length-bin edges are ever refit, since the validation is reference-specific.
 
 ---
 
@@ -320,6 +355,92 @@ doesn't silently change under it.
 
 ---
 
+## Reading the numbers: the anchored `p_fit` scale
+
+Since 2026-08-19 the partial-credit calibration **pins ground-truth parity**.
+`p_fit = σ(a + b·Δ)` where Δ is `θ_candidate − mean(θ_ground_truths)`, so Δ = 0
+means "exactly as good as the ground truths" — and the intercept is fixed so
+that point scores **0.90**. Ground truths and non-ground-truths also get equal
+total weight in the fit, so a question's distractor count no longer moves the
+curve.
+
+What to expect on ChronoLogic 0.7 (`a = 2.1972`, `b = 0.9516`):
+
+| | value |
+|---|---|
+| ground-truth parity, Δ = 0 | 0.900 by construction |
+| held-out real ground truths, median | 0.888 |
+| held-out real ground truths, q25 | 0.716 |
+| probability-0 distractors, median | 0.114 |
+| probability-0 distractors above 0.90 | 4.2% |
+
+That last row is not a calibration artifact and does not shrink if you re-anchor
+the scale: it is exactly the share of distractors the BT judge ranks above the
+average ground truth (Δ > 0), and it is identical under the old free-intercept
+curve — just hidden there, because that curve put ground truths at 0.328 too.
+It is the instrument's honest resolution limit. The benchmark's job is
+discriminating slightly-better from slightly-worse *sub*-ground-truth answers,
+and the anchored scale gives that region most of the range; compression above
+0.90 is an accepted cost, since "much better than average ground truth" is not a
+meaningful claim here.
+
+**Before 2026-08-19** the intercept floated and ground-truth parity scored 0.345
+on 0.7 (0.669 on 0.1). Numbers from those runs are on a different scale and are
+not comparable. `--no-pin --no-class-balance` reproduces the old fit.
+
+**Recalibrating costs nothing.** It refits from the stored LOO artifact; no judge
+calls. Only `calibrate` needs re-running — never `anchor-fit`, `loo`, or
+`validate`, which are the expensive stages:
+
+```bash
+python bt_context_scoring.py calibrate \
+    --judge anthropic/claude-sonnet-5 \
+    --benchmark ../booksample/chronologic_en_0.7.jsonl \
+    --judge-effort medium --prompt-mode rationales --bootstrap 1000
+```
+
+Anything already scored against the previous curve must be re-scored, and
+`drawbank.verify_compatible` will refuse to mix the two: `pin_p` and
+`class_balance` travel with both the calibration draws and the Δ draws.
+
+## Automatic verdicts
+
+Some answers do not need a judge, and both paths now skip one when the answer is
+verbatim identical (lowercased, punctuation-stripped) to one of the question's
+own answer options. Rules live in `substantive/verdicts.py`:
+
+| candidate matches | pass/fail | partial credit |
+|---|---|---|
+| a ground truth | pass, score 1 | `p_fit = 1.0` |
+| a prob-0 distractor, class `question`/`both` | fail, score 0 | `p_fit = 0.0` |
+| a prob-0 distractor, class `context` | **judged normally** | `p_fit = 0.0` |
+| a distractor with 0 < prob < 1 | judged normally | judged normally |
+
+The third row is the one to remember: `anachronistic_*` answers are accurate and
+relevant, and fail only on period fidelity, which the pass/fail path does not
+measure — anachronism is penalized on style instead. The partial-credit path
+does cover it, so there it fails.
+
+Spotting them in output: the pass/fail path writes `judge: "identity"` with an
+`auto_verdict` field; the partial-credit path writes `judge: "bt:identity"`,
+`n_comparisons: 0`, and `auto_verdict` inside the `bt` block. The ledger carries
+`n_auto_passfail` and `n_auto_partial` so you can see how much of a headline came
+from certainties rather than judgments — a score that is largely verbatim recall
+should be visible as such.
+
+Downstream these bypass their channel's noise correction entirely: an automatic
+verdict is a certainty, not a noisy reading, so Rogan–Gladen is not applied (it
+would return `(1−α)/(1−α−β) > 1` for a pass) and the calibration curve is not
+consulted. They are also exempt from the informativeness floor, which measures
+the judge — and no judge was consulted.
+
+```bash
+# how many verdicts in a scored file were automatic
+python -c "import json,sys; d=json.load(open(sys.argv[1])); \
+print(sum(1 for v in d['context_fit'].values() if v.get('bt',{}).get('auto_verdict')))" \
+    scored_answers/<file>_btcontext.json
+```
+
 ## Known gaps (deliberate, not oversights)
 
 - **`--pool-pilot`** needs `--pilot-labels PATH` explicitly passed (see
@@ -328,8 +449,15 @@ doesn't silently change under it.
 - **`--length-covariate`** on `bt_context_scoring.py calibrate` fits and
   banks the 3-parameter draws, but `score_substantive.py` still scores
   with the 2-parameter calibration — the estimator side isn't wired yet.
-- **Style columns aren't auto-joined into the ledger.** The join between
-  `typicality.py`'s per-model stats (keyed on free-gen's raw `model`
-  field) and the ledger's `candidate_label`/`candidate_model` columns
-  isn't verified, so `run_pipeline.py --refresh-style` computes and prints
-  the numbers but leaves the ledger's style columns for you to fill in.
+  It also cannot be combined with a pinned intercept: `c·z_len` shifts the
+  curve at Δ = 0, so pinning the intercept would no longer pin ground-truth
+  parity. `calibrate` exits with that message; pass `--no-pin` if you want
+  the length covariate.
+- **The BT rubric still asks only about context fit** (`bt/prompts.py`,
+  `PROMPT_VERSION = "bt-v3"`). The partial-credit path covers the superset
+  in practice because the anchor pool includes instruction-following
+  distractors, but the prompt wording has not been revised — doing so bumps
+  the prompt version and invalidates every anchor fit and the prompt cache.
+- **`estimator.py:157` computes σ(E[Δ])** while `apply_calibration` and the
+  bootstrap compute E[σ(Δ)], so the plug-in point disagrees slightly with
+  both the reported per-question `p_fit` and the bootstrap's centre.
