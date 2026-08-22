@@ -101,10 +101,22 @@ def jeffreys_interval(k, n, ci=(2.5, 97.5)) -> tuple[float, float]:
     return float(lo), float(hi)
 
 
-def pooled_alpha(reliability_path) -> Rate:
-    """k = sum(question_total - question_correct), n = sum(question_total)."""
+def pooled_alpha(reliability_path, restrict_to: set[str] | None = None) -> Rate:
+    """k = sum(question_total - question_correct), n = sum(question_total).
+
+    `restrict_to`, when given, is the set of qnums currently routed to the
+    binary path (route_questions(benchmark).pass_fail). Reliability files are
+    seeded forward across benchmark versions and accumulate entries for
+    questions that later move to the BT path (or leave the benchmark
+    entirely) -- pooling those in overstates alpha for the path it's meant
+    to characterize, since questions get routed to BT precisely because a
+    bare pass/fail verdict is not adequate for them. Omit `restrict_to` only
+    to reproduce the old unrestricted (and misleading) pooled number.
+    """
     data = json.loads(Path(reliability_path).read_text(encoding="utf-8"))
     per_question = data.get("per_question", {})
+    if restrict_to is not None:
+        per_question = {q: r for q, r in per_question.items() if q in restrict_to}
     k = sum(r["question_total"] - r["question_correct"] for r in per_question.values())
     n = sum(r["question_total"] for r in per_question.values())
     lo, hi = jeffreys_interval(k, n)
@@ -112,14 +124,21 @@ def pooled_alpha(reliability_path) -> Rate:
     return Rate(k=int(k), n=int(n), rate=rate, lo=lo, hi=hi, n_questions=len(per_question))
 
 
-def pooled_beta(gt_pairs_path) -> Rate:
-    """k = sum(k_nontie), n = sum(n_valid_trials); rate halved on the way out."""
+def pooled_beta(gt_pairs_path, restrict_to: set[str] | None = None) -> Rate:
+    """k = sum(k_nontie), n = sum(n_valid_trials); rate halved on the way out.
+
+    `restrict_to` filters records by `str(question_number)`, for the same
+    reason as `pooled_alpha`: GT-pair records persist for questions that may
+    since have moved off the binary path.
+    """
     records = []
     with open(gt_pairs_path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if line:
                 records.append(json.loads(line))
+    if restrict_to is not None:
+        records = [r for r in records if str(r.get("question_number")) in restrict_to]
     k = sum(r["k_nontie"] for r in records)
     n = sum(r["n_valid_trials"] for r in records)
     lo, hi = jeffreys_interval(k, n)

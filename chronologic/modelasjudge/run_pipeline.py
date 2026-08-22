@@ -414,11 +414,32 @@ def build_stages(args) -> list[Stage]:
         subsample_qnums = _bt_stratified_subsample(
             routing.partial, args.loo_subsample, ["question_category", "n_gt"], seed=20260728)
     missing_loo_qnums = sorted(set(subsample_qnums) - existing_loo_qids, key=int)
+    # Once a LOO set exists for this tag it is treated as established, not as
+    # a moving target to true up against the freshly-stratified sample: the
+    # 0.7->0.8 migration deliberately built a specific 80-old + 20-new union
+    # (see 0.7_to_0.8_pipeline.py), and this stage's default stratified-80
+    # draw over the current (possibly since-enlarged) partial pool will not
+    # generally equal that union once the pool's composition has changed --
+    # a mismatch that would otherwise silently grow the LOO set and trigger
+    # stage 7 to recalibrate on every unrelated candidate's first run against
+    # a benchmark version whose calibration was already deliberately fixed.
+    # Only the very first LOO build for a tag (no existing records at all)
+    # still bootstraps automatically. `--force loo` overrides the skip, but
+    # note cmd_loo overwrites bt_loo_{tag}.json wholesale with a fresh
+    # stratified --subsample draw -- it does not merge, so forcing this stage
+    # replaces a deliberately-curated LOO set rather than growing it. Use it
+    # only when you actually want to discard the current LOO composition.
+    loo_established = bool(existing_loo_qids)
     stages.append(Stage(
         5, "loo", "instrument",
-        skip=SkipResult(not missing_loo_qnums and bool(subsample_qnums),
-                        "subsample qids already all in the LOO artifact" if not missing_loo_qnums and subsample_qnums
-                        else f"{len(missing_loo_qnums)}/{len(subsample_qnums)} subsample qnums missing LOO records"),
+        skip=SkipResult(
+            loo_established or (not missing_loo_qnums and bool(subsample_qnums)),
+            (f"LOO set already established for this tag ({len(existing_loo_qids)} qids); "
+             f"not auto-expanded -- pass --force loo only if you intend to replace it wholesale")
+            if loo_established
+            else ("subsample qids already all in the LOO artifact" if not missing_loo_qnums and subsample_qnums
+                  else f"{len(missing_loo_qnums)}/{len(subsample_qnums)} subsample qnums missing LOO records")
+        ),
         argv=[py, "bt_context_scoring.py", "loo", "--judge", bt_judge,
              "--judge-effort", judge_effort, "--benchmark", str(benchmark_path),
              "--prior-scale", str(prior_scale), "--prompt-mode", prompt_mode,
@@ -663,7 +684,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--bt-judge", default=DEFAULT_BT_JUDGE)
     parser.add_argument("--judge-effort", default="medium", choices=["none", "low", "medium", "high"])
     parser.add_argument("--candidate-effort", default="none",
-                        choices=["none", "minimal", "low", "medium", "high"])
+                        choices=["none", "minimal", "low", "medium", "high", "max"])
     parser.add_argument("--prior-scale", type=float, default=3.0)
     parser.add_argument("--prompt-mode", default="rationales")
     parser.add_argument("--loo-subsample", type=int, default=80)

@@ -374,7 +374,7 @@ def generate_answer_openrouter(question, model_id, client, reasoning_effort="non
         question:         benchmark question dict.
         model_id:         OpenRouter model identifier string (e.g. ``qwen/qwen3-8b``).
         client:           openai.OpenAI instance pointed at OpenRouter base URL.
-        reasoning_effort: one of "none", "low", "medium", "high".
+        reasoning_effort: one of "none", "minimal", "low", "medium", "high", "max".
 
     Returns:
         tuple: (answer_str, length_spec_str)
@@ -725,7 +725,7 @@ def main():
     )
     parser.add_argument(
         '--reasoning-effort',
-        choices=['none', 'minimal', 'low', 'medium', 'high'],
+        choices=['none', 'minimal', 'low', 'medium', 'high', 'max'],
         default='none',
         help="OpenAI Responses API reasoning effort (default: none).",
     )

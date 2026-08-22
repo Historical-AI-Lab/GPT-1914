@@ -192,9 +192,10 @@ def call_openrouter_chat(
                           when reasoning_effort != "none".
         max_retries:      number of attempts before raising.
         debug:            if True, print the full response object.
-        reasoning_effort: one of "none", "low", "medium", "high". Anthropic models
-                          receive this as verbosity; other providers receive it as
-                          reasoning.effort.
+        reasoning_effort: one of "none", "minimal", "low", "medium", "high", "max".
+                          Anthropic models receive this as verbosity (values outside
+                          low/medium/high are unlikely to be accepted there); other
+                          providers receive it as reasoning.effort.
         response_format:  optional structured-output spec, passed through to the API
                           unchanged. For a JSON schema the chat-completions shape is
                           {"type": "json_schema",
