@@ -30,10 +30,18 @@ import math
 import os
 import random
 import re
+import sys
 import datetime
 from pathlib import Path
 
 import numpy as np
+
+# Reasoning-type -> {cloze, constrained_generation, knowledge_inference}
+# rollup, shared with modelasjudge's scoring pipeline.
+_MODELASJUDGE_DIR = Path(__file__).resolve().parent.parent / "modelasjudge"
+if str(_MODELASJUDGE_DIR) not in sys.path:
+    sys.path.insert(0, str(_MODELASJUDGE_DIR))
+from substantive import groups as group_defs
 
 # HF path (primary)
 HF_DEFAULT_DEVICE = None  # None → auto-detect at runtime
@@ -626,6 +634,13 @@ DEFAULT_SUBSET_FIELDS = [
 def build_subset_index(questions, fields=None):
     """Build a dictionary mapping 'field:value' keys to lists of question indices.
 
+    Also derives a 'reasoning_group:{cloze,constrained_generation,
+    knowledge_inference}' key per question via group_defs.group_of(), the
+    same rollup modelasjudge's scoring pipeline uses. Questions whose
+    reasoning_type is missing or unmapped are silently excluded from this
+    rollup (they still land in every other subset key); a one-line warning
+    reports how many were skipped.
+
     Args:
         questions: list of question dicts.
         fields:    list of field names to index (default: DEFAULT_SUBSET_FIELDS).
@@ -637,13 +652,63 @@ def build_subset_index(questions, fields=None):
         fields = DEFAULT_SUBSET_FIELDS
 
     index = {}
+    unmapped = 0
     for i, q in enumerate(questions):
         for field in fields:
             if field not in q:
                 continue
             key = f"{field}:{q[field]}"
             index.setdefault(key, []).append(i)
+        try:
+            group = group_defs.group_of(q)
+        except group_defs.UnmappedReasoningType:
+            unmapped += 1
+            continue
+        index.setdefault(f"reasoning_group:{group}", []).append(i)
+
+    if unmapped:
+        print(f"Warning: {unmapped} question(s) skipped from the "
+              f"cloze/constrained_generation/knowledge_inference rollup "
+              f"(unmapped or missing reasoning_type).")
+
     return index
+
+
+def format_group_score_table(confidence_intervals):
+    """Markdown table of cloze/constrained_generation/knowledge_inference
+    brier/skill/accuracy, sourced from bootstrap_evaluate()'s output.
+
+    Args:
+        confidence_intervals: dict from bootstrap_evaluate(), expected to
+            contain 'reasoning_group:{group}' keys (added by
+            build_subset_index()).
+
+    Returns:
+        list[str]: markdown lines, or [] if no group keys are present.
+    """
+    rows = []
+    for group in group_defs.GROUPS:
+        key = f"reasoning_group:{group}"
+        if key not in confidence_intervals:
+            continue
+        stats = confidence_intervals[key]
+        label = group_defs.GROUP_LABELS[group]
+        brier_lo, brier_med, brier_hi = stats["brier_score"]
+        acc_lo, acc_med, acc_hi = stats["accuracy"]
+        skill_lo, skill_med, skill_hi = stats["skill_score"]
+        rows.append(
+            f"| {label} | {brier_med:.4f} [{brier_lo:.4f}, {brier_hi:.4f}] "
+            f"| {acc_med:.1%} [{acc_lo:.1%}, {acc_hi:.1%}] "
+            f"| {skill_med:.4f} [{skill_lo:.4f}, {skill_hi:.4f}] |"
+        )
+    if not rows:
+        return []
+    header = [
+        "\n### Scores by reasoning group\n",
+        "| Group | Brier (median [95% CI]) | Accuracy (median [95% CI]) | Skill (median [95% CI]) |",
+        "|-------|--------------------------|------------------------------|---------------------------|",
+    ]
+    return header + rows
 
 
 def _fit_platt_params(x, y, w):
@@ -1293,6 +1358,7 @@ def full_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
             cat_total = len(category_scores[cat])
             cat_fails = category_scoring_fail.get(cat, 0)
             summary_lines.append(f"| {cat} | {mean_brier:.4f} | {cat_fails} / {cat_total} |")
+        summary_lines.extend(format_group_score_table(confidence_intervals))
         summary_lines.append("")
 
         report_text = "\n".join(summary_lines) + "\n" + "\n\n".join(per_question_blocks)
@@ -1487,6 +1553,7 @@ def mcq_eval_hf(model_id, path_to_jsonl, device=None, trust_remote_code=False,
             summary_lines.append(
                 f"| {cat} | {acc:.1%} | {skill_avg:.4f} | {cat_no_resp} / {cat_total} |"
             )
+        summary_lines.extend(format_group_score_table(confidence_intervals))
         summary_lines.append("")
 
         report_text = "\n".join(summary_lines) + "\n" + "\n\n".join(per_question_blocks)
@@ -1871,6 +1938,7 @@ def full_eval_together(model_id, path_to_jsonl, api_key_path=None,
             cat_total = len(category_scores[cat])
             cat_fails = category_scoring_fail.get(cat, 0)
             summary_lines.append(f"| {cat} | {mean_brier:.4f} | {cat_fails} / {cat_total} |")
+        summary_lines.extend(format_group_score_table(confidence_intervals))
         summary_lines.append("")
 
         report_text = "\n".join(summary_lines) + "\n" + "\n\n".join(per_question_blocks)
@@ -2055,6 +2123,7 @@ def mcq_eval_together(model_id, path_to_jsonl, api_key_path=None,
             summary_lines.append(
                 f"| {cat} | {acc:.1%} | {skill_avg:.4f} | {cat_no_resp} / {cat_total} |"
             )
+        summary_lines.extend(format_group_score_table(confidence_intervals))
         summary_lines.append("")
 
         report_text = "\n".join(summary_lines) + "\n" + "\n\n".join(per_question_blocks)
@@ -2358,6 +2427,7 @@ def mcq_eval_openrouter(model_id, path_to_jsonl, cred_path=None,
             summary_lines.append(
                 f"| {cat} | {acc:.1%} | {skill_avg:.4f} | {cat_no_resp} / {cat_total} |"
             )
+        summary_lines.extend(format_group_score_table(confidence_intervals))
         summary_lines.append("")
 
         report_text = "\n".join(summary_lines) + "\n" + "\n\n".join(per_question_blocks)
@@ -2808,6 +2878,7 @@ def mcq_eval_openai(model_id, path_to_jsonl, credentials_path=None,
             summary_lines.append(
                 f"| {cat} | {acc:.1%} | {skill_avg:.4f} | {cat_no_resp} / {cat_total} |"
             )
+        summary_lines.extend(format_group_score_table(confidence_intervals))
         summary_lines.append("")
 
         report_text = "\n".join(summary_lines) + "\n" + "\n\n".join(per_question_blocks)
