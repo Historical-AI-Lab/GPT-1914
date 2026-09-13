@@ -1,4 +1,4 @@
-ChronoLogic benchmark
+Chronologic-EN-1.0
 =====================
 
 Ted Underwood, Ziliang Qiu, Sarah Griebel, Laura K. Nelson, Teddy Roland, Wenyi Shang, Matthew Wilkens
