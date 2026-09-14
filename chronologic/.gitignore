@@ -1,5 +1,56 @@
-old_process_files/
-booksample/chronologic*
+# ---------------------------------------------------------------------------
+# Chronologic-EN
+#
+# Paths here are relative to chronologic/, so this file works unchanged both
+# inside GPT-1914 and after `git filter-repo --subdirectory-filter chronologic`
+# promotes this directory to a repository root.
+# ---------------------------------------------------------------------------
 
-# repartition_validation.py backups of the v2 fine-tuning data
+# --- credentials: never commit ---
+credentials.txt
+OpenRouterCredentials.txt
+TogetherAPIKey.txt
+*.secretly
+
+# --- editor / OS / tooling junk ---
+.DS_Store
+__pycache__/
+*.pyc
+.pytest_cache/
+.claude/
+
+# --- the withheld benchmark (contamination control) ---
+# Deliberately broad: chronologic_btpilot_0.1.jsonl, chronologic-0.2-edited.json
+# and chronologic-0.2-preview.jsonl all carry ground truths and would slip past
+# a narrower chronologic_en_* pattern. The negation re-admits the public sample.
+booksample/chronologic*
+!booksample/chronologic_en_1.0_sample.jsonl
+
+# --- question-pipeline scratch output ---
+old_process_files/
+
+# --- content-addressed judge-call cache: ~75,700 regenerable files ---
+modelasjudge/bt_artifacts/cache/
+
+# --- superseded / backup working files ---
+*.bak
+*.bak-*
+*.wrongseed-*.bak
+modelasjudge/deprecated/
+modelasjudge/deprecated_rg_scores/
 gpt41tuning/v2/_prepartition_backup/
+
+# --- model weights and environments: distributed via HuggingFace, not git ---
+bertclassify/model_output/
+bertclassify/large_tok196/
+bertclassify/baseline/
+qwentuning/qlora-env/
+qwentuning/smoke_checkpoints/
+
+# --- source volumes (~1.4 GB of HathiTrust text) ---
+booksample/sample1000books/
+booksample/averybooks/
+booksample/averybooks.tar.gz
+booksample/benchmarkbooks/
+booksample/edgebooks/
+booksample/IDI_sample_1875-25/
