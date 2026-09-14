@@ -1,2 +1,5 @@
 old_process_files/
 booksample/chronologic*
+
+# repartition_validation.py backups of the v2 fine-tuning data
+gpt41tuning/v2/_prepartition_backup/

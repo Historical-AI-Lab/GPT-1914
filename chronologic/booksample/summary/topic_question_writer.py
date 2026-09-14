@@ -28,8 +28,17 @@ except ImportError:
 # Path setup
 SCRIPT_DIR = Path(__file__).parent
 BOOKSAMPLE_DIR = SCRIPT_DIR.parent
-SOURCE_DIR = BOOKSAMPLE_DIR / "edgebooks"
 PROCESS_FILES_DIR = SCRIPT_DIR / "process_files"
+
+sys.path.insert(0, str(BOOKSAMPLE_DIR))
+from text_file_lookup import find_text_file
+
+# Corpora searched for {barcode}.txt, in order. Books can come from any of them;
+# without a source text, same-book distractors are unavailable but the rest works.
+SOURCE_DIRS = [
+    BOOKSAMPLE_DIR / name
+    for name in ("benchmarkbooks", "averybooks", "sample1000books")
+]
 
 # Add batchconnectors to path for imports
 sys.path.insert(0, str(BOOKSAMPLE_DIR / "batchconnectors"))
@@ -41,17 +50,35 @@ from topic_distractor_generator import (
     make_anachronistic_distractors,
     normalize_distractor_format,
     round_length,
+    MASK_MARKER,
 )
+
+# Default rejection rationales, keyed by answer type (see augment/augmentation-spec.md)
+sys.path.insert(0, str(BOOKSAMPLE_DIR.parent / "augment"))
+from gather_judgments import default_reject_reason
 
 METADATA_FRAME_TEMPLATE = (
     "The following paragraph comes from {title}, {article} {genre} "
-    "written by {author} and published in {date}. The topic sentence, which gives a preview of the paragraph's central theme, has been masked."
+    "written by {author} and published in {date}. The introductory sentence, which gives a preview of the paragraph's central theme, has been masked."
 )
 
 QUESTION_SUFFIX = (
-    "Write a topic sentence that would provide a suitable introduction "
-    "for this paragraph. Return only the topic sentence, without quotation marks:"
+    "Write an introductory sentence that would provide a suitable introduction "
+    "for this paragraph. Return only the introductory sentence, without quotation marks:"
 )
+
+
+def find_source_text(barcode: str) -> Path | None:
+    """
+    Return the first {barcode}.txt found across SOURCE_DIRS, or None.
+
+    Args:
+        barcode: The volume barcode
+
+    Returns:
+        Path to the source text, or None if it is in none of the corpora
+    """
+    return find_text_file(barcode, SOURCE_DIRS)
 
 
 def build_topic_metadata_frame(metadata: dict) -> str:
@@ -67,7 +94,7 @@ def build_topic_metadata_frame(metadata: dict) -> str:
         return (
             f"The following paragraph comes from {metadata['source_title']}, "
             f"{article} {genre} published in {metadata['source_date']}. "
-            f"The topic sentence, which gives a preview of the paragraph's central theme, has been masked."
+            f"The introductory sentence, which gives a preview of the paragraph's central theme, has been masked."
         )
 
     return METADATA_FRAME_TEMPLATE.format(
@@ -81,11 +108,11 @@ def build_topic_metadata_frame(metadata: dict) -> str:
 
 def create_trimmed_paragraph(passage: str, synopsis: str) -> str:
     """
-    Replace the synopsis in passage with [masked topic sentence].
+    Replace the synopsis in passage with the mask marker.
 
     Uses exact string replacement; falls back to fuzzy match if needed.
     """
-    marker = "[masked topic sentence]"
+    marker = MASK_MARKER
 
     # Try exact replacement
     if synopsis in passage:
@@ -140,7 +167,7 @@ def present_passage_for_approval(trimmed_paragraph: str, synopsis: str) -> str |
     """
     while True:
         print("\n" + "=" * 70)
-        print("PASSAGE (with masked topic sentence):")
+        print("PASSAGE (with masked introductory sentence):")
         print("-" * 70)
         print(trimmed_paragraph)
         print("-" * 70)
@@ -171,27 +198,88 @@ def present_passage_for_approval(trimmed_paragraph: str, synopsis: str) -> str |
             print("  Unrecognized option. Try again.")
 
 
-def present_distractor_for_approval(distractor: str, dtype: str) -> tuple:
+def prompt_for_context_judged() -> bool:
+    """
+    Ask whether this question is open to judgment about fit with the target context.
+
+    Only context-judged questions carry reject_reasons. Default is yes:
+    topic-sentence questions are constrained generation, where period fit is
+    exactly what's being judged.
+
+    Returns True if context_judged.
+    """
+    response = input(
+        "\nIs this question open to judgment on context fit (context_judged)? "
+        "(enter/y = yes, n = no): "
+    ).strip().lower()
+    return response not in ('n', 'no')
+
+
+def prompt_for_reject_reason(dtype: str) -> str:
+    """
+    Ask why a distractor should be rejected, defaulting by answer type.
+
+    A typed reason is used as-is. A bare enter falls back to the default
+    rationale for dtype from augment/gather_judgments.py. If the table has
+    nothing to say about dtype, a typed reason is required.
+
+    Args:
+        dtype: The answer type, used to look up the default
+
+    Returns:
+        The reason string (non-blank)
+    """
+    default = default_reject_reason(dtype)
+
+    while True:
+        if default:
+            print(f"  [enter = \"{default}\"]")
+        reason = input("  Reason for rejection is that the answer ...: ").strip()
+        if reason:
+            return reason
+        if default:
+            return default
+        print("  No default for this type — please type a reason")
+
+
+def present_distractor_for_approval(distractor: str, dtype: str,
+                                    collect_reason: bool = False) -> tuple:
     """
     Display a distractor for user approval.
 
-    Returns (distractor_string_or_None, final_type).
-    User can accept, edit, or reject.
+    Returns (distractor_string_or_None, final_type, reason).
+    User can accept, edit, or reject. A rejection rationale is collected
+    only when collect_reason is True (i.e. context-judged questions);
+    otherwise reason is "".
+
+    Unrecognized input is re-prompted rather than treated as a rejection:
+    the rationale prompt follows immediately, and typing a reason here by
+    mistake would otherwise discard the distractor silently.
     """
     print(f"\n  DISTRACTOR [{dtype}]:")
     print(f"  {distractor}")
 
-    response = input("  Accept (enter/y), edit (e), or reject (n)? ").strip().lower()
+    while True:
+        response = input("  Accept (enter/y), edit (e), or reject (n)? ").strip().lower()
 
-    if response in ('', 'y', 'yes'):
-        return distractor, dtype
-    elif response in ('e', 'edit'):
-        edited = input("  Enter replacement: ").strip()
-        if edited:
-            return edited, f"manual_{dtype}"
-        return distractor, dtype
-    else:
-        return None, dtype
+        if response in ('', 'y', 'yes'):
+            final, final_type = distractor, dtype
+            break
+        elif response in ('e', 'edit'):
+            edited = input("  Enter replacement: ").strip()
+            if edited:
+                final, final_type = edited, f"manual_{dtype}"
+            else:
+                final, final_type = distractor, dtype
+            break
+        elif response in ('n', 'no'):
+            return None, dtype, ""
+        else:
+            print("  Unrecognized option — enter/y to accept, e to edit, n to reject.")
+            print("  (The reason prompt comes next, after you accept.)")
+
+    reason = prompt_for_reject_reason(final_type) if collect_reason else ""
+    return final, final_type, reason
 
 
 def present_final_question(question_record: dict) -> bool:
@@ -206,13 +294,17 @@ def present_final_question(question_record: dict) -> bool:
     print(f"Metadata: {question_record['metadata_frame']}")
     print(f"Category: {question_record['question_category']}")
     print(f"Period words: {question_record['period_words_in_main_question']}")
+    print(f"Context judged: {question_record['context_judged']}")
     print("-" * 70)
 
+    reasons = question_record.get('reject_reasons', [])
     for i, (atype, astr) in enumerate(
         zip(question_record['answer_types'], question_record['answer_strings'])
     ):
         label = "GROUND TRUTH" if i == 0 else f"DISTRACTOR {i}"
         print(f"  {label} [{atype}]: {astr[:100]}{'...' if len(astr) > 100 else ''}")
+        if i < len(reasons) and reasons[i]:
+            print(f"    rejected because it {reasons[i]}")
 
     print("=" * 70)
 
@@ -282,6 +374,9 @@ def process_file(barcode: str, metadata: dict, sentences: list):
             print("  Skipped.")
             continue
 
+        # Is this question open to judgment on context fit?
+        context_judged = prompt_for_context_judged()
+
         # Generate same_book distractors
         print("\n  Generating same-book distractors...")
         similar_sentences = make_same_book_distractors(sentences, synopsis, passage)
@@ -289,11 +384,15 @@ def process_file(barcode: str, metadata: dict, sentences: list):
         # Present top 2 same_book distractors for approval
         approved_same_book = []
         approved_same_book_types = []
+        approved_same_book_reasons = []
         for j, sent in enumerate(similar_sentences[:2]):
-            distractor, dtype = present_distractor_for_approval(sent, "same_book")
+            distractor, dtype, reason = present_distractor_for_approval(
+                sent, "same_book", collect_reason=context_judged
+            )
             if distractor is not None:
                 approved_same_book.append(distractor)
                 approved_same_book_types.append(dtype)
+                approved_same_book_reasons.append(reason)
 
         # Generate anachronistic distractors
         gt_word_count = len(synopsis.split())
@@ -309,20 +408,28 @@ def process_file(barcode: str, metadata: dict, sentences: list):
         # Present anachronistic distractors for approval
         approved_anach = []
         approved_anach_types = []
+        approved_anach_reasons = []
         for astr, atype in zip(anach_strings, anach_types):
-            distractor, dtype = present_distractor_for_approval(astr, atype)
+            distractor, dtype, reason = present_distractor_for_approval(
+                astr, atype, collect_reason=context_judged
+            )
             if distractor is not None:
                 approved_anach.append(distractor)
                 approved_anach_types.append(dtype)
+                approved_anach_reasons.append(reason)
 
         # Prompt for manual distractor
         print("\n  Manual distractor (press enter to skip):")
         manual = input("  > ").strip()
         manual_strings = []
         manual_types = []
+        manual_reasons = []
         if manual:
             manual_strings.append(manual)
             manual_types.append("manual")
+            manual_reasons.append(
+                prompt_for_reject_reason("manual") if context_judged else ""
+            )
 
         # Assemble answer lists
         answer_strings = [synopsis] + approved_same_book + approved_anach + manual_strings
@@ -331,6 +438,10 @@ def process_file(barcode: str, metadata: dict, sentences: list):
             + approved_anach_types + manual_types
         )
         answer_probabilities = [1.0] + [0.0] * (len(answer_strings) - 1)
+        reject_reasons = (
+            [""] + approved_same_book_reasons
+            + approved_anach_reasons + manual_reasons
+        )
 
         # Build main_question
         main_question = trimmed_paragraph + "\n" + QUESTION_SUFFIX
@@ -355,9 +466,15 @@ def process_file(barcode: str, metadata: dict, sentences: list):
             "answer_types": answer_types,
             "answer_strings": answer_strings,
             "answer_probabilities": answer_probabilities,
+            "reject_reasons": reject_reasons,
+            "context_judged": 1 if context_judged else 0,
             "period_words_in_main_question": period_words,
             "passage": passage,
         }
+
+        # Rationales only exist for context-judged questions
+        if not context_judged:
+            del question_record["reject_reasons"]
 
         # Present final question for approval
         if not present_final_question(question_record):
@@ -417,16 +534,19 @@ def main():
             continue
 
         # Load the source text file and tokenize into sentences
-        source_path = SOURCE_DIR / f"{barcode}.txt"
-        if not source_path.exists():
-            print(f"Error: Source text not found: {source_path}")
-            continue
-
-        print(f"\nLoading source text from {source_path.name}...")
-        with open(source_path, 'r', encoding='utf-8') as f:
-            text = f.read()
-        sentences = sent_tokenize(text)
-        print(f"  {len(sentences)} sentences tokenized.")
+        source_path = find_source_text(barcode)
+        if source_path is None:
+            print(f"\nWarning: No source text found for {barcode} in any of:")
+            for source_dir in SOURCE_DIRS:
+                print(f"    {source_dir.name}/")
+            print("  Proceeding without same-book distractors.")
+            sentences = []
+        else:
+            print(f"\nLoading source text from {source_path.parent.name}/{source_path.name}...")
+            with open(source_path, 'r', encoding='utf-8') as f:
+                text = f.read()
+            sentences = sent_tokenize(text)
+            print(f"  {len(sentences)} sentences tokenized.")
 
         # Elicit metadata
         print(f"\nEliciting metadata for {barcode}...")

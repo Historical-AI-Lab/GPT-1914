@@ -24,7 +24,9 @@ import os
 import sys
 import argparse
 import requests
-from typing import Dict, Any, List, Optional
+import re
+from pathlib import Path
+from typing import Dict, Any, List, Set, Tuple, Optional
 
 # Download nltk data if needed
 import nltk
@@ -34,14 +36,43 @@ except LookupError:
     nltk.download('punkt', quiet=True)
     from nltk import sent_tokenize
 
+# Reuse the OpenRouter client shared by the modelasjudge and summary pipelines
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(REPO_ROOT / "modelasjudge"))
+from openrouter_client import make_openrouter_client, call_openrouter_chat
+
 # Constants
+OPENROUTER_MODEL = "google/gemini-3.5-flash-lite"
 OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL = "gpt-oss:20b"
-TEMPERATURE = 0.3
+OLLAMA_MODEL = "gpt-oss:20b"
+MODEL = OPENROUTER_MODEL  # default backend is OpenRouter
+TEMPERATURE = 0.3  # Ollama path only; call_openrouter_chat sends no temperature
+REASONING_EFFORT = "low"  # Gemini Flash endpoints reject effort="none"
 NUM_PREDICT = 1500  # Higher than description task (1000) to avoid truncation
 TIMEOUT = 120
 MAX_WORDS_PER_CHUNK = 700
 DEFAULT_SKIP_LINES = 25
+
+# Structured-output schema. Under strict:true every declared property is required,
+# so "nothing found" can no longer be signalled by an empty object -- hence "found".
+DIALOGUE_SCHEMA = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "character_dialogue",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "found": {"type": "boolean"},
+                "character": {"type": "string"},
+                "dialogue": {"type": "string"},
+                "summary": {"type": "string"},
+            },
+            "required": ["found", "character", "dialogue", "summary"],
+            "additionalProperties": False,
+        },
+    },
+}
 
 DIALOGUE_EXTRACTION_PROMPT = """You are identifying fictional passages that contain substantial dialogue from one of a group of characters. If dialogue from one of those characters is found, you extract it (for that character only), and return json with three parts: the character name, a single passage of dialogue from the character, and a one-sentence summary of the whole scene.
 
@@ -58,14 +89,14 @@ passage: "When Stephanus returned home after the encounter with Gideon he found 
 The child's intuitive sense prevented her from questioning further. 'Come with me, father.'"
 
 reply:
-{{"character": "Elsie", "dialogue": "Father, why are you so late tonight? And where is your horse?", "summary": "Stephanus returns home and finds Elsie, who questions him."}}
+{{"found": true, "character": "Elsie", "dialogue": "Father, why are you so late tonight? And where is your horse?", "summary": "Stephanus returns home and finds Elsie, who questions him."}}
 
 Note that interruptions in Elsie's dialogue ('Elsie asked' and an all-caps page header) have been silently removed. Note also that only a single passage of dialogue from a single character is provided; the transcription stops when Elsie stops speaking. 
 
 Finally, notice that the summary sentence covers the whole scene in a general way and does not focus on Elsie's dialogue.
 
-If there is no dialogue, or there is dialogue but not from any of the character names mentioned, return an empty json object:
-{{}}
+If there is no dialogue, or there is dialogue but not from any of the character names mentioned, set "found" to false and leave the other fields empty:
+{{"found": false, "character": "", "dialogue": "", "summary": ""}}
 
 character_list: {characters}
 passage: {passage}
@@ -77,6 +108,58 @@ reply:
 # COPIED FUNCTIONS from extract_character_descriptions.py
 # ============================================================================
 
+def clean_ocr_text(text: str) -> str:
+    """
+    Light OCR repair for early-print scans, applied before sentence tokenization.
+
+    Copied verbatim from connectors/make_cloze_questions.py:540 (commit 98e6eab).
+    Keep the three copies in sync; connectors/tests/test_passage_building.py::TestCleanOcrText
+    is the canonical test.
+
+    The edgebooks texts are mostly reflowed already, so the dominant artifact is
+    not hyphenation but short ALL-CAPS running heads and bare page numbers
+    dropped into the middle of paragraphs, which both split real sentences and
+    inject junk "sentences". Measured across the 92-volume corpus: running heads
+    and page numbers occur 3-65 per 10,000 words; hyphenated line-break splits
+    only 1-5 per 10,000 words.
+
+    This is deliberately shallow. It will occasionally drop a legitimate short
+    ALL-CAPS line (a shouted line of dialogue, a line of small-caps verse) and
+    will occasionally merge a genuine hyphenated compound broken across lines.
+    Both are far rarer than the artifacts being removed, and the interactive
+    edit_passage step remains available as a backstop.
+
+    Args:
+        text: Raw text as read from the volume file
+
+    Returns:
+        Cleaned text, with paragraph breaks (blank lines) preserved
+    """
+    # Rejoin words split by a hyphen at a line ending
+    text = re.sub(r'(\w)-[ \t]*\n[ \t]*(\w)', r'\1\2', text)
+
+    kept_lines = []
+    for line in text.split('\n'):
+        stripped = line.strip()
+        if stripped:
+            # Bare page or section number (arabic or roman)
+            if re.fullmatch(r'[\dIVXLC.,\-—\[\]() ]{1,12}', stripped):
+                continue
+            # Short ALL-CAPS line: a running head or chapter heading
+            if (len(stripped) < 45 and stripped == stripped.upper()
+                    and re.search(r'[A-Z]{3}', stripped)):
+                continue
+        kept_lines.append(line)
+    text = '\n'.join(kept_lines)
+
+    # Drop spaces the OCR inserted before punctuation
+    text = re.sub(r'[ \t]+([,;:.!?])', r'\1', text)
+    # Reflow paragraph interiors: a lone newline is a line wrap, not a break
+    text = re.sub(r'(?<!\n)\n(?!\n)', ' ', text)
+
+    return re.sub(r'[ \t]{2,}', ' ', text)
+
+
 def read_novel_text(file_path: str, skip_lines: int = DEFAULT_SKIP_LINES) -> str:
     """
     Read novel text file, skipping first N lines to avoid headers/TOC.
@@ -86,7 +169,8 @@ def read_novel_text(file_path: str, skip_lines: int = DEFAULT_SKIP_LINES) -> str
         skip_lines: Number of lines to skip at start (default 25)
 
     Returns:
-        Text content as string with skipped lines removed
+        Cleaned text: skipped lines removed, then clean_ocr_text applied to strip
+        running heads and page numbers and repair hyphenated line breaks
 
     Raises:
         FileNotFoundError: If file doesn't exist
@@ -97,7 +181,7 @@ def read_novel_text(file_path: str, skip_lines: int = DEFAULT_SKIP_LINES) -> str
 
     # Skip first N lines, join remainder
     remaining_text = ''.join(lines[skip_lines:])
-    return remaining_text
+    return clean_ocr_text(remaining_text)
 
 
 def chunk_text_at_sentences(text: str, max_words: int = MAX_WORDS_PER_CHUNK) -> List[str]:
@@ -142,7 +226,7 @@ def chunk_text_at_sentences(text: str, max_words: int = MAX_WORDS_PER_CHUNK) -> 
 
 def call_ollama_model(
     prompt: str,
-    model: str = MODEL,
+    model: str = OLLAMA_MODEL,
     temperature: float = TEMPERATURE,
     num_predict: int = NUM_PREDICT,
     timeout: int = TIMEOUT,
@@ -271,6 +355,95 @@ def load_character_names(character_file: str) -> List[List[str]]:
     return character_groups
 
 
+# ============================================================================
+# BACKEND DISPATCH — keep byte-identical with extract_character_descriptions.py
+# ============================================================================
+
+_CLIENT = None
+
+
+def get_client():
+    """Return a cached OpenRouter client, creating it on first use."""
+    global _CLIENT
+    if _CLIENT is None:
+        _CLIENT = make_openrouter_client()
+    return _CLIENT
+
+
+def call_openrouter_model(prompt: str, model: str, max_tokens: int,
+                          response_format: Optional[Dict[str, Any]] = None,
+                          debug: bool = False) -> Dict[str, Any]:
+    """
+    Generate text via OpenRouter, in the status-dict contract this module expects.
+
+    Wraps call_openrouter_chat, which raises after exhausting its own retries.
+
+    Uses REASONING_EFFORT rather than the client's "none" default: Gemini Flash
+    endpoints reject reasoning.effort="none" outright with "Reasoning is mandatory
+    for this endpoint". Measured reasoning_tokens at "low" is 0 for
+    gemini-3.5-flash-lite, so this costs nothing extra.
+    """
+    try:
+        text = call_openrouter_chat(
+            get_client(), model, prompt, max_tokens=max_tokens,
+            response_format=response_format, debug=debug,
+            reasoning_effort=REASONING_EFFORT
+        )
+        return {"status": "success", "response": (text or "").strip()}
+    except Exception as e:
+        return {"status": "error", "reason": f"{type(e).__name__}: {str(e)}"}
+
+
+def call_extraction_model(prompt: str, model: str, use_ollama: bool,
+                          response_format: Optional[Dict[str, Any]],
+                          num_predict: int, debug: bool = False) -> Dict[str, Any]:
+    """
+    Route one extraction call to Ollama or OpenRouter.
+
+    Args:
+        prompt: The prompt to send
+        model: Model identifier for whichever backend is selected
+        use_ollama: Send to local Ollama instead of OpenRouter
+        response_format: Structured-output spec, or None. Always None on the
+            Ollama path and whenever --no-schema is set
+        num_predict: Output token cap
+        debug: Print debug information
+
+    Returns:
+        Dict with 'status' and either 'response' or 'reason'
+    """
+    if use_ollama:
+        return call_ollama_model(prompt, model=model, num_predict=num_predict, debug=debug)
+    return call_openrouter_model(prompt, model=model, max_tokens=num_predict,
+                                 response_format=response_format, debug=debug)
+
+
+def _dialogue_from_found(parsed: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Interpret a structured-output response carrying an explicit "found" flag.
+
+    Under strict:true a response can validate while carrying blank strings, so
+    treat any blank required field as "empty" rather than emitting an entry with
+    no speaker or no dialogue.
+    """
+    if not parsed.get("found"):
+        return {"status": "empty"}
+
+    character = (parsed.get("character") or "").strip()
+    dialogue = (parsed.get("dialogue") or "").strip()
+    summary = (parsed.get("summary") or "").strip()
+
+    if not character or not dialogue:
+        return {"status": "empty"}
+
+    return {
+        "status": "success",
+        "character": character,
+        "dialogue": dialogue,
+        "summary": summary
+    }
+
+
 def parse_dialogue_response(response_text: str, debug: bool = False) -> Dict[str, Any]:
     """
     Parse LLM response to extract dialogue JSON.
@@ -314,6 +487,10 @@ def parse_dialogue_response(response_text: str, debug: bool = False) -> Dict[str
         if not parsed or len(parsed) == 0:
             return {"status": "empty"}
 
+        # Structured-output form: "found" gates the result
+        if "found" in parsed:
+            return _dialogue_from_found(parsed)
+
         # Valid dialogue extraction (all 3 fields required)
         if "character" in parsed and "dialogue" in parsed and "summary" in parsed:
             return {
@@ -337,6 +514,9 @@ def parse_dialogue_response(response_text: str, debug: bool = False) -> Dict[str
             if not parsed:
                 return {"status": "empty"}
 
+            if "found" in parsed:
+                return _dialogue_from_found(parsed)
+
             if "character" in parsed and "dialogue" in parsed and "summary" in parsed:
                 return {
                     "status": "success",
@@ -358,6 +538,8 @@ def extract_dialogue_from_chunk(
     characters: List[List[str]],
     chunk_index: int,
     model: str = MODEL,
+    use_ollama: bool = False,
+    use_schema: bool = True,
     debug: bool = False
 ) -> Dict[str, Any]:
     """
@@ -368,6 +550,8 @@ def extract_dialogue_from_chunk(
         characters: Character name groups [["Elsie", "Miss Elsie"], ["Stephanus"]]
         chunk_index: Index of this chunk (for tracking)
         model: Model to use for extraction
+        use_ollama: Route to local Ollama instead of OpenRouter
+        use_schema: Constrain the response with DIALOGUE_SCHEMA (OpenRouter only)
         debug: Print debug info
 
     Returns:
@@ -383,10 +567,14 @@ def extract_dialogue_from_chunk(
         passage=passage
     )
 
-    # Call LLM with num_predict=1500 (higher than description task)
-    result = call_ollama_model(
+    # Call LLM with num_predict=1500 (higher than description task).
+    # Ollama has no structured-output support, so it never gets a schema.
+    response_format = DIALOGUE_SCHEMA if (use_schema and not use_ollama) else None
+    result = call_extraction_model(
         prompt,
         model=model,
+        use_ollama=use_ollama,
+        response_format=response_format,
         num_predict=NUM_PREDICT,
         debug=debug
     )
@@ -491,6 +679,112 @@ def aggregate_dialogue_by_character(
     return results
 
 
+# ============================================================================
+# PROGRESS SIDECAR — keep byte-identical with extract_character_descriptions.py
+# ============================================================================
+
+def progress_path(output_path: str) -> str:
+    """
+    Sidecar path for an output file: X_characters.jsonl -> X_characters.progress.jsonl.
+
+    Derived rather than passed on the CLI, so resuming needs no extra flag.
+    """
+    base, ext = os.path.splitext(output_path)
+    return f"{base}.progress{ext or '.jsonl'}"
+
+
+def append_progress(path: str, record: Dict[str, Any]) -> None:
+    """
+    Append one record to the progress sidecar.
+
+    Opened and closed per record so an abrupt kill loses at most one chunk.
+    """
+    with open(path, 'a', encoding='utf-8') as f:
+        f.write(json.dumps(record, ensure_ascii=False) + '\n')
+
+
+def load_progress(path: str) -> Tuple[Optional[Dict[str, Any]], Set[int], List[Dict[str, Any]]]:
+    """
+    Read a progress sidecar written by an earlier run.
+
+    Chunks recorded as "success" or "empty" count as done. Chunks recorded only
+    as "error" are deliberately left out, so a run interrupted by a stretch of
+    Ollama failures retries them instead of treating them as settled.
+
+    Args:
+        path: Path to the .progress.jsonl sidecar
+
+    Returns:
+        (header, done_indices, successes) - successes sorted by chunk_index.
+        Returns (None, empty, empty) when no sidecar exists.
+    """
+    header: Optional[Dict[str, Any]] = None
+    done: Set[int] = set()
+    successes: List[Dict[str, Any]] = []
+
+    if not os.path.exists(path):
+        return header, done, successes
+
+    with open(path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                # Truncated final line from a hard kill; ignore it
+                continue
+
+            if record.get("record") == "header":
+                header = record
+                continue
+
+            index = record.get("chunk_index")
+            if index is None:
+                continue
+            if record.get("status") in ("success", "empty"):
+                done.add(index)
+            if record.get("status") == "success":
+                successes.append(record)
+
+    successes.sort(key=lambda r: r["chunk_index"])
+    return header, done, successes
+
+
+def check_progress_header(header: Optional[Dict[str, Any]],
+                          expected: Dict[str, Any], path: str) -> None:
+    """
+    Refuse to resume when the chunking has changed since the sidecar was written.
+
+    Chunk indices only mean something relative to a fixed chunking, which depends
+    on skip_lines, the source text and clean_ocr_text. If any of those moved, the
+    stored indices point at different text and resuming would silently mix two
+    different books' worth of chunk numbering.
+
+    Args:
+        header: Header record from load_progress, or None
+        expected: Field values this run computed; compared key by key
+        path: Sidecar path, for the error message
+
+    Exits with status 1 on any mismatch.
+    """
+    if header is None:
+        return
+
+    for key, want in expected.items():
+        got = header.get(key)
+        if got != want:
+            print(f"\nError: {path}", file=sys.stderr)
+            print(f"  was written with {key}={got!r}, but this run has {key}={want!r}.",
+                  file=sys.stderr)
+            print("  Chunk numbering would not match, so resuming is unsafe.",
+                  file=sys.stderr)
+            print("  Re-run with --restart to discard that progress and start over.",
+                  file=sys.stderr)
+            sys.exit(1)
+
+
 def process_novel_dialogue(
     character_file: str,
     text_file: str,
@@ -499,7 +793,10 @@ def process_novel_dialogue(
     start_chunk: int = 0,
     max_chunks: Optional[int] = None,
     model: str = MODEL,
-    debug: bool = False
+    debug: bool = False,
+    restart: bool = False,
+    use_ollama: bool = False,
+    use_schema: bool = True
 ) -> List[Dict[str, Any]]:
     """
     Process a novel to extract character dialogue.
@@ -510,9 +807,12 @@ def process_novel_dialogue(
         output_file: Path to output .jsonl file
         skip_lines: Lines to skip at file start
         start_chunk: Resume from this chunk (0-indexed)
-        max_chunks: Process only this many chunks (None for all)
+        max_chunks: Stop after chunk N, i.e. process chunks 0..N-1 (None for all)
         model: Model to use for extraction
         debug: Print debug info
+        restart: Discard any saved progress and extract from scratch
+        use_ollama: Route to local Ollama instead of OpenRouter
+        use_schema: Constrain responses with DIALOGUE_SCHEMA (OpenRouter only)
 
     Returns:
         List of aggregated dialogue by character
@@ -548,60 +848,118 @@ def process_novel_dialogue(
         print("Warning: Input file is empty after skipping header lines", file=sys.stderr)
 
     chunks = chunk_text_at_sentences(text, max_words=MAX_WORDS_PER_CHUNK)
-    print(f"Created {len(chunks)} chunks (~{MAX_WORDS_PER_CHUNK} words each)")
+
+    # Total before any ceiling: this defines chunk numbering and completeness
+    total_chunks = len(chunks)
+    print(f"Created {total_chunks} chunks (~{MAX_WORDS_PER_CHUNK} words each)")
 
     # Limit chunks if specified
     if max_chunks is not None:
         chunks = chunks[:max_chunks]
-        print(f"Limited to first {max_chunks} chunks for testing")
+        print(f"Ceiling: stopping after chunk {len(chunks) - 1}")
 
-    # Resume logic
-    raw_dialogue = []
-    if start_chunk > 0:
-        print(f"Resuming from chunk {start_chunk}...")
-
-    # Process chunks
-    print(f"\nProcessing chunks {start_chunk} to {len(chunks)-1}...\n")
-
-    for i in range(start_chunk, len(chunks)):
-        chunk = chunks[i]
-        chunk_preview = chunk[:60].replace('\n', ' ')
-        print(f"[{i+1}/{len(chunks)}] {chunk_preview}...", end=" ")
-
-        # Debug only on first chunk
-        show_debug = debug and i == start_chunk
-
-        # Extract dialogue
-        result = extract_dialogue_from_chunk(
-            chunk,
-            characters=character_groups,
-            chunk_index=i,
-            model=model,
-            debug=show_debug
-        )
-
-        if result["status"] == "success":
-            char = result["character"]
-            dialogue_preview = result["dialogue"][:40].replace('\n', ' ')
-            print(f"✓ {char}: {dialogue_preview}...")
-            raw_dialogue.append(result)
-
-        elif result["status"] == "empty":
-            print("○ (no dialogue)")
-
-        else:  # error
-            error_msg = result.get("reason", "Unknown error")[:50]
-            print(f"✗ {error_msg}")
-
-    # Aggregate dialogue by character
-    print("\nAggregating dialogue by character...")
-    aggregated = aggregate_dialogue_by_character(raw_dialogue, character_groups)
-
-    # Create output directory if needed
+    # Create output directory if needed (the sidecar lands here too)
     output_dir = os.path.dirname(output_file)
     if output_dir and not os.path.exists(output_dir):
         os.makedirs(output_dir, exist_ok=True)
         print(f"Created output directory: {output_dir}")
+
+    # Resume logic
+    prog_path = progress_path(output_file)
+    if restart and os.path.exists(prog_path):
+        os.remove(prog_path)
+        print(f"--restart: discarded previous progress ({prog_path})")
+
+    header, done, raw_dialogue = load_progress(prog_path)
+    check_progress_header(
+        header,
+        {"skip_lines": skip_lines, "n_chunks": total_chunks,
+         "n_character_groups": len(character_groups)},
+        prog_path
+    )
+    # Model is recorded but deliberately kept out of the hard check above: swapping
+    # models doesn't shift chunk boundaries, so the data stays valid - just mixed.
+    if header is not None and header.get("model") not in (None, model):
+        print(f"Warning: progress file was written with model={header['model']}, "
+              f"this run uses {model}.")
+        print("  Chunks already done keep their original model's output.")
+
+    if header is None:
+        append_progress(prog_path, {
+            "record": "header",
+            "source": text_file,
+            "character_file": character_file,
+            "skip_lines": skip_lines,
+            "n_chunks": total_chunks,
+            "n_character_groups": len(character_groups),
+            "model": model
+        })
+
+    # Drop anything above the current ceiling, so lowering it on a later run
+    # doesn't pull out-of-range chunks back into the aggregation
+    raw_dialogue = [r for r in raw_dialogue if r["chunk_index"] < len(chunks)]
+
+    already_done = len(done & set(range(len(chunks))))
+    if already_done:
+        print(f"Resuming: {already_done} of {len(chunks)} chunks already done")
+
+    # Process chunks
+    print(f"\nProcessing chunks {start_chunk} to {len(chunks)-1}...\n")
+
+    interrupted = False
+    first_processed = True
+    try:
+        for i in range(start_chunk, len(chunks)):
+            if i in done:
+                continue
+
+            chunk = chunks[i]
+            chunk_preview = chunk[:60].replace('\n', ' ')
+            print(f"[{i+1}/{len(chunks)}] {chunk_preview}...", end=" ")
+
+            # Debug only on the first chunk actually processed this run
+            show_debug = debug and first_processed
+            first_processed = False
+
+            # Extract dialogue
+            result = extract_dialogue_from_chunk(
+                chunk,
+                characters=character_groups,
+                chunk_index=i,
+                model=model,
+                use_ollama=use_ollama,
+                use_schema=use_schema,
+                debug=show_debug
+            )
+
+            # Record before reacting, so a crash here still leaves a trace
+            append_progress(prog_path, result)
+            if result["status"] in ("success", "empty"):
+                done.add(i)
+
+            if result["status"] == "success":
+                char = result["character"]
+                dialogue_preview = result["dialogue"][:40].replace('\n', ' ')
+                print(f"✓ {char}: {dialogue_preview}...")
+                raw_dialogue.append(result)
+
+            elif result["status"] == "empty":
+                print("○ (no dialogue)")
+
+            else:  # error
+                error_msg = result.get("reason", "Unknown error")[:50]
+                print(f"✗ {error_msg}")
+
+    except KeyboardInterrupt:
+        interrupted = True
+        print("\n\nInterrupted. Aggregating the chunks processed so far...")
+
+    # Keep chronological order even when a retried error chunk was filled in late
+    raw_dialogue.sort(key=lambda r: r["chunk_index"])
+
+    # Aggregate dialogue by character
+    print("\nAggregating dialogue by character...")
+    aggregated = aggregate_dialogue_by_character(raw_dialogue, character_groups)
 
     # Write output
     print(f"Writing {len(aggregated)} characters to {output_file}")
@@ -609,12 +967,27 @@ def process_novel_dialogue(
         for char_entry in aggregated:
             f.write(json.dumps(char_entry, ensure_ascii=False) + '\n')
 
+    # The sidecar goes away only once every chunk in the book is accounted for.
+    # Coverage, not "the loop ended": --start-chunk can reach the end with early
+    # chunks never attempted, and the batch drivers rely on this file to tell
+    # a partial extraction from a finished one.
+    complete = set(range(total_chunks)) <= done
+    if complete:
+        os.remove(prog_path)
+        print(f"All {total_chunks} chunks done; removed progress file")
+    else:
+        remaining = total_chunks - len(done & set(range(total_chunks)))
+        print(f"Progress saved: {remaining} of {total_chunks} chunks still to do")
+        print(f"  Re-run the same command to continue ({prog_path})")
+
     # Print summary
     print(f"\n=== Summary ===")
-    print(f"Chunks processed: {len(chunks) - start_chunk}")
+    print(f"Chunks done: {len(done & set(range(total_chunks)))}/{total_chunks}")
     print(f"Dialogue passages found: {len(raw_dialogue)}")
     print(f"Characters with dialogue: {len(aggregated)}")
     print(f"Output: {output_file}")
+    if interrupted:
+        print("Status: INTERRUPTED (output above covers completed chunks only)")
 
     return aggregated
 
@@ -654,7 +1027,13 @@ def main():
         "--max-chunks",
         type=int,
         default=None,
-        help="Process only N chunks for testing (default: all)"
+        help="Stop after chunk N: processes chunks 0 to N-1 (default: all)"
+    )
+
+    parser.add_argument(
+        "--restart",
+        action="store_true",
+        help="Discard saved progress and extract from scratch"
     )
 
     parser.add_argument(
@@ -671,19 +1050,31 @@ def main():
     )
 
     parser.add_argument(
-        "--mistral",
+        "--model",
+        default=None,
+        help=f"Model identifier (default: {OPENROUTER_MODEL}, or {OLLAMA_MODEL} with --ollama)"
+    )
+
+    parser.add_argument(
+        "--ollama",
         action="store_true",
-        help="Use mistral-small:24b instead of gpt-oss:20b"
+        help="Use local Ollama instead of OpenRouter (replaces the old --mistral)"
+    )
+
+    parser.add_argument(
+        "--no-schema",
+        action="store_true",
+        help="Don't constrain the response with a JSON schema (OpenRouter only)"
     )
 
     args = parser.parse_args()
 
-    # Determine model
-    if args.mistral:
-        model = "mistral-small:24b"
-    else:
-        model = MODEL
-    print(f"Using model: {model}")
+    # Determine backend and model
+    model = args.model or (OLLAMA_MODEL if args.ollama else OPENROUTER_MODEL)
+    backend = "Ollama" if args.ollama else "OpenRouter"
+    use_schema = not args.no_schema and not args.ollama
+    print(f"Using model: {model} via {backend}"
+          f"{' with structured output' if use_schema else ''}")
 
     # Process the novel
     try:
@@ -695,7 +1086,10 @@ def main():
             start_chunk=args.start_chunk,
             max_chunks=args.max_chunks,
             model=model,
-            debug=args.debug
+            debug=args.debug,
+            restart=args.restart,
+            use_ollama=args.ollama,
+            use_schema=use_schema
         )
     except FileNotFoundError as e:
         print(f"Error: {e}", file=sys.stderr)
@@ -705,9 +1099,6 @@ def main():
         sys.exit(1)
     except UnicodeDecodeError as e:
         print(f"Error: File encoding problem: {e}", file=sys.stderr)
-        sys.exit(1)
-    except KeyboardInterrupt:
-        print("\n\nInterrupted by user. Partial results may have been written.", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
         print(f"Error: {type(e).__name__}: {e}", file=sys.stderr)

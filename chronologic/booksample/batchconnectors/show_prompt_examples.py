@@ -62,7 +62,6 @@ def main():
         # Reconstruct the pieces that generate_anachronistic would use
         ground_truth = rec['answer_strings'][0]
         gt_words = len(ground_truth.split())
-        is_clause = cat.endswith('clause')
 
         metadata_prefix = rec['metadata_frame']
         # The main_question field contains "passage\n\nprompt"
@@ -70,7 +69,7 @@ def main():
 
         question_text = f"{metadata_prefix}\n\n{main_q}"
 
-        length_spec = format_length_spec(gt_words, is_clause)
+        length_spec = format_length_spec(gt_words)
         term_spec = get_term_spec(cat)
 
         full_prompt = ANACHRONISTIC_PROMPT.format(
@@ -81,7 +80,6 @@ def main():
 
         lines.append("=" * 72)
         lines.append(f"CATEGORY: {cat}")
-        lines.append(f"  is_clause: {is_clause}")
         lines.append(f"  ground_truth ({gt_words} words): {ground_truth[:120]}...")
         lines.append(f"  length_spec: {length_spec}")
         lines.append(f"  term_spec: {term_spec}")

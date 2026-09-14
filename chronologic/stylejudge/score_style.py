@@ -183,23 +183,42 @@ def _resolve(args) -> dict:
         sys.exit(f"ERROR: benchmark {benchmark_path} not found (candidate {candidate_label!r}, "
                  f"benchmark_version {benchmark_version!r}); pass --benchmark explicitly.")
 
-    reference = Path(args.reference) if args.reference else tp.DEFAULT_REFERENCE_OUT
-    e1_model_dir = Path(args.e1_model_dir) if args.e1_model_dir else tp.DEFAULT_E1_MODEL_DIR
-    e2_run_dir = Path(args.e2_run_dir) if args.e2_run_dir else tp.DEFAULT_E2_RUN_DIR
-    temperature_fit = Path(args.temperature_fit) if args.temperature_fit else tp.DEFAULT_TEMPERATURE_FIT
-    length_bin_edges = (Path(args.length_bin_edges) if args.length_bin_edges
-                        else tp.DEFAULT_LENGTH_BIN_EDGES)
+    if args.e3 and args.channels not in (None, "date"):
+        sys.exit(f"ERROR: --e3 implies --channels date; got --channels {args.channels!r} "
+                 f"(the E3 artifacts are date-side only).")
+    channels = args.channels or ("date" if args.e3 else "both")
 
+    if args.e3:
+        reference = Path(args.reference) if args.reference else tp.DEFAULT_REFERENCE_OUT_E3
+        e1_model_dir = Path(args.e1_model_dir) if args.e1_model_dir else tp.DEFAULT_E1_MODEL_DIR_E3
+        temperature_fit = (Path(args.temperature_fit) if args.temperature_fit
+                           else tp.DEFAULT_TEMPERATURE_FIT_E3)
+        length_bin_edges = (Path(args.length_bin_edges) if args.length_bin_edges
+                            else tp.DEFAULT_LENGTH_BIN_EDGES_E3)
+    else:
+        reference = Path(args.reference) if args.reference else tp.DEFAULT_REFERENCE_OUT
+        e1_model_dir = Path(args.e1_model_dir) if args.e1_model_dir else tp.DEFAULT_E1_MODEL_DIR
+        temperature_fit = (Path(args.temperature_fit) if args.temperature_fit
+                           else tp.DEFAULT_TEMPERATURE_FIT)
+        length_bin_edges = (Path(args.length_bin_edges) if args.length_bin_edges
+                            else tp.DEFAULT_LENGTH_BIN_EDGES)
+    e2_run_dir = Path(args.e2_run_dir) if args.e2_run_dir else tp.DEFAULT_E2_RUN_DIR
+
+    # Channel-aware default output names so an --e3 / single-channel run never
+    # clobbers the frozen lexical `both` artifacts (report JSON/MD *and* the
+    # answers_q intermediate). Matches the plan's example filenames
+    # (`...__0.8__e3.json`, `...__auth.json`).
+    chan_sfx = "__e3" if args.e3 else ("" if channels == "both" else f"__{channels}")
     ctag = naming.candidate_tag(candidate_label)
     label_tag = naming.sanitize(candidate_label)
     out_dir = Path(args.out_dir)
     json_out = (Path(args.json_out) if args.json_out
-               else out_dir / f"style_report_{label_tag}__{benchmark_version}.json")
+               else out_dir / f"style_report_{label_tag}__{benchmark_version}{chan_sfx}.json")
     report_path = (Path(args.report) if args.report
-                  else out_dir / f"style_report_{label_tag}__{benchmark_version}.md")
+                  else out_dir / f"style_report_{label_tag}__{benchmark_version}{chan_sfx}.md")
     intermediate_dir = Path(args.intermediate_dir)
     answers_q_out = (Path(args.answers_q_out) if args.answers_q_out
-                     else intermediate_dir / f"answers_q_{ctag}__{benchmark_version}.jsonl")
+                     else intermediate_dir / f"answers_q_{ctag}__{benchmark_version}{chan_sfx}.jsonl")
 
     return dict(
         free_gen=free_gen, free_gen_path=free_gen_path,
@@ -208,7 +227,7 @@ def _resolve(args) -> dict:
         benchmark_path=benchmark_path, reference=reference, e1_model_dir=e1_model_dir,
         e2_run_dir=e2_run_dir, temperature_fit=temperature_fit, length_bin_edges=length_bin_edges,
         json_out=json_out, report_path=report_path, intermediate_dir=intermediate_dir,
-        answers_q_out=answers_q_out,
+        answers_q_out=answers_q_out, channels=channels, e3=bool(args.e3),
     )
 
 
@@ -260,40 +279,70 @@ def _build_answer_rows(free_gen: dict, free_gen_path: Path, benchmark_path: Path
 # ---------------------------------------------------------------------------
 
 def _score_answers(answer_rows, edges, reference_by_year, *, e1_model_dir, e2_run_dir,
-                   temperature_fit, h, max_length, batch_size, device):
+                   temperature_fit, h, max_length, batch_size, device,
+                   do_date=True, do_auth=True):
     texts = [a["text"] for a in answer_rows]
     n_words_list = [count_words(t) for t in texts]
 
-    temperature = tp.load_temperature(temperature_fit)
-    print(f"  E1 scoring at T*={temperature:.4f} ({e1_model_dir})", file=sys.stderr)
-    e1_features = tp.score_e1(texts, e1_model_dir, temperature)
+    if do_date:
+        temperature = tp.load_temperature(temperature_fit)
+        print(f"  E1 scoring at T*={temperature:.4f} ({e1_model_dir})", file=sys.stderr)
+        e1_features = tp.score_e1(texts, e1_model_dir, temperature, device=device,
+                                  max_length=max_length, batch_size=batch_size)
+    else:
+        print("  E1/date channel skipped (--channels auth)", file=sys.stderr)
+        e1_features = [None] * len(texts)
 
-    print(f"  E2 scoring ({e2_run_dir})", file=sys.stderr)
-    p_synthetic = tp.score_e2(texts, e2_run_dir, max_length, batch_size, device)
+    if do_auth:
+        print(f"  E2 scoring ({e2_run_dir})", file=sys.stderr)
+        p_synthetic = tp.score_e2(texts, e2_run_dir, max_length, batch_size, device)
+    else:
+        print("  E2/auth channel skipped (--channels date)", file=sys.stderr)
+        p_synthetic = [None] * len(texts)
 
     out_rows = []
-    for a, (mean, entropy, multimodality), p_syn, n_words in zip(
+    for a, feat, p_syn, n_words in zip(
             answer_rows, e1_features, p_synthetic, n_words_list):
         target_date = a["true_date"]
+        mean, entropy, multimodality = (None, None, None) if feat is None else feat
         q_e1, q_e2, window_n, window_vols, date_window_vols, e1_null_window_mean = tp.qscore_answer(
             mean, p_syn, target_date, n_words, edges, reference_by_year, h)
-        out_rows.append({
+        row = {
             "row_id": a["row_id"], "model": a["model"], "source_file": a.get("source_file"),
             "question_number": a["question_number"], "true_date": target_date,
             "e1_mean": mean, "e1_entropy": entropy, "e1_multimodality": multimodality,
-            "e1_signed_residual": mean - target_date, "e1_null_window_mean": e1_null_window_mean,
+            "e1_signed_residual": None if mean is None else mean - target_date,
+            "e1_null_window_mean": e1_null_window_mean,
             "e2_p_synthetic": p_syn, "q_e1": q_e1, "q_e2": q_e2,
             "window_n_passages": window_n, "window_n_volumes": window_vols,
             "date_window_n_volumes": date_window_vols, "window_empty": window_n == 0,
             "n_words": n_words, "length_bin": tp.length_bin(n_words, edges),
-        })
+        }
+        if feat is None:
+            row["skip_reason"] = "fragment"
+        out_rows.append(row)
     return out_rows
 
 
-def _valid(answers_q):
-    """Same predicate as typicality.cmd_model_report."""
-    return [a for a in answers_q if not a.get("window_empty")
-           and not math.isnan(a["q_e1"]) and not math.isnan(a["q_e2"])]
+def _finite(x):
+    return x is not None and not math.isnan(x)
+
+
+def _valid(answers_q, *, do_date=True, do_auth=True):
+    """One `valid` set for the run: an answer survives iff its window is
+    non-empty and every ACTIVE channel's q is finite (not None -- an E3
+    abstention -- and not NaN). Inactive channels are not required, so a
+    `--channels date` run isn't gated on E2 and vice versa. `both` keeps the
+    original behavior (both channels required)."""
+    def ok(a):
+        if a.get("window_empty"):
+            return False
+        if do_date and not _finite(a.get("q_e1")):
+            return False
+        if do_auth and not _finite(a.get("q_e2")):
+            return False
+        return True
+    return [a for a in answers_q if ok(a)]
 
 
 # ---------------------------------------------------------------------------
@@ -392,6 +441,9 @@ def run(args):
     resolved = _resolve(args)
     candidate_label = resolved["candidate_label"]
     benchmark_version = resolved["benchmark_version"]
+    channels = resolved["channels"]
+    do_date = channels in ("both", "date")
+    do_auth = channels in ("both", "auth")
 
     print(f"  loading reference {resolved['reference']}", file=sys.stderr)
     reference_rows = tp.read_jsonl(resolved["reference"])
@@ -420,18 +472,30 @@ def run(args):
         answers_q = _score_answers(
             answer_rows, edges, reference_by_year, e1_model_dir=resolved["e1_model_dir"],
             e2_run_dir=resolved["e2_run_dir"], temperature_fit=resolved["temperature_fit"],
-            h=args.h, max_length=args.max_length, batch_size=args.batch_size, device=args.device)
+            h=args.h, max_length=args.max_length, batch_size=args.batch_size, device=args.device,
+            do_date=do_date, do_auth=do_auth)
         resolved["answers_q_out"].parent.mkdir(parents=True, exist_ok=True)
         tp.write_jsonl(answers_q, resolved["answers_q_out"])
         print(f"  wrote {resolved['answers_q_out']}", file=sys.stderr)
 
-    valid = _valid(answers_q)
+    valid = _valid(answers_q, do_date=do_date, do_auth=do_auth)
     n_excluded_empty_window = len(answers_q) - len(valid)
     if n_excluded_empty_window:
         print(f"  excluding {n_excluded_empty_window}/{len(answers_q)} answers with "
              f"empty/NaN windows from all model-level statistics", file=sys.stderr)
     if not valid:
         sys.exit("ERROR: no valid (non-empty-window) answers to score")
+
+    # Date-channel abstentions (E3 declines sub-sentential fragments; the
+    # lexical E1 never does, so this is 0 on that path). Denominator is every
+    # answer the date model was asked to score.
+    n_e1_candidates = len(answers_q) if do_date else 0
+    n_e1_abstained = sum(1 for a in answers_q
+                         if a.get("skip_reason") == "fragment" or a.get("q_e1") is None) \
+        if do_date else 0
+    if n_e1_abstained:
+        print(f"  E1/E3 abstained on {n_e1_abstained}/{n_e1_candidates} answers (fragments)",
+             file=sys.stderr)
 
     lovo_rows = _lovo_with_cache(
         reference_rows, args.h, edges, reference_path=resolved["reference"],
@@ -441,15 +505,20 @@ def run(args):
 
     # Corrected years residuals: raw signed residual minus the SAME window
     # mean qscore_answer already computed (e1_null_window_mean), per the
-    # wiring plan's year-baseline-correction section.
-    corrected_residuals = [a["e1_signed_residual"] - a["e1_null_window_mean"] for a in valid]
-    raw_residuals = [a["e1_signed_residual"] for a in valid]
+    # wiring plan's year-baseline-correction section. Only meaningful when the
+    # date channel ran -- otherwise e1_signed_residual is None.
+    if do_date:
+        corrected_residuals = [a["e1_signed_residual"] - a["e1_null_window_mean"] for a in valid]
+        raw_residuals = [a["e1_signed_residual"] for a in valid]
+        drift_mean_raw = _mean(raw_residuals)
+        dispersion_mae_raw = _mean([abs(r) for r in raw_residuals])
+    else:
+        corrected_residuals = None
+        drift_mean_raw = dispersion_mae_raw = float("nan")
 
     real_stats = tp.model_stats_from_qs(
         [a["q_e1"] for a in valid], [a["q_e2"] for a in valid], corrected_residuals,
         quantile_grid_n=args.quantile_grid_n)
-    drift_mean_raw = _mean(raw_residuals)
-    dispersion_mae_raw = _mean([abs(r) for r in raw_residuals])
 
     profile = {}
     for r in valid:
@@ -477,9 +546,10 @@ def run(args):
     null_drift_mean = _mean([d.get("drift_years", float("nan")) for d in null_draws])
     null_dispersion_mae = _mean([d.get("dispersion_mae", float("nan")) for d in null_draws])
 
-    e1_headline = tp.e1_period_fidelity(real_stats["W1"], w0)
-    e2_headline = tp.e2_authenticity_fidelity(real_stats["T_E2"], mu0)
-    d_e1 = max(0.0, real_stats["W1"] - w0) / (0.5 - w0) if w0 < 0.5 else float("nan")
+    e1_headline = tp.e1_period_fidelity(real_stats["W1"], w0) if do_date else None
+    e2_headline = tp.e2_authenticity_fidelity(real_stats["T_E2"], mu0) if do_auth else None
+    d_e1 = (max(0.0, real_stats["W1"] - w0) / (0.5 - w0) if w0 < 0.5 else float("nan")) \
+        if do_date else float("nan")
 
     print(f"  two-way bootstrap ({args.n_boot} draws)...", file=sys.stderr)
     boot_stats = tp.two_way_bootstrap(
@@ -527,67 +597,79 @@ def run(args):
         str(resolved["e2_run_dir"]), args.h, args.seed, args.n_boot, args.n_null,
     ]).encode("utf-8")).hexdigest()[:16]
 
-    result = {
-        "schema_version": SCHEMA_VERSION,
-        "model": {
-            "name": candidate_label, "candidate_label": candidate_label,
-            "candidate_model": resolved["candidate_model"],
-            "candidate_effort": resolved["candidate_effort"],
-            "benchmark_version": benchmark_version, "benchmark_path": str(resolved["benchmark_path"]),
-            "free_gen_path": str(resolved["free_gen_path"]),
-            "n_answers": len(valid), "n_answers_e1": real_stats["n_e1"],
-            "n_answers_e2": real_stats["n_e2"], **answer_counts,
-            "n_excluded_empty_window": n_excluded_empty_window,
-        },
-        "e1": {
-            "headline": {"name": "period_fidelity", "score": e1_headline,
-                        "ci95": list(e1_headline_ci)},
-            "wasserstein": {"w1_observed": real_stats["W1"], "w1_ci95": list(w1_ci),
-                           "w1_null_mean": w0, "w1_null_sd": w0_sd, "w1_null_ci95": list(w0_ci95),
-                           "normalized_excess_distance": d_e1},
-            "years": {"drift_mean": real_stats["drift_years"], "drift_ci95": list(drift_years_ci),
-                     "dispersion_mae": real_stats["dispersion_mae"],
-                     "dispersion_ci95": list(dispersion_mae_ci),
-                     "drift_mean_raw": drift_mean_raw, "dispersion_mae_raw": dispersion_mae_raw,
-                     "null_drift_mean": null_drift_mean, "null_dispersion_mae": null_dispersion_mae,
-                     "baseline_correction": "per_answer_window_mean"},
-            "conformal": {"drift": real_stats["T_drift"], "drift_ci95": list(t_drift_ci),
-                         "drift_null_center": 0.5, "dispersion": real_stats["T_disp"],
-                         "dispersion_ci95": list(t_disp_ci), "dispersion_null_center": 0.25},
-            "quantile_curve": ({"grid": q_curve["grid"].tolist(),
-                               "model_quantiles": q_curve["model_quantiles"].tolist(),
-                               "deviation": q_curve["deviation"].tolist()}
-                              if q_curve is not None else None),
-            "quantile_null_band": ({"grid": null_grid.tolist(), "median": null_band_median.tolist(),
-                                   "lower_95": null_band_lo.tolist(), "upper_95": null_band_hi.tolist()}
-                                  if null_grid is not None else None),
-        },
-        "e2": {
-            "headline": {"name": "authenticity_fidelity", "score": e2_headline,
-                        "ci95": list(e2_headline_ci)},
-            "conformal": {"mean_q": real_stats["T_E2"], "mean_q_ci95": list(t_e2_ci),
-                         "null_center": mu0, "null_center_source": "pseudo_model_mean"},
-        },
-        "diagnostics": {"ks": ks, "ks_null_mean": ks_null_mean,
-                        "median_window_n_volumes": median_window_n_volumes,
-                        "thin_cell_frac": thin_cell_frac},
-        "bootstrap": {"n_boot": args.n_boot, "seed": args.seed, "item_clustered": True,
-                     "item_cluster_key": "question_number", "reference_volume_clustered": True,
-                     "null_baselines_held_fixed": True,
-                     "null_baselines_held_fixed_note": METHOD_NOTE},
-        "null_simulation": {"n_pseudo_models": args.n_null,
-                            "matched_on": ["date", "length", "candidate_suite_structure"],
-                            "unmet_slots": total_unmet},
-        "provenance": {"style_run_id": style_run_id, "produced_by": "stylejudge/score_style.py",
-                      "produced_at": datetime.now(timezone.utc).isoformat(),
-                      "git_head": git_head(), "reference_path": str(resolved["reference"]),
-                      "reference_sha256": _sha256_file(resolved["reference"]),
-                      "e1_model_dir": str(resolved["e1_model_dir"]),
-                      "e2_run_dir": str(resolved["e2_run_dir"]), "temperature": tp.load_temperature(
-                          resolved["temperature_fit"]),
-                      "length_bin_edges": str(resolved["length_bin_edges"]), "h": args.h,
-                      "quantile_method": "inverted_cdf"},
+    e1_block = {
+        "headline": {"name": "period_fidelity", "score": e1_headline,
+                    "ci95": list(e1_headline_ci)},
+        "n_abstained": n_e1_abstained,
+        "abstention_rate": (n_e1_abstained / n_e1_candidates
+                            if n_e1_candidates else float("nan")),
+        "wasserstein": {"w1_observed": real_stats["W1"], "w1_ci95": list(w1_ci),
+                       "w1_null_mean": w0, "w1_null_sd": w0_sd, "w1_null_ci95": list(w0_ci95),
+                       "normalized_excess_distance": d_e1},
+        "years": {"drift_mean": real_stats["drift_years"], "drift_ci95": list(drift_years_ci),
+                 "dispersion_mae": real_stats["dispersion_mae"],
+                 "dispersion_ci95": list(dispersion_mae_ci),
+                 "drift_mean_raw": drift_mean_raw, "dispersion_mae_raw": dispersion_mae_raw,
+                 "null_drift_mean": null_drift_mean, "null_dispersion_mae": null_dispersion_mae,
+                 "baseline_correction": "per_answer_window_mean"},
+        "conformal": {"drift": real_stats["T_drift"], "drift_ci95": list(t_drift_ci),
+                     "drift_null_center": 0.5, "dispersion": real_stats["T_disp"],
+                     "dispersion_ci95": list(t_disp_ci), "dispersion_null_center": 0.25},
+        "quantile_curve": ({"grid": q_curve["grid"].tolist(),
+                           "model_quantiles": q_curve["model_quantiles"].tolist(),
+                           "deviation": q_curve["deviation"].tolist()}
+                          if q_curve is not None else None),
+        "quantile_null_band": ({"grid": null_grid.tolist(), "median": null_band_median.tolist(),
+                               "lower_95": null_band_lo.tolist(), "upper_95": null_band_hi.tolist()}
+                              if null_grid is not None else None),
+    } if do_date else None
+
+    e2_block = {
+        "headline": {"name": "authenticity_fidelity", "score": e2_headline,
+                    "ci95": list(e2_headline_ci)},
+        "conformal": {"mean_q": real_stats["T_E2"], "mean_q_ci95": list(t_e2_ci),
+                     "null_center": mu0, "null_center_source": "pseudo_model_mean"},
+    } if do_auth else None
+
+    # Assembled in the historical key order (schema/model/e1/e2/diagnostics/...)
+    # so a `both` run's JSON diffs cleanly against the frozen lexical reports --
+    # `channels` and the `_e3`/abstention fields are the only additions.
+    result = {"schema_version": SCHEMA_VERSION, "channels": channels}
+    result["model"] = {
+        "name": candidate_label, "candidate_label": candidate_label,
+        "candidate_model": resolved["candidate_model"],
+        "candidate_effort": resolved["candidate_effort"],
+        "benchmark_version": benchmark_version, "benchmark_path": str(resolved["benchmark_path"]),
+        "free_gen_path": str(resolved["free_gen_path"]),
+        "n_answers": len(valid), "n_answers_e1": real_stats["n_e1"],
+        "n_answers_e2": real_stats["n_e2"], **answer_counts,
+        "n_excluded_empty_window": n_excluded_empty_window,
     }
+    if e1_block is not None:
+        result["e1"] = e1_block
+    if e2_block is not None:
+        result["e2"] = e2_block
+    result["diagnostics"] = {"ks": ks, "ks_null_mean": ks_null_mean,
+                             "median_window_n_volumes": median_window_n_volumes,
+                             "thin_cell_frac": thin_cell_frac}
+    result["bootstrap"] = {"n_boot": args.n_boot, "seed": args.seed, "item_clustered": True,
+                           "item_cluster_key": "question_number",
+                           "reference_volume_clustered": True, "null_baselines_held_fixed": True,
+                           "null_baselines_held_fixed_note": METHOD_NOTE}
+    result["null_simulation"] = {"n_pseudo_models": args.n_null,
+                                 "matched_on": ["date", "length", "candidate_suite_structure"],
+                                 "unmet_slots": total_unmet}
+    result["provenance"] = {
+        "style_run_id": style_run_id, "produced_by": "stylejudge/score_style.py",
+        "produced_at": datetime.now(timezone.utc).isoformat(),
+        "git_head": git_head(), "reference_path": str(resolved["reference"]),
+        "reference_sha256": _sha256_file(resolved["reference"]),
+        "e1_model_dir": str(resolved["e1_model_dir"]) if do_date else None,
+        "date_model": (("deberta-e3" if resolved["e3"] else "lexical-e1") if do_date else None),
+        "e2_run_dir": str(resolved["e2_run_dir"]) if do_auth else None,
+        "temperature": (tp.load_temperature(resolved["temperature_fit"]) if do_date else None),
+        "length_bin_edges": str(resolved["length_bin_edges"]) if do_date else None,
+        "h": args.h, "quantile_method": "inverted_cdf"}
 
     resolved["json_out"].parent.mkdir(parents=True, exist_ok=True)
     resolved["json_out"].write_text(json.dumps(result, indent=1), encoding="utf-8")
@@ -612,7 +694,10 @@ def run(args):
     resolved["report_path"].write_text(report, encoding="utf-8")
     print(f"wrote {resolved['report_path']}", file=sys.stderr)
 
-    if args.diagnose_null_stability:
+    if args.diagnose_null_stability and not do_date:
+        print("  --diagnose-null-stability is a W1/date-channel check; skipped for "
+             "--channels auth", file=sys.stderr)
+    elif args.diagnose_null_stability:
         diag_out = resolved["json_out"].with_name(
             resolved["json_out"].stem + "_null_stability.md")
         _diagnose_null_stability(
@@ -620,8 +705,12 @@ def run(args):
             valid=valid, profile=profile, h=args.h, n_null=args.n_null, seed=args.seed,
             out_path=diag_out)
 
-    print(f"\n{candidate_label}: Period Fidelity {e1_headline:.1f} {e1_headline_ci} "
-         f"  Authenticity Fidelity {e2_headline:.1f} {e2_headline_ci}")
+    summary = [f"\n{candidate_label}:"]
+    if do_date:
+        summary.append(f" Period Fidelity {e1_headline:.1f} {e1_headline_ci}")
+    if do_auth:
+        summary.append(f"  Authenticity Fidelity {e2_headline:.1f} {e2_headline_ci}")
+    print("".join(summary))
     return result
 
 
@@ -630,55 +719,62 @@ def run(args):
 # ---------------------------------------------------------------------------
 
 def _render_report(result: dict) -> str:
-    m, e1, e2, diag = result["model"], result["e1"], result["e2"], result["diagnostics"]
+    m, diag = result["model"], result["diagnostics"]
+    e1, e2 = result.get("e1"), result.get("e2")
     lines = [f"# Style score: {m['candidate_label']}", "",
              f"Benchmark `{m['benchmark_version']}` · n_answers={m['n_answers']} "
              f"(n_generated={m['n_generated']}, excluded: {m['n_excluded_short']} short, "
              f"{m['n_excluded_missing_text']} missing text, {m['n_excluded_unmatched']} unmatched, "
              f"{m['n_excluded_empty_window']} empty window)", ""]
 
-    lines += ["## Headline scores", "",
-             f"- **Period Fidelity**: {e1['headline']['score']:.1f} "
-             f"(95% CI [{e1['headline']['ci95'][0]:.1f}, {e1['headline']['ci95'][1]:.1f}])",
-             f"- **Authenticity Fidelity**: {e2['headline']['score']:.1f} "
-             f"(95% CI [{e2['headline']['ci95'][0]:.1f}, {e2['headline']['ci95'][1]:.1f}])", ""]
+    lines += ["## Headline scores", ""]
+    if e1:
+        lines += [f"- **Period Fidelity**: {e1['headline']['score']:.1f} "
+                 f"(95% CI [{e1['headline']['ci95'][0]:.1f}, {e1['headline']['ci95'][1]:.1f}])"]
+    if e2:
+        lines += [f"- **Authenticity Fidelity**: {e2['headline']['score']:.1f} "
+                 f"(95% CI [{e2['headline']['ci95'][0]:.1f}, {e2['headline']['ci95'][1]:.1f}])"]
+    lines += [""]
 
-    y = e1["years"]
-    lines += ["## E1 (date) diagnostics -- years", "",
-             f"- drift (corrected, headline): {y['drift_mean']:.2f} "
-             f"[{y['drift_ci95'][0]:.2f}, {y['drift_ci95'][1]:.2f}] years "
-             "(positive = reads too modern relative to genuine prose of the same period/length)",
-             f"- dispersion (corrected, headline): {y['dispersion_mae']:.2f} "
-             f"[{y['dispersion_ci95'][0]:.2f}, {y['dispersion_ci95'][1]:.2f}] years",
-             f"- drift (raw, uncorrected): {y['drift_mean_raw']:.2f}; "
-             f"dispersion (raw): {y['dispersion_mae_raw']:.2f}",
-             f"- null drift/dispersion (instrument bias + noise floor for this candidate's "
-             f"composition): {y['null_drift_mean']:.2f} / {y['null_dispersion_mae']:.2f}", ""]
+    if e1:
+        y = e1["years"]
+        lines += ["## E1 (date) diagnostics -- years", "",
+                 f"- drift (corrected, headline): {y['drift_mean']:.2f} "
+                 f"[{y['drift_ci95'][0]:.2f}, {y['drift_ci95'][1]:.2f}] years "
+                 "(positive = reads too modern relative to genuine prose of the same period/length)",
+                 f"- dispersion (corrected, headline): {y['dispersion_mae']:.2f} "
+                 f"[{y['dispersion_ci95'][0]:.2f}, {y['dispersion_ci95'][1]:.2f}] years",
+                 f"- drift (raw, uncorrected): {y['drift_mean_raw']:.2f}; "
+                 f"dispersion (raw): {y['dispersion_mae_raw']:.2f}",
+                 f"- null drift/dispersion (instrument bias + noise floor for this candidate's "
+                 f"composition): {y['null_drift_mean']:.2f} / {y['null_dispersion_mae']:.2f}", ""]
 
-    c = e1["conformal"]
-    lines += ["## E1 (date) diagnostics -- conformal", "",
-             f"- T_drift: {c['drift']:.4f} [{c['drift_ci95'][0]:.4f}, {c['drift_ci95'][1]:.4f}] "
-             f"(null center {c['drift_null_center']})",
-             f"- T_disp: {c['dispersion']:.4f} "
-             f"[{c['dispersion_ci95'][0]:.4f}, {c['dispersion_ci95'][1]:.4f}] "
-             f"(null center {c['dispersion_null_center']})", ""]
+        c = e1["conformal"]
+        lines += ["## E1 (date) diagnostics -- conformal", "",
+                 f"- T_drift: {c['drift']:.4f} [{c['drift_ci95'][0]:.4f}, {c['drift_ci95'][1]:.4f}] "
+                 f"(null center {c['drift_null_center']})",
+                 f"- T_disp: {c['dispersion']:.4f} "
+                 f"[{c['dispersion_ci95'][0]:.4f}, {c['dispersion_ci95'][1]:.4f}] "
+                 f"(null center {c['dispersion_null_center']})", ""]
 
-    w = e1["wasserstein"]
-    lines += ["## W1 (period fidelity's underlying distance)", "",
-             f"- W_obs: {w['w1_observed']:.4f} [{w['w1_ci95'][0]:.4f}, {w['w1_ci95'][1]:.4f}]",
-             f"- W0 (null mean): {w['w1_null_mean']:.4f}, sd={w['w1_null_sd']:.4f}, "
-             f"95% CI [{w['w1_null_ci95'][0]:.4f}, {w['w1_null_ci95'][1]:.4f}]",
-             f"- normalized excess distance d_E1: {w['normalized_excess_distance']:.4f}", ""]
+        w = e1["wasserstein"]
+        lines += ["## W1 (period fidelity's underlying distance)", "",
+                 f"- W_obs: {w['w1_observed']:.4f} [{w['w1_ci95'][0]:.4f}, {w['w1_ci95'][1]:.4f}]",
+                 f"- W0 (null mean): {w['w1_null_mean']:.4f}, sd={w['w1_null_sd']:.4f}, "
+                 f"95% CI [{w['w1_null_ci95'][0]:.4f}, {w['w1_null_ci95'][1]:.4f}]",
+                 f"- normalized excess distance d_E1: {w['normalized_excess_distance']:.4f}", ""]
 
-    ec = e2["conformal"]
-    lines += ["## E2 (authenticity) diagnostics", "",
-             f"- T_E2 (mean_q): {ec['mean_q']:.4f} "
-             f"[{ec['mean_q_ci95'][0]:.4f}, {ec['mean_q_ci95'][1]:.4f}] "
-             f"(null center {ec['null_center']:.4f}, source: {ec['null_center_source']})", ""]
+    if e2:
+        ec = e2["conformal"]
+        lines += ["## E2 (authenticity) diagnostics", "",
+                 f"- T_E2 (mean_q): {ec['mean_q']:.4f} "
+                 f"[{ec['mean_q_ci95'][0]:.4f}, {ec['mean_q_ci95'][1]:.4f}] "
+                 f"(null center {ec['null_center']:.4f}, source: {ec['null_center_source']})", ""]
 
-    lines += ["## KS compatibility (diagnostic, not a headline)", "",
-             f"- T_KS: {diag['ks']:.4f} (null mean {diag['ks_null_mean']:.4f})",
-             f"- median window n_volumes: {diag['median_window_n_volumes']:.0f}; "
+    lines += ["## KS compatibility (diagnostic, not a headline)", ""]
+    if e1:
+        lines += [f"- T_KS: {diag['ks']:.4f} (null mean {diag['ks_null_mean']:.4f})"]
+    lines += [f"- median window n_volumes: {diag['median_window_n_volumes']:.0f}; "
              f"thin-cell fraction (<60 volumes): {diag['thin_cell_frac']:.3f}", ""]
 
     lines += ["## Glossary", "",
@@ -694,13 +790,17 @@ def _render_report(result: dict) -> str:
              "", "## Method note", "", METHOD_NOTE, ""]
 
     prov = result["provenance"]
+    temp_str = f"{prov['temperature']:.4f}" if prov.get("temperature") is not None else "n/a"
     lines += ["## Provenance", "",
-             f"- style_run_id: `{prov['style_run_id']}`",
-             f"- produced_by: `{prov['produced_by']}` at {prov['produced_at']}",
+             f"- style_run_id: `{prov['style_run_id']}`"]
+    if result.get("channels", "both") != "both" or prov.get("date_model") not in (None, "lexical-e1"):
+        lines += [f"- channels: `{result.get('channels', 'both')}`"
+                 + (f"; date_model: `{prov['date_model']}`" if prov.get("date_model") else "")]
+    lines += [f"- produced_by: `{prov['produced_by']}` at {prov['produced_at']}",
              f"- git_head: `{prov['git_head']}`",
              f"- reference: `{prov['reference_path']}` (sha256 {prov['reference_sha256'][:16]}...)",
              f"- e1_model_dir: `{prov['e1_model_dir']}`; e2_run_dir: `{prov['e2_run_dir']}`",
-             f"- temperature: {prov['temperature']:.4f}; h: {prov['h']}; "
+             f"- temperature: {temp_str}; h: {prov['h']}; "
              f"quantile_method: {prov['quantile_method']}",
              f"- bootstrap: n_boot={result['bootstrap']['n_boot']} seed={result['bootstrap']['seed']}; "
              f"null_simulation: n_pseudo_models={result['null_simulation']['n_pseudo_models']}", ""]
@@ -721,6 +821,15 @@ def build_parser():
                   help="default: free_gen's own benchmark_path, else booksample/chronologic_en_{ver}.jsonl")
     p.add_argument("--candidate-label", default=None,
                   help="default: free_gen's candidate_label or model -- the identity key")
+    p.add_argument("--channels", choices=["both", "date", "auth"], default=None,
+                  help="which conformal channels to score [both]. "
+                       "date = Period Fidelity only (E1/E3 date predictor); "
+                       "auth = Authenticity Fidelity only (E2 detector).")
+    p.add_argument("--e3", action="store_true",
+                  help="shorthand: --channels date + repoint the four date-side artifact "
+                       "paths to their E3 defaults (calibration_reference_scored_e3.jsonl, "
+                       "the DeBERTa run dir, e3_temperature_fit.json, e3_length_bin_edges.json) "
+                       "unless the corresponding flag is given explicitly.")
     p.add_argument("--reference", default=None, help="default: typicality.DEFAULT_REFERENCE_OUT")
     p.add_argument("--e1-model-dir", default=None)
     p.add_argument("--e2-run-dir", default=None)

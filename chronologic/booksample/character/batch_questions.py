@@ -126,8 +126,31 @@ def get_output_paths(barcode: str) -> dict[str, Path]:
     }
 
 
+def progress_file(output_path: Path) -> Path:
+    """
+    Sidecar path the extraction scripts use: X.jsonl -> X.progress.jsonl.
+
+    Mirrors progress_path() in extract_character_descriptions.py.
+    """
+    return output_path.with_name(f"{output_path.stem}.progress{output_path.suffix}")
+
+
+def is_extraction_partial(barcode: str) -> bool:
+    """
+    True if either extraction stage stopped part way through a book.
+
+    The extraction scripts delete their progress sidecar only once every chunk
+    is accounted for, so a surviving sidecar means unfinished work. A partial
+    book is still usable for question generation - it just covers less of the
+    novel - so this only affects how the book is reported, not whether it runs.
+    """
+    paths = get_output_paths(barcode)
+    return (progress_file(paths['characters']).exists()
+            or progress_file(paths['dialogue']).exists())
+
+
 def is_extraction_complete(barcode: str) -> bool:
-    """Check if dialogue extraction is complete for a barcode."""
+    """Check if dialogue extraction has produced usable output for a barcode."""
     paths = get_output_paths(barcode)
     return paths['dialogue'].exists()
 
@@ -429,7 +452,8 @@ def main():
 
     print(f"\nWill process {len(ready)} books:")
     for b in ready:
-        print(f"  - {b}")
+        partial = "  (partial extraction - covers only part of the novel)" if is_extraction_partial(b) else ""
+        print(f"  - {b}{partial}")
 
     input("\nPress Enter to begin (or Ctrl+C to abort)...")
 

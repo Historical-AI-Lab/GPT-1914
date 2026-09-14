@@ -96,7 +96,7 @@ def stage1_create_chunks(input_file: str) -> str:
     print(f"Saved to {output_file}")
     return output_file
 
-def call_ollama(prompt: str, model: str = "gpt-oss:20b") -> Dict[str, Any]:
+def call_ollama(prompt: str, model: str = "qwen2.5:7b-instruct") -> Dict[str, Any]:
     """
     Call ollama API with the given prompt
     """
@@ -278,8 +278,8 @@ def stage2_analyze_motivation(chunks_file: str, max_chunks: int) -> str:
     
     output_data = {
         "source_chunks_file": chunks_file,
-        # "model_used": "qwen2.5:7b-instruct",
-        "model_used": "gpt-oss:20b",
+        "model_used": "qwen2.5:7b-instruct",
+        # "model_used": "gpt-oss:20b",
         "total_chunks": len(results),
         "motive_chunks": len([r for r in results if r["motive_yn"] == "y"]),
         "results": results

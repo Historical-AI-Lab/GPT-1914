@@ -32,8 +32,8 @@ python -u benchmark_evaluation.py \
     /projects/bdfx/models/gemma-3-27b-pt \
     diff_0.2_to_0.4/chronologic_diff_0.2_to_0.4.jsonl \
     --device-map auto \
-    --full-eval \
-    --output-dir prob_04_diff
+    --mcq \
+    --output-dir mcq_04_diff
 
 echo "Job completed"
 date

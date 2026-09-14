@@ -101,9 +101,12 @@ def _newer(a, b) -> bool:
     return a.exists() and b.exists() and a.stat().st_mtime > b.stat().st_mtime
 
 
-def _ledger_has_style(bver, candidate_label, candidate_effort, judge, judge_effort, bt_tag) -> bool:
+def _ledger_has_style(bver, candidate_label, candidate_effort, judge, judge_effort, bt_tag,
+                      column="style_period_fidelity") -> bool:
     """True iff the ledger row matching this 6-tuple key has a non-empty
-    style_period_fidelity -- safe under --dry-run (read-only CSV scan)."""
+    `column` -- safe under --dry-run (read-only CSV scan). Stage 12 keys on
+    `style_period_fidelity_e3` in the default (E3) mode, `style_period_fidelity`
+    under --legacy-style."""
     path = substantive_artifacts.ledger_path()
     if not path.exists():
         return False
@@ -112,7 +115,7 @@ def _ledger_has_style(bver, candidate_label, candidate_effort, judge, judge_effo
     with open(path, newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
             key = tuple(str(row.get(c, "")) for c in substantive_ledger.KEY_COLUMNS)
-            if key == target and row.get("style_period_fidelity"):
+            if key == target and row.get(column):
                 return True
     return False
 
@@ -551,57 +554,85 @@ def build_stages(args) -> list[Stage]:
     ))
 
     # ---- stage 12: style_score (per-candidate, runs by default) -----------
-    style_json_path = RESULTS_DIR / f"style_report_{naming.sanitize(candidate_label)}__{bver}.json"
-    style_report_path = RESULTS_DIR / f"style_report_{naming.sanitize(candidate_label)}__{bver}.md"
+    # Default: two lean invocations -- the E3 DeBERTa date channel (-> style_*_e3
+    # columns) and the unchanged E2 authenticity channel (-> style_authenticity_*
+    # + style_cohort_id). --legacy-style falls back to the single lexical-E1
+    # `--channels both` score+merge for reproducing frozen style_* numbers.
+    _label = naming.sanitize(candidate_label)
+    legacy_json = RESULTS_DIR / f"style_report_{_label}__{bver}.json"
+    legacy_md = RESULTS_DIR / f"style_report_{_label}__{bver}.md"
+    e3_json = RESULTS_DIR / f"style_report_{_label}__{bver}__e3.json"
+    e3_md = RESULTS_DIR / f"style_report_{_label}__{bver}__e3.md"
+    auth_json = RESULTS_DIR / f"style_report_{_label}__{bver}__auth.json"
+    auth_md = RESULTS_DIR / f"style_report_{_label}__{bver}__auth.md"
 
-    style_fresh = _newer(style_json_path, free_gen_path)
-    style_in_ledger = _ledger_has_style(bver, candidate_label, candidate_effort, judge, judge_effort, tag)
+    if args.legacy_style:
+        style_fresh = _newer(legacy_json, free_gen_path)
+        style_in_ledger = _ledger_has_style(bver, candidate_label, candidate_effort, judge,
+                                            judge_effort, tag, "style_period_fidelity")
+        _fresh_name = legacy_json.name
+    else:
+        style_fresh = _newer(e3_json, free_gen_path) and _newer(auth_json, free_gen_path)
+        style_in_ledger = _ledger_has_style(bver, candidate_label, candidate_effort, judge,
+                                            judge_effort, tag, "style_period_fidelity_e3")
+        _fresh_name = f"{e3_json.name} + {auth_json.name}"
     style_skip = args.no_style or (style_fresh and style_in_ledger)
 
     if args.no_style:
         style_reason = "disabled with --no-style"
     elif not style_fresh:
-        style_reason = f"{style_json_path.name} missing or stale vs {free_gen_path.name}"
+        style_reason = f"{_fresh_name} missing or stale vs {free_gen_path.name}"
     elif not style_in_ledger:
-        style_reason = f"{style_json_path.name} fresh but its ledger columns are missing"
+        style_reason = f"{_fresh_name} fresh but its ledger columns are missing"
     else:
-        style_reason = f"{style_json_path.name} newer than {free_gen_path.name} and merged into the ledger"
+        style_reason = f"{_fresh_name} newer than {free_gen_path.name} and merged into the ledger"
 
-    def _run_style_score(runner):
-        RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    _merge_key_argv = [
+        "--benchmark-version", bver, "--candidate-label", candidate_label,
+        "--candidate-effort", candidate_effort, "--judge", judge,
+        "--judge-effort", judge_effort, "--bt-tag", tag,
+    ]
+
+    def _score_and_merge(runner, score_extra, json_path, report_path, merge_extra):
         score_argv = [
-            py, "score_style.py", "--free-gen", str(free_gen_path), "--benchmark", str(benchmark_path),
-            "--candidate-label", candidate_label, "--json-out", str(style_json_path),
-            "--report", str(style_report_path), "--n-boot", str(args.style_n_boot),
-            "--n-null", str(args.style_n_null), "--device", args.style_device,
+            py, "score_style.py", "--free-gen", str(free_gen_path),
+            "--benchmark", str(benchmark_path), "--candidate-label", candidate_label,
+            "--json-out", str(json_path), "--report", str(report_path),
+            "--n-boot", str(args.style_n_boot), "--n-null", str(args.style_n_null),
+            "--device", args.style_device, *score_extra,
         ]
         result = runner(score_argv, cwd=str(STYLEJUDGE_DIR))
-        rc = getattr(result, "returncode", 0)
-        if rc != 0:
+        if getattr(result, "returncode", 0) != 0:
             sys.exit(f"style_score step failed: {' '.join(score_argv)}")
 
-        merge_argv = [
-            py, "merge_style_row.py", "--style-json", str(style_json_path),
-            "--benchmark-version", bver, "--candidate-label", candidate_label,
-            "--candidate-effort", candidate_effort, "--judge", judge,
-            "--judge-effort", judge_effort, "--bt-tag", tag,
-        ]
+        merge_argv = [py, "merge_style_row.py", "--style-json", str(json_path),
+                      *_merge_key_argv, *merge_extra]
         result = runner(merge_argv, cwd=str(SCRIPT_DIR))
         rc = getattr(result, "returncode", 0)
         if rc == 2:
             # merge_style_row.py's contract: the key resolved but no ledger
             # row matched yet (e.g. --only style_score before stage 11 has
-            # ever run). Non-fatal -- the two-part skip predicate above
-            # keeps this stage un-skippable until the columns actually land.
-            print(f"wrote {style_json_path}; no ledger row matched yet -- run score_substantive first")
+            # ever run). Non-fatal -- the two-part skip predicate above keeps
+            # this stage un-skippable until the columns actually land.
+            print(f"wrote {json_path}; no ledger row matched yet -- run score_substantive first")
         elif rc != 0:
             sys.exit(f"merge_style_row step failed: {' '.join(merge_argv)}")
+
+    def _run_style_score(runner):
+        RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+        if args.legacy_style:
+            _score_and_merge(runner, ["--channels", "both"], legacy_json, legacy_md, [])
+            return
+        _score_and_merge(runner, ["--e3", "--channels", "date"], e3_json, e3_md,
+                         ["--column-suffix", "_e3"])
+        _score_and_merge(runner, ["--channels", "auth"], auth_json, auth_md, [])
 
     stages.append(Stage(
         12, "style_score", "candidate",
         skip=SkipResult(style_skip, style_reason),
         argv=None, action=_run_style_score, cwd=STYLEJUDGE_DIR,
-        note=f"n_boot={args.style_n_boot} n_null={args.style_n_null}; zero API calls",
+        note=(f"n_boot={args.style_n_boot} n_null={args.style_n_null}; zero API calls; "
+              + ("legacy lexical-E1 both" if args.legacy_style else "E3 date + auth channels")),
     ))
 
     return stages
@@ -696,6 +727,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-style", action="store_true",
                         help="Skip stage 12 (style_score) -- escape hatch when the E2 "
                              "checkpoint or RPS isn't on this machine.")
+    parser.add_argument("--legacy-style", action="store_true",
+                        help="Stage 12: run the old single lexical-E1 `--channels both` "
+                             "score+merge instead of the E3 date channel + auth channel "
+                             "split. For reproducing frozen `style_*` (non-_e3) numbers.")
     parser.add_argument("--style-n-boot", type=int, default=1000)
     parser.add_argument("--style-n-null", type=int, default=2000)
     parser.add_argument("--style-device", default="auto")

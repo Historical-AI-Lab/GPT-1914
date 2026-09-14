@@ -28,11 +28,12 @@
 #     documented OOM fallback for deberta-v3-large at max-length 256. Bump to
 #     32/32 if VRAM allows and you want the exact E2 optimizer trajectory.
 #
-#   BEFORE SUBMITTING, from the Mac, copy the prepared data to the Delta path
-#   this script reads ($E3_DIR below). `date_predictor_deberta.py prepare`
-#   writes them locally; they are not in the repo:
-#       scp ~/workdata/chronologic-dating-corpus/passages/e3/{train,val}.jsonl \
-#           delta:~/workdata/chronologic-dating-corpus/passages/e3/
+#   BEFORE SUBMITTING, from the Mac, rsync the prepared data into the submit
+#   dir (same dir as this script — $E3_DIR="$SCRIPT_DIR" below, the E2
+#   convention since Delta has no ~/workdata tree). `date_predictor_deberta.py
+#   prepare` writes them locally; they are not in the repo:
+#       rsync -av ~/workdata/chronologic-dating-corpus/passages/e3/{train,val}.jsonl \
+#           delta:<this-submit-dir>/
 #   and sync this script + train_date_deberta.py + stylejudge/date_predictor.py.
 #
 #   deberta-v3-large + its tokenizer should already be cached under this
@@ -52,11 +53,11 @@
 # stylejudge/date_predictor.py (imported for the bin grid / soft labels /
 # CRPS) are synced before submitting.
 #
-# After the run: the checkpoint lands in
-# bertclassify/model_output/e3_v1/. Sync it to
-# $HOME/workdata/chronologic-dating-corpus/passages/e3/deberta_model/ (the path
-# stylejudge/date_predictor_deberta.py `evaluate --run-dir` expects) before
-# evaluating. Revise --time once a real run reports what it needed.
+# After the run: the checkpoint lands in <submit-dir>/model_output/e3_v1/ on
+# Delta. rsync it back to the MAC at
+# ~/workdata/chronologic-dating-corpus/passages/e3/deberta_model/ (where the
+# Mac's $P/e3/ lives and `date_predictor_deberta.py evaluate --run-dir`
+# expects it). Revise --time once a real run reports what it needed.
 # ---------------------------------------------------------------------------
 
 echo "Job starting on $(hostname)"
@@ -74,14 +75,16 @@ source deberta-env/bin/activate
 SCRIPT_DIR="$SLURM_SUBMIT_DIR"
 cd "$SCRIPT_DIR"
 
-E3_DIR="$HOME/workdata/chronologic-dating-corpus/passages/e3"
+# train.jsonl / val.jsonl are rsync'd into the submit dir alongside this script
+# (E2 convention — Delta has no ~/workdata tree).
+E3_DIR="$SCRIPT_DIR"
 
 python -u train_date_deberta.py \
     --model-name microsoft/deberta-v3-large \
     --train-file "$E3_DIR/train.jsonl" \
     --val-file "$E3_DIR/val.jsonl" \
     --sigma 15 \
-    --epochs 3 \
+    --epochs 5 \
     --batch-size 16 \
     --effective-batch-size 32 \
     --learning-rate 2e-5 \
@@ -89,10 +92,17 @@ python -u train_date_deberta.py \
     --adam-epsilon 1e-6 \
     --warmup-ratio 0.1 \
     --max-length 256 \
-    --best-metric crps \
+    --best-metric loss \
     --save-strategy best \
     --device cuda \
-    --run-name e3_v1
+    --run-name e3_v2
+
+# Config that produced the promoted checkpoint (NOTES.md §17). The first pass
+# ran --epochs 3 --best-metric crps --run-name e3_v1 and kept an epoch-3
+# checkpoint whose val-CRPS edge did not survive to the test split; --best-metric
+# loss keeps the val-loss-minimum epoch (epoch 2 here), which is better
+# calibrated and equivalent on held-out accuracy. Val loss rises monotonically
+# after epoch 2, so 5 epochs is headroom for save-best, not a target.
 
 echo "Job completed"
 date

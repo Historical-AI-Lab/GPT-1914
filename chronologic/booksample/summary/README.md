@@ -6,7 +6,7 @@ This module finds paragraphs that contain their own summary sentence (a topic se
 ## Pipeline overview
 
 ```
-IDI_sample_1875-25/*.txt
+benchmarkbooks/*.txt
         |
         v
   find_synopses.py          Uses Qwen (local, via Ollama) to identify
@@ -44,7 +44,7 @@ Both scripts are incremental: they check what has already been processed and pic
 python summary/find_synopses.py
 ```
 
-Each invocation processes the next 20 text files (alphabetically) from `IDI_sample_1875-25/`. For each file it extracts 10 random paragraphs (80-1000 words), sends them to Qwen, and writes results to `process_files/{barcode}_synopses.jsonl`.
+Each invocation processes the next 20 text files (alphabetically) from `benchmarkbooks/`. For each file it extracts 10 random paragraphs (80-1000 words), sends them to Qwen, and writes results to `process_files/{barcode}_synopses.jsonl`.
 
 Run it 5 times to cover all 99 files.
 

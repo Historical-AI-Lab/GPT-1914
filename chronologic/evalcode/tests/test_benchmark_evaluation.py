@@ -425,11 +425,20 @@ class TestIsOpenaiModel:
     def test_gpt5_bare(self):
         assert is_openai_model("gpt-5") is True
 
+    def test_gpt6_named_variant(self):
+        assert is_openai_model("gpt-6-astra") is True
+
+    def test_gpt6_bare(self):
+        assert is_openai_model("gpt-6") is True
+
     def test_finetune_gpt41(self):
         assert is_openai_model("ft:gpt-4.1-2025-04-14:org:mymodel:abc123") is True
 
     def test_finetune_gpt5(self):
         assert is_openai_model("ft:gpt-5-2025-12-01:org:mymodel:xyz") is True
+
+    def test_finetune_gpt6(self):
+        assert is_openai_model("ft:gpt-6-astra:org:mymodel:xyz") is True
 
     def test_local_hf_model(self):
         assert is_openai_model("Qwen/Qwen2.5-7B-Instruct") is False

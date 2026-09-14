@@ -25,6 +25,8 @@ module list
 
 source ../qwentuning/qlora-env/bin/activate
 
+pip install -q peft
+
 SCRIPT_DIR="$SLURM_SUBMIT_DIR"
 cd "$SCRIPT_DIR"
 

@@ -258,9 +258,39 @@ def check_prior_scale_consistency(anchor_meta: dict, calib: dict | None,
         )
 
 
+class CacheMiss(RuntimeError):
+    """A --replay-only run reached a comparison the prompt cache does not hold.
+
+    Carries the comparison so the caller can report *which* one missed rather
+    than only that something did.
+    """
+
+    def __init__(self, comparison):
+        self.comparison = comparison
+        super().__init__(
+            f"prompt cache miss: qid={comparison.qid} phase={comparison.phase} "
+            f"{comparison.first} vs {comparison.second} repeat={comparison.repeat}"
+        )
+
+
+def make_replay_judge_call():
+    """A judge that never calls anything and never returns a value.
+
+    Returning would be worse than useless: bt.collect writes `raw` into the
+    shared prompt cache whenever it is not None, so a stub that returned ""
+    would poison the cache with unparseable entries for every miss. Raising
+    is the only safe failure mode here.
+    """
+    def _call(comparison, system, user):
+        raise CacheMiss(comparison)
+    return _call
+
+
 def make_judge_call_from_args(args):
     if args.dry_run:
         return None
+    if getattr(args, "replay_only", False):
+        return make_replay_judge_call()
     from bt.llm_judge import make_llm_judge_call
     return make_llm_judge_call(args.judge, args.judge_effort, debug=args.debug)
 
@@ -341,7 +371,11 @@ def cmd_anchor_fit(args):
 def cmd_score(args):
     scored = json.loads(Path(args.scored_file).read_text(encoding="utf-8"))
     free_gen = json.loads(Path(args.free_gen).read_text(encoding="utf-8"))
-    benchmark_records = load_benchmark(args.benchmark)
+    # --questions was silently ignored here, unlike in cmd_anchor_fit and cmd_loo,
+    # so a restricted run scored the benchmark's whole partial-credit channel.
+    # run_pipeline never passes it to `score`, so honouring it changes nothing
+    # about the pipeline and makes the flag mean what it says.
+    benchmark_records = select_questions(load_benchmark(args.benchmark), args.questions)
     book_context_qnums = set(scored.get("book_context_qnums", benchmark_records.keys()))
 
     tag = artifacts.bt_tag(args.judge, args.benchmark, args.judge_effort, args.prompt_mode,
@@ -368,6 +402,21 @@ def cmd_score(args):
 
     cache = None if args.no_cache else PromptCache(artifacts.cache_dir())
     judge_call = make_judge_call_from_args(args)
+
+    # getattr, not attribute access: callers construct their own args objects
+    # (tests/test_bt_scoring.py builds a synthetic Args), so a new flag must not
+    # become a required field of that informal interface.
+    replay_only = getattr(args, "replay_only", False)
+    dump_comparisons = getattr(args, "dump_comparisons", None)
+    dump_path = Path(dump_comparisons) if dump_comparisons else None
+    dump_records: list[dict] = []
+    replay_misses: list[str] = []
+    if replay_only and cache is None:
+        raise ValueError("--replay-only cannot be combined with --no-cache: "
+                         "the cache is the only source of judgments it can read.")
+    if replay_only and dump_path is None:
+        raise ValueError("--replay-only requires --dump-comparisons: it writes no "
+                         "other output, so without it the run would do nothing.")
 
     # The calibration design travels with the scores it produced, so a scored
     # file built against an anchored curve can never be silently combined with
@@ -412,6 +461,29 @@ def cmd_score(args):
         )
         if verdict is not None:
             p = 1.0 if verdict == "pass" else 0.0
+            if dump_path is not None:
+                # No comparisons were ever run for this question. Record that
+                # explicitly so a consumer can tell "short-circuited" apart from
+                # "missing", which are very different things downstream.
+                #
+                # On a distractor_identity the candidate reproduced a distractor
+                # verbatim, so the item it lost to is knowable rather than merely
+                # absent -- name it, and let the consumer decide whether to score
+                # it as a loss or drop the question.
+                cand_norm = verdicts.normalize_for_identity(cand.text)
+                matched = [it.item_id for it in items
+                           if it.kind != "ground_truth"
+                           and verdicts.normalize_for_identity(it.text) == cand_norm]
+                dump_records.append({
+                    "kind": "auto_verdict", "qid": qnum,
+                    "candidate_label": scored.get("candidate_label"),
+                    "auto_verdict": ("gt_identity" if verdict == "pass"
+                                     else "distractor_identity"),
+                    "matched_items": matched,
+                    "p": p, "counts": [], "planned_calls": 0, "cache_hits": 0,
+                })
+            if replay_only:
+                continue
             context_fit[qnum] = {
                 # not f"bt:{args.judge}" -- no judge was consulted, and this
                 # makes short-circuits greppable the way the pass/fail path's
@@ -457,9 +529,36 @@ def cmd_score(args):
         def call(comp, system, user, _judge_call=judge_call):
             return _judge_call(comp, system, user)
 
-        result = run_comparisons(comps, items_by_id, build, call, cache=cache,
-                                 judge_model=args.judge, judge_effort=args.judge_effort)
+        try:
+            result = run_comparisons(comps, items_by_id, build, call, cache=cache,
+                                     judge_model=args.judge, judge_effort=args.judge_effort)
+        except CacheMiss as miss:
+            # Per question, not per run: a --verify-only pass has to report every
+            # question whose prompts fail to reproduce, not just the first.
+            replay_misses.append(f"{qnum}: {miss}")
+            continue
+
+        if dump_path is not None:
+            dump_records.extend(result.log_records)
+            dump_records.append({
+                "kind": "counts", "qid": qnum,
+                "candidate_label": scored.get("candidate_label"),
+                "reference_gt": pool_ref, "withdrawn_gts": withdrawn,
+                "benchmark": str(args.benchmark),
+                "counts": [{"first": a, "second": b, "wins_first": w, "n": n}
+                           for (a, b), (w, n) in sorted(result.counts.items())],
+                "dropped_groups": [list(g) for g in result.dropped_groups],
+                "cache_hits": result.cache_hits,
+                "planned_calls": result.planned_calls,
+                "unparseable_calls": result.unparseable_calls,
+            })
+
         if not result.counts:
+            continue
+        if replay_only:
+            if i % 25 == 0 or i == total:
+                print(f"  [{i}/{total}] qnum={qnum} replayed "
+                      f"{result.cache_hits}/{result.planned_calls} from cache")
             continue
         score = score_candidate(fit, result.counts, "cand", reference_gt,
                                 prior_scale=args.prior_scale, seed=args.seed,
@@ -492,6 +591,22 @@ def cmd_score(args):
 
     if args.dry_run:
         print(f"Would score {len(book_context_qnums & benchmark_records.keys())} context questions.")
+        return
+
+    if dump_path is not None:
+        artifacts.append_jsonl(dump_path, dump_records)
+        print(f"Wrote {len(dump_records)} comparison records to {dump_path}")
+
+    if replay_only:
+        n_q = sum(1 for r in dump_records if r.get("kind") in ("counts", "auto_verdict"))
+        hits = sum(r.get("cache_hits", 0) for r in dump_records if r.get("kind") == "counts")
+        planned = sum(r.get("planned_calls", 0) for r in dump_records if r.get("kind") == "counts")
+        print(f"REPLAY: {n_q} questions, {hits}/{planned} calls served from cache, "
+              f"{len(replay_misses)} questions with a cache miss")
+        for line in replay_misses[:20]:
+            print(f"  MISS {line}")
+        if replay_misses:
+            sys.exit(f"{len(replay_misses)} question(s) could not be replayed from cache")
         return
 
     out = dict(scored)
@@ -1059,6 +1174,15 @@ def build_parser():
                               "uses the derived path; a value overrides it.")
     p_score.add_argument("--thin", type=int, default=1000,
                          help="Draws kept per question in the saved Delta bank (default 1000).")
+    p_score.add_argument("--dump-comparisons", default=None,
+                         help="Append the candidate phase's per-call log records, plus one "
+                              "per-question counts summary, to this JSONL file. The "
+                              "head-to-head record against each individual distractor is "
+                              "otherwise discarded after the fit.")
+    p_score.add_argument("--replay-only", action="store_true",
+                         help="Re-derive comparisons from the prompt cache without "
+                              "spending: no judge calls, no fit, and nothing written but "
+                              "--dump-comparisons. Exits non-zero on any cache miss.")
     p_score.set_defaults(func=cmd_score)
 
     p_emit_pilot = sub.add_parser("emit-pilot-labels",

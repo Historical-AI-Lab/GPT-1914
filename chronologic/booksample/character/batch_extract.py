@@ -20,10 +20,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from text_file_lookup import find_text_file
+
 # Paths relative to this script
 SCRIPT_DIR = Path(__file__).parent
 BOOKSAMPLE_DIR = SCRIPT_DIR.parent
-SOURCE_DIR = BOOKSAMPLE_DIR / "edgebooks"
+SOURCE_DIR = BOOKSAMPLE_DIR / "benchmarkbooks"
 PROCESS_FILES_DIR = SCRIPT_DIR / "process_files"
 FICTION_LIST = SCRIPT_DIR / "fiction_to_process.txt"
 
@@ -60,19 +63,12 @@ def get_source_file(barcode: str) -> Path | None:
     """
     Find the source text file for a barcode.
 
-    Tries both the exact barcode and uppercase version.
+    Matches case-insensitively and ignores an hvd. prefix, since
+    benchmarkbooks/ mixes exact-match filenames from the current
+    generation with inconsistently cased filenames inherited from
+    the 1875-1924 generation.
     """
-    # Try exact match first
-    path = SOURCE_DIR / f"{barcode}.txt"
-    if path.exists():
-        return path
-
-    # Try uppercase
-    path = SOURCE_DIR / f"{barcode.upper()}.txt"
-    if path.exists():
-        return path
-
-    return None
+    return find_text_file(barcode, [SOURCE_DIR])
 
 
 def get_output_paths(barcode: str) -> dict[str, Path]:
@@ -91,14 +87,41 @@ def get_output_paths(barcode: str) -> dict[str, Path]:
     }
 
 
-def is_extraction_complete(barcode: str) -> bool:
-    """Check if dialogue extraction is complete for a barcode."""
+def progress_file(output_path: Path) -> Path:
+    """
+    Sidecar path the extraction scripts use: X.jsonl -> X.progress.jsonl.
+
+    Mirrors progress_path() in extract_character_descriptions.py.
+    """
+    return output_path.with_name(f"{output_path.stem}.progress{output_path.suffix}")
+
+
+def is_extraction_partial(barcode: str) -> bool:
+    """
+    True if either extraction stage stopped part way through a book.
+
+    The extraction scripts delete their progress sidecar only once every chunk
+    is accounted for, so a surviving sidecar means unfinished work.
+    """
     paths = get_output_paths(barcode)
-    return paths['dialogue'].exists()
+    return (progress_file(paths['characters']).exists()
+            or progress_file(paths['dialogue']).exists())
+
+
+def is_extraction_complete(barcode: str) -> bool:
+    """
+    Check if dialogue extraction is complete for a barcode.
+
+    Interrupted runs now write real output files, so file existence alone no
+    longer implies completion - a leftover progress sidecar means it is partial.
+    """
+    paths = get_output_paths(barcode)
+    return paths['dialogue'].exists() and not is_extraction_partial(barcode)
 
 
 def run_descriptions_extraction(barcode: str, source_file: Path, dry_run: bool = False,
-                                 use_mistral: bool = False) -> bool:
+                                 use_ollama: bool = False,
+                                 model: str = None) -> bool:
     """
     Run extract_character_descriptions.py for a barcode.
 
@@ -106,7 +129,8 @@ def run_descriptions_extraction(barcode: str, source_file: Path, dry_run: bool =
         barcode: Book barcode
         source_file: Path to source text file
         dry_run: If True, only print command without running
-        use_mistral: If True, use mistral-small:24b instead of gpt-oss:20b
+        use_ollama: If True, use local Ollama instead of OpenRouter
+        model: Model identifier override, or None for the script default
 
     Returns True on success, False on failure.
     """
@@ -120,8 +144,10 @@ def run_descriptions_extraction(barcode: str, source_file: Path, dry_run: bool =
         str(output_file)
     ]
 
-    if use_mistral:
-        cmd.append('--mistral')
+    if use_ollama:
+        cmd.append('--ollama')
+    if model:
+        cmd.extend(['--model', model])
 
     if dry_run:
         print(f"  Would run: {' '.join(cmd)}")
@@ -145,7 +171,8 @@ def run_descriptions_extraction(barcode: str, source_file: Path, dry_run: bool =
 
 
 def run_dialogue_extraction(barcode: str, source_file: Path, dry_run: bool = False,
-                            use_mistral: bool = False) -> bool:
+                            use_ollama: bool = False,
+                            model: str = None) -> bool:
     """
     Run extract_character_dialogue.py for a barcode.
 
@@ -153,7 +180,8 @@ def run_dialogue_extraction(barcode: str, source_file: Path, dry_run: bool = Fal
         barcode: Book barcode
         source_file: Path to source text file
         dry_run: If True, only print command without running
-        use_mistral: If True, use mistral-small:24b instead of gpt-oss:20b
+        use_ollama: If True, use local Ollama instead of OpenRouter
+        model: Model identifier override, or None for the script default
 
     Returns True on success, False on failure.
     """
@@ -173,8 +201,10 @@ def run_dialogue_extraction(barcode: str, source_file: Path, dry_run: bool = Fal
         str(output_file)
     ]
 
-    if use_mistral:
-        cmd.append('--mistral')
+    if use_ollama:
+        cmd.append('--ollama')
+    if model:
+        cmd.extend(['--model', model])
 
     if dry_run:
         print(f"  Would run: {' '.join(cmd)}")
@@ -198,7 +228,8 @@ def run_dialogue_extraction(barcode: str, source_file: Path, dry_run: bool = Fal
 
 
 def process_book(barcode: str, force: bool = False, dry_run: bool = False,
-                 use_mistral: bool = False) -> bool:
+                 use_ollama: bool = False,
+                 model: str = None) -> bool:
     """
     Process a single book through both extraction stages.
 
@@ -206,7 +237,8 @@ def process_book(barcode: str, force: bool = False, dry_run: bool = False,
         barcode: Book barcode
         force: If True, re-process even if outputs exist
         dry_run: If True, only print commands without running
-        use_mistral: If True, use mistral-small:24b instead of gpt-oss:20b
+        use_ollama: If True, use local Ollama instead of OpenRouter
+        model: Model identifier override, or None for the script default
 
     Returns True if processing completed (or was skipped), False on error.
     """
@@ -218,6 +250,9 @@ def process_book(barcode: str, force: bool = False, dry_run: bool = False,
     if not force and is_extraction_complete(barcode):
         print(f"  Skipping: extraction already complete")
         return True
+
+    if is_extraction_partial(barcode):
+        print(f"  Partial extraction found; resuming where it left off")
 
     # Find source file
     source_file = get_source_file(barcode)
@@ -233,16 +268,20 @@ def process_book(barcode: str, force: bool = False, dry_run: bool = False,
         PROCESS_FILES_DIR.mkdir(exist_ok=True)
 
     # Check if we need to run descriptions extraction
+    # A partial descriptions run writes a real _characters.jsonl, so existence
+    # alone isn't enough - re-run it while its progress sidecar survives.
     paths = get_output_paths(barcode)
-    if force or not paths['characters'].exists():
-        success = run_descriptions_extraction(barcode, source_file, dry_run, use_mistral)
+    descriptions_done = (paths['characters'].exists()
+                         and not progress_file(paths['characters']).exists())
+    if force or not descriptions_done:
+        success = run_descriptions_extraction(barcode, source_file, dry_run, use_ollama, model)
         if not success:
             return False
     else:
         print(f"  Skipping descriptions: {paths['characters']} exists")
 
     # Run dialogue extraction
-    success = run_dialogue_extraction(barcode, source_file, dry_run, use_mistral)
+    success = run_dialogue_extraction(barcode, source_file, dry_run, use_ollama, model)
     if not success:
         return False
 
@@ -271,18 +310,23 @@ def main():
         help='Process at most N books'
     )
     parser.add_argument(
-        '--mistral',
+        '--ollama',
         action='store_true',
-        help='Use mistral-small:24b instead of gpt-oss:20b'
+        help='Use local Ollama instead of OpenRouter (replaces the old --mistral)'
+    )
+    parser.add_argument(
+        '--model',
+        default=None,
+        help='Model identifier override, passed through to both extraction scripts'
     )
 
     args = parser.parse_args()
 
     # Print model info
-    if args.mistral:
-        print("Using model: mistral-small:24b")
+    if args.ollama:
+        print(f"Using model: {args.model or 'gpt-oss:20b'} via Ollama")
     else:
-        print("Using model: gpt-oss:20b")
+        print(f"Using model: {args.model or 'google/gemini-3.5-flash-lite'} via OpenRouter")
 
     # Load barcodes
     print(f"Loading barcodes from: {FICTION_LIST}")
@@ -315,7 +359,7 @@ def main():
                 continue
 
             success = process_book(barcode, force=args.force, dry_run=args.dry_run,
-                                   use_mistral=args.mistral)
+                                   use_ollama=args.ollama, model=args.model)
             if success:
                 processed += 1
             else:

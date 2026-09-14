@@ -120,6 +120,16 @@ DEFAULT_REFERENCE_OUT = (Path.home() / "workdata" / "chronologic-dating-corpus"
 DEFAULT_LENGTH_BIN_EDGES = SCRIPT_DIR / "length_bin_edges.json"
 DEFAULT_N_LENGTH_BINS = 6
 
+# E3 date-channel defaults (phase-e4-plan.md). Used by score_style.py --e3 to
+# repoint the four date-side artifact paths at the DeBERTa instrument and its
+# fragment-free calibration layer. The E2/authenticity side is unchanged.
+DEFAULT_REFERENCE_OUT_E3 = (Path.home() / "workdata" / "chronologic-dating-corpus"
+                             / "calibration_reference_scored_e3.jsonl")
+DEFAULT_E1_MODEL_DIR_E3 = (Path.home() / "workdata" / "chronologic-dating-corpus"
+                            / "passages" / "e3_v2" / "deberta_model")
+DEFAULT_TEMPERATURE_FIT_E3 = SCRIPT_DIR / "e3_temperature_fit.json"
+DEFAULT_LENGTH_BIN_EDGES_E3 = SCRIPT_DIR / "e3_length_bin_edges.json"
+
 
 def load_temperature(path):
     """T*_nll from e1_temperature_fit.json — frozen, never refit against the
@@ -178,7 +188,18 @@ def cmd_fit_length_bins(args):
           f"{[round(e, 3) for e in edges]}", file=sys.stderr)
 
 
-def score_e1(texts, e1_model_dir, temperature):
+def score_e1(texts, e1_model_dir, temperature, *, device="auto", max_length=256, batch_size=32):
+    """(mean, entropy, multimodality) per text.
+
+    Dispatches on the model dir: a DeBERTa (E3) run dir delegates to
+    `date_predictor_deberta.score_e1`, which returns `None` at each
+    sub-sentential-fragment index (E3 abstains on fragments). The lexical (E1)
+    path is byte-for-byte unchanged and never returns `None`.
+    """
+    import date_predictor_deberta as dpd
+    if dpd.is_deberta_dir(e1_model_dir):
+        return dpd.score_e1(texts, e1_model_dir, temperature, device=device,
+                            max_length=max_length, batch_size=batch_size)
     config, vectorizer, _ridge, model, _edges, midpoints = dp.load_model_dir(e1_model_dir)
     X = dp.transform_features(vectorizer, texts, config["feature_type"])
     probs = dp.predict_probs(model, X, temperature=temperature)
@@ -220,13 +241,29 @@ def cmd_score_reference(args):
 
     temperature = load_temperature(args.temperature_fit)
     print(f"  E1 scoring at T*={temperature:.4f} ({args.e1_model_dir})", file=sys.stderr)
-    e1_features = score_e1(texts, args.e1_model_dir, temperature)
+    e1_features = score_e1(texts, args.e1_model_dir, temperature, device=args.device,
+                           max_length=args.max_length, batch_size=args.batch_size)
 
-    print(f"  E2 scoring ({args.e2_run_dir})", file=sys.stderr)
-    p_synthetic = score_e2(texts, args.e2_run_dir, args.max_length, args.batch_size, args.device)
+    # The E3 date-channel RPS is date-only: score_style.py --e3 --channels date
+    # never reads e2_p_synthetic from it (the auth channel keeps calibrating
+    # against the existing fragment-bearing RPS). Auto-skip the E2 pass for a
+    # DeBERTa run dir, or on explicit --date-only.
+    import date_predictor_deberta as _dpd
+    date_only = args.date_only or _dpd.is_deberta_dir(args.e1_model_dir)
+    if date_only:
+        print("  date-only: skipping E2 re-score (e2_p_synthetic = null)", file=sys.stderr)
+        p_synthetic = [None] * len(texts)
+    else:
+        print(f"  E2 scoring ({args.e2_run_dir})", file=sys.stderr)
+        p_synthetic = score_e2(texts, args.e2_run_dir, args.max_length, args.batch_size, args.device)
 
     out_rows = []
-    for r, (mean, entropy, multimodality), p_syn in zip(rows, e1_features, p_synthetic):
+    n_dropped = 0
+    for r, feat, p_syn in zip(rows, e1_features, p_synthetic):
+        if feat is None:
+            n_dropped += 1
+            continue
+        mean, entropy, multimodality = feat
         out_rows.append({
             "passage_id": r["passage_id"],
             "volume_id": r["volume_id"],
@@ -244,9 +281,12 @@ def cmd_score_reference(args):
 
     write_jsonl(out_rows, args.out)
     print(f"wrote {len(out_rows)} scored reference rows to {args.out}", file=sys.stderr)
-    if len(out_rows) != len(rows):
-        print(f"  WARNING: row count mismatch ({len(out_rows)} scored vs "
-              f"{len(rows)} input) — no row should be silently dropped", file=sys.stderr)
+    if n_dropped:
+        print(f"  dropped {n_dropped} fragment rows (E1/E3 abstained)", file=sys.stderr)
+    if len(out_rows) + n_dropped != len(rows):
+        print(f"  WARNING: row count mismatch ({len(out_rows)} scored + {n_dropped} "
+              f"dropped vs {len(rows)} input) — no row should be silently dropped",
+              file=sys.stderr)
 
 
 DEFAULT_WINDOW_H = 10
@@ -270,10 +310,15 @@ def q_score(value, reference_values):
     distribution (e.g. E1: archaic-reading relative to the window's authentic
     prose); q -> 1 means it sits at or above the top (e.g. E2: more
     detector-legible than the window's authentic prose).
+
+    `value` None (a skipped channel: E3 abstention, or a date-only RPS whose
+    `e2_p_synthetic` column is null) -> NaN, same as an empty window. None
+    entries in `reference_values` are ignored in the numerator; the
+    denominator stays the full window size.
     """
-    if not reference_values:
+    if value is None or not reference_values:
         return float("nan")
-    return sum(1 for r in reference_values if r < value) / len(reference_values)
+    return sum(1 for r in reference_values if r is not None and r < value) / len(reference_values)
 
 
 def index_reference_by_year(reference_rows):
@@ -329,10 +374,22 @@ def qscore_answer(e1_mean, p_synthetic, target_date, n_words, edges, reference_b
     target_bin = length_bin(n_words, edges)
     window, date_window_n_volumes = length_conditioned_window(
         reference_by_year, target_date, h, target_bin, exclude_volume_id)
-    signed_residual = e1_mean - target_date
     window_residuals = [r["e1_signed_residual"] for r in window]
-    q_e1 = q_score(signed_residual, window_residuals)
-    q_e2 = q_score(p_synthetic, [r["e2_p_synthetic"] for r in window])
+    # E1/E3 abstention: a None/NaN e1_mean must NOT fall through to
+    # q_score(NaN, window) -- `r < NaN` is always False there, so q_e1 would
+    # silently read 0.0 ("maximally archaic"), pass _valid's isnan check, and
+    # poison the Period-Fidelity headline. Force q_e1 = NaN; q_e2 and the
+    # window's null mean are unaffected and still computed.
+    if e1_mean is None or math.isnan(e1_mean):
+        q_e1 = float("nan")
+    else:
+        q_e1 = q_score(e1_mean - target_date, window_residuals)
+    # p_synthetic is None when the E2 channel was deliberately skipped
+    # (score_style.py --channels date) -- symmetric with the e1_mean guard.
+    if p_synthetic is None:
+        q_e2 = float("nan")
+    else:
+        q_e2 = q_score(p_synthetic, [r["e2_p_synthetic"] for r in window])
     n_volumes = len({r["volume_id"] for r in window})
     e1_null_window_mean = (sum(window_residuals) / len(window_residuals)
                             if window_residuals else float("nan"))
@@ -353,18 +410,20 @@ def cmd_qscore(args):
 
     temperature = load_temperature(args.temperature_fit)
     print(f"  E1 scoring at T*={temperature:.4f} ({args.e1_model_dir})", file=sys.stderr)
-    e1_features = score_e1(texts, args.e1_model_dir, temperature)
+    e1_features = score_e1(texts, args.e1_model_dir, temperature, device=args.device,
+                           max_length=args.max_length, batch_size=args.batch_size)
 
     print(f"  E2 scoring ({args.e2_run_dir})", file=sys.stderr)
     p_synthetic = score_e2(texts, args.e2_run_dir, args.max_length, args.batch_size, args.device)
 
     out_rows = []
-    for a, (mean, entropy, multimodality), p_syn, n_words in zip(
+    for a, feat, p_syn, n_words in zip(
             answers, e1_features, p_synthetic, n_words_list):
         target_date = a["true_date"]
+        mean, entropy, multimodality = (None, None, None) if feat is None else feat
         q_e1, q_e2, window_n, window_vols, date_window_vols, e1_null_window_mean = qscore_answer(
             mean, p_syn, target_date, n_words, edges, reference_by_year, args.h)
-        out_rows.append({
+        row = {
             "row_id": a["row_id"],
             "model": a["model"],
             "source_file": a.get("source_file"),
@@ -373,7 +432,7 @@ def cmd_qscore(args):
             "e1_mean": mean,
             "e1_entropy": entropy,
             "e1_multimodality": multimodality,
-            "e1_signed_residual": mean - target_date,
+            "e1_signed_residual": None if mean is None else mean - target_date,
             "e1_null_window_mean": e1_null_window_mean,
             "e2_p_synthetic": p_syn,
             "q_e1": q_e1,
@@ -384,7 +443,10 @@ def cmd_qscore(args):
             "window_empty": window_n == 0,
             "n_words": n_words,
             "length_bin": length_bin(n_words, edges),
-        })
+        }
+        if feat is None:
+            row["skip_reason"] = "fragment"
+        out_rows.append(row)
 
     write_jsonl(out_rows, args.out)
     print(f"wrote {len(out_rows)} scored answer rows to {args.out}", file=sys.stderr)
@@ -485,6 +547,20 @@ def cmd_verify(args):
     print(f"  computing own-date, own-length-bin LOVO q's for every row "
           f"(h={args.h}, {len(edges) + 1} length bins)...", file=sys.stderr)
     lovo_rows = compute_lovo_qs(reference_rows, args.h, edges)
+    # A date-only RPS (typicality.py score-reference --date-only, auto-on for a DeBERTa
+    # date model) writes e2_p_synthetic = null for every row. The E2 columns would then be
+    # all-NaN, so both the narrative and the table columns are suppressed rather than
+    # printed as a claim the tables do not support.
+    has_e2 = any(r.get("e2_p_synthetic") is not None for r in reference_rows)
+
+    def _e2_cells(block):
+        if not has_e2:
+            return ""
+        return (f" {block['ks_e2']:.3f} | {block['ks_p_e2']:.3f} | "
+                f"{block['frac_le_0.5_e2']:.3f} |")
+
+    _e2_hdr = " ks_e2 | ks_p_e2 | frac≤0.5 e2 |" if has_e2 else ""
+    _e2_sep = "---|---|---|" if has_e2 else ""
 
     if args.lovo_out:
         write_jsonl(lovo_rows, args.lovo_out)
@@ -492,7 +568,8 @@ def cmd_verify(args):
 
     lines = ["# typicality.py verify report", "",
              f"n = {len(lovo_rows)} reference passages; h = {args.h}; step = {args.step}; "
-             f"{len(edges) + 1} length bins", ""]
+             f"{len(edges) + 1} length bins; channels: "
+             f"{'E1 (date) + E2 (authenticity)' if has_e2 else 'E1 (date) only'}", ""]
 
     lines += ["## What this checks, and why it matters", "",
               "Every reference passage's own-date, leave-one-volume-out q asks: among its "
@@ -507,6 +584,7 @@ def cmd_verify(args):
               "(pre-length-conditioning: frac≤0.5 = 0.351 in the shortest tercile, 0.664 in the "
               "longest — badly non-uniform). It's a validity check on the *instrument*, not a "
               "claim about any individual passage.", "",
+              *([] if not has_e2 else [
               "**Why frac≤0.5 near 0.5 matters for E2 too, not just E1**: E2 (the authenticity "
               "detector) was never as visibly broken as E1 in the pre-length-conditioning check "
               "(0.517 / 0.511 / 0.468 by tercile — much closer to 0.5 than E1's 0.351/0.664), "
@@ -515,7 +593,13 @@ def cmd_verify(args):
               "sample (n>10,000) having enough statistical power to detect a real but minor "
               "shape difference, rather than a length bias worth fixing on its own. After "
               "length-conditioning, E2's frac≤0.5 sits at 0.498–0.500 in every bin below — "
-              "essentially exact, which is the confirmation that reading was right.", "",
+              "essentially exact, which is the confirmation that reading was right.", ""]),
+              *([] if has_e2 else [
+              "**Date-only reference**: this run scored the reference with a date model alone "
+              "(`e2_p_synthetic` is null in every row), so the E2 authenticity channel is not "
+              "evaluated here and its columns are omitted below. The E2 channel calibrates "
+              "against the separate fragment-bearing lexical reference; see that reference's "
+              "own verify report for its uniformity check.", ""]),
               "**Why 6 length bins**: splitting the reference by length costs *passages*, not "
               "*volumes* — and passages are the abundant resource here, volumes the scarce one. "
               "A density check across the corpus's thinnest windows (t=1831, 57 volumes; "
@@ -535,9 +619,8 @@ def cmd_verify(args):
               "`n_volumes` here is the length-conditioned cell's count, pooled over all "
               "length bins in the window for this table (see the per-length-bin table below "
               "for whether length-conditioning is actually working).", "",
-              "| t | n_passages | n_volumes | ks_e1 | ks_p_e1 | frac≤0.5 e1 | "
-              "ks_e2 | ks_p_e2 | frac≤0.5 e2 |",
-              "|---|---|---|---|---|---|---|---|---|"]
+              "| t | n_passages | n_volumes | ks_e1 | ks_p_e1 | frac≤0.5 e1 |" + _e2_hdr,
+              "|---|---|---|---|---|---|" + _e2_sep]
     t = TARGET_DATE_LO_DEFAULT
     while t <= TARGET_DATE_HI_DEFAULT:
         window = [r for r in lovo_rows if t - args.h <= r["date"] <= t + args.h]
@@ -547,8 +630,7 @@ def cmd_verify(args):
         flag = " **short**" if n_volumes < 60 else ""
         lines.append(
             f"| {t} | {len(window)} | {n_volumes}{flag} | {block['ks_e1']:.3f} | "
-            f"{block['ks_p_e1']:.3f} | {block['frac_le_0.5_e1']:.3f} | {block['ks_e2']:.3f} | "
-            f"{block['ks_p_e2']:.3f} | {block['frac_le_0.5_e2']:.3f} |")
+            f"{block['ks_p_e1']:.3f} | {block['frac_le_0.5_e1']:.3f} |" + _e2_cells(block))
         t += args.step
 
     lines += ["", "## Per-length-bin breakdown (pooled across all windows)", "",
@@ -556,15 +638,14 @@ def cmd_verify(args):
               "the pre-length-conditioning design had (frac≤0.5 ranged 0.351 low / 0.664 high "
               "by tercile). Every bin should now sit near 0.5 — that's the confirmation, not "
               "just an assumption, that conditioning the window on length actually worked.", "",
-              "| length bin | n | ks_e1 | ks_p_e1 | frac≤0.5 e1 | ks_e2 | ks_p_e2 | frac≤0.5 e2 |",
-              "|---|---|---|---|---|---|---|---|"]
+              "| length bin | n | ks_e1 | ks_p_e1 | frac≤0.5 e1 |" + _e2_hdr,
+              "|---|---|---|---|---|" + _e2_sep]
     for name, bucket in sorted(group_by_length_bin(lovo_rows, len(edges) + 1).items()):
         block = _uniformity_block([r["lovo_q_e1"] for r in bucket],
                                    [r["lovo_q_e2"] for r in bucket])
         lines.append(
             f"| {name} | {len(bucket)} | {block['ks_e1']:.3f} | {block['ks_p_e1']:.3f} | "
-            f"{block['frac_le_0.5_e1']:.3f} | {block['ks_e2']:.3f} | {block['ks_p_e2']:.3f} | "
-            f"{block['frac_le_0.5_e2']:.3f} |")
+            f"{block['frac_le_0.5_e1']:.3f} |" + _e2_cells(block))
 
     report = "\n".join(lines) + "\n"
     if args.report:
@@ -1144,19 +1225,36 @@ def two_way_bootstrap(valid_answers, reference_rows, models, by_model, h, n_boot
 
         recomputed = {}
         for a in valid_answers:
+            em = a.get("e1_mean")
+            ps = a.get("e2_p_synthetic")
             t = a["true_date"]
             b = a["length_bin"]
-            e1_vals = [e1_by_cell[(y, b)] for y in range(t - h, t + h + 1) if (y, b) in e1_by_cell]
-            e2_vals = [e2_by_cell[(y, b)] for y in range(t - h, t + h + 1) if (y, b) in e2_by_cell]
-            if not e1_vals:
+            # A channel is "off" for this answer when its raw input is absent:
+            # e1_mean None/NaN (E1/E3 abstained, or score_style.py --channels
+            # auth skipped the date model); e2_p_synthetic None (--channels
+            # date skipped the E2 model). Off channels contribute NaN.
+            e1_off = em is None or math.isnan(em)
+            e2_off = ps is None
+            e1_vals = ([] if e1_off else
+                       [e1_by_cell[(y, b)] for y in range(t - h, t + h + 1) if (y, b) in e1_by_cell])
+            e2_vals = ([] if e2_off else
+                       [e2_by_cell[(y, b)] for y in range(t - h, t + h + 1) if (y, b) in e2_by_cell])
+            if not e1_off and not e1_vals:
+                # Unchanged behavior: an ACTIVE-E1 answer whose resampled
+                # window came up empty contributes nothing on either channel
+                # this draw.
                 recomputed[a["row_id"]] = (float("nan"), float("nan"), float("nan"))
                 continue
-            e1_arr = np.sort(np.concatenate(e1_vals))
-            e2_arr = np.sort(np.concatenate(e2_vals))
-            signed_residual = a["e1_mean"] - t
-            q_e1 = float(np.searchsorted(e1_arr, signed_residual, side="left")) / len(e1_arr)
-            q_e2 = float(np.searchsorted(e2_arr, a["e2_p_synthetic"], side="left")) / len(e2_arr)
-            resid_corrected = signed_residual - e1_arr.mean()
+            q_e1 = resid_corrected = float("nan")
+            if e1_vals:
+                e1_arr = np.sort(np.concatenate(e1_vals))
+                signed_residual = em - t
+                q_e1 = float(np.searchsorted(e1_arr, signed_residual, side="left")) / len(e1_arr)
+                resid_corrected = signed_residual - e1_arr.mean()
+            q_e2 = float("nan")
+            if e2_vals:
+                e2_arr = np.sort(np.concatenate(e2_vals))
+                q_e2 = float(np.searchsorted(e2_arr, ps, side="left")) / len(e2_arr)
             recomputed[a["row_id"]] = (q_e1, q_e2, resid_corrected)
 
         for m in models:
@@ -1203,6 +1301,9 @@ def build_parser():
     sr.add_argument("--max-length", type=int, default=256)
     sr.add_argument("--batch-size", type=int, default=32)
     sr.add_argument("--device", default="auto")
+    sr.add_argument("--date-only", action="store_true",
+                     help="skip the E2 pass; write e2_p_synthetic = null. Implied for a "
+                          "DeBERTa --e1-model-dir (the E3 date RPS is date-only by design).")
     sr.add_argument("--out", default=str(DEFAULT_REFERENCE_OUT))
     sr.set_defaults(func=cmd_score_reference)
 
