@@ -1,0 +1,5544 @@
+{
+  "judge_model": "anthropic/claude-sonnet-4-6",
+  "reasoning_effort": "medium",
+  "benchmark_version": "0.7",
+  "per_question": {
+    "1": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "2": {
+      "question_correct": 16,
+      "question_total": 16,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "3": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "4": {
+      "question_correct": 6,
+      "question_total": 8,
+      "question_r": 0.75,
+      "question_invalid": 0,
+      "question_weight": 0.25
+    },
+    "5": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "6": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "7": {
+      "question_correct": 7,
+      "question_total": 8,
+      "question_r": 0.875,
+      "question_invalid": 0,
+      "question_weight": 0.5625
+    },
+    "8": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "9": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "10": {
+      "question_correct": 7,
+      "question_total": 8,
+      "question_r": 0.875,
+      "question_invalid": 0,
+      "question_weight": 0.5625
+    },
+    "11": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "12": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "13": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "14": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "15": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "16": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "17": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "18": {
+      "question_correct": 6,
+      "question_total": 8,
+      "question_r": 0.75,
+      "question_invalid": 0,
+      "question_weight": 0.25
+    },
+    "19": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "21": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "22": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "23": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "24": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "25": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "26": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "27": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "28": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "29": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "30": {
+      "question_correct": 7,
+      "question_total": 8,
+      "question_r": 0.875,
+      "question_invalid": 0,
+      "question_weight": 0.5625
+    },
+    "31": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "32": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "33": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "34": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "35": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "36": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "37": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "38": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "39": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "40": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "41": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "42": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "43": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "44": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "45": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "46": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "47": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "48": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "49": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "50": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "51": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "52": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "53": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "54": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "55": {
+      "question_correct": 3,
+      "question_total": 6,
+      "question_r": 0.5,
+      "question_invalid": 0,
+      "question_weight": 0.0
+    },
+    "56": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "57": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "58": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "59": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "60": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "61": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "62": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "63": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "64": {
+      "question_correct": 5,
+      "question_total": 6,
+      "question_r": 0.8333,
+      "question_invalid": 0,
+      "question_weight": 0.4444
+    },
+    "65": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "66": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "67": {
+      "question_correct": 5,
+      "question_total": 6,
+      "question_r": 0.8333,
+      "question_invalid": 0,
+      "question_weight": 0.4444
+    },
+    "68": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "69": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "70": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "71": {
+      "question_correct": 5,
+      "question_total": 6,
+      "question_r": 0.8333,
+      "question_invalid": 0,
+      "question_weight": 0.4444
+    },
+    "72": {
+      "question_correct": 2,
+      "question_total": 6,
+      "question_r": 0.3333,
+      "question_invalid": 0,
+      "question_weight": 0
+    },
+    "73": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "74": {
+      "question_correct": 2,
+      "question_total": 6,
+      "question_r": 0.3333,
+      "question_invalid": 0,
+      "question_weight": 0
+    },
+    "75": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "76": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "77": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "78": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "79": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "80": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "81": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "82": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "83": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "84": {
+      "question_correct": 5,
+      "question_total": 6,
+      "question_r": 0.8333,
+      "question_invalid": 0,
+      "question_weight": 0.4444
+    },
+    "85": {
+      "question_correct": 5,
+      "question_total": 6,
+      "question_r": 0.8333,
+      "question_invalid": 0,
+      "question_weight": 0.4444
+    },
+    "86": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "87": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "88": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "89": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "90": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "91": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "92": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "93": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "94": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "95": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "96": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "97": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "98": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "99": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "100": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "101": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "102": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "103": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "104": {
+      "question_correct": 2,
+      "question_total": 6,
+      "question_r": 0.3333,
+      "question_invalid": 0,
+      "question_weight": 0
+    },
+    "105": {
+      "question_correct": 5,
+      "question_total": 6,
+      "question_r": 0.8333,
+      "question_invalid": 0,
+      "question_weight": 0.4444
+    },
+    "106": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "107": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "108": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "109": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "110": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "111": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "112": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "113": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "114": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "115": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "116": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "117": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "118": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "119": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "120": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "121": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "122": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "123": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "124": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "125": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "126": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "127": {
+      "question_correct": 12,
+      "question_total": 12,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "128": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "129": {
+      "question_correct": 16,
+      "question_total": 16,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "130": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "131": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "132": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "133": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "134": {
+      "question_correct": 5,
+      "question_total": 6,
+      "question_r": 0.8333,
+      "question_invalid": 0,
+      "question_weight": 0.4444
+    },
+    "135": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "136": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "137": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "138": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "139": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "140": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "141": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "142": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "143": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "144": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "145": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "146": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "147": {
+      "question_correct": 5,
+      "question_total": 6,
+      "question_r": 0.8333,
+      "question_invalid": 0,
+      "question_weight": 0.4444
+    },
+    "148": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "149": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "150": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "151": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "152": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "153": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "154": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "155": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "156": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "157": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "158": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "159": {
+      "question_correct": 6,
+      "question_total": 8,
+      "question_r": 0.75,
+      "question_invalid": 0,
+      "question_weight": 0.25
+    },
+    "160": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "161": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "162": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "163": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "164": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "165": {
+      "question_correct": 7,
+      "question_total": 10,
+      "question_r": 0.7,
+      "question_invalid": 0,
+      "question_weight": 0.16
+    },
+    "166": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "167": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "168": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "169": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "170": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "171": {
+      "question_correct": 7,
+      "question_total": 8,
+      "question_r": 0.875,
+      "question_invalid": 0,
+      "question_weight": 0.5625
+    },
+    "172": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "173": {
+      "question_correct": 6,
+      "question_total": 10,
+      "question_r": 0.6,
+      "question_invalid": 0,
+      "question_weight": 0.04
+    },
+    "174": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "175": {
+      "question_correct": 6,
+      "question_total": 8,
+      "question_r": 0.75,
+      "question_invalid": 0,
+      "question_weight": 0.25
+    },
+    "176": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "177": {
+      "question_correct": 7,
+      "question_total": 8,
+      "question_r": 0.875,
+      "question_invalid": 0,
+      "question_weight": 0.5625
+    },
+    "178": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "179": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "180": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "181": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "182": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "183": {
+      "question_correct": 7,
+      "question_total": 10,
+      "question_r": 0.7,
+      "question_invalid": 0,
+      "question_weight": 0.16
+    },
+    "184": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "185": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "186": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "187": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "188": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "189": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "190": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "191": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "192": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "193": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "194": {
+      "question_correct": 7,
+      "question_total": 10,
+      "question_r": 0.7,
+      "question_invalid": 0,
+      "question_weight": 0.16
+    },
+    "195": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "196": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "197": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "198": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "199": {
+      "question_correct": 6,
+      "question_total": 10,
+      "question_r": 0.6,
+      "question_invalid": 0,
+      "question_weight": 0.04
+    },
+    "200": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "201": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "202": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "203": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "204": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "205": {
+      "question_correct": 6,
+      "question_total": 8,
+      "question_r": 0.75,
+      "question_invalid": 0,
+      "question_weight": 0.25
+    },
+    "206": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "207": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "208": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "209": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "210": {
+      "question_correct": 6,
+      "question_total": 10,
+      "question_r": 0.6,
+      "question_invalid": 0,
+      "question_weight": 0.04
+    },
+    "211": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "212": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "213": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "214": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "215": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "216": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "217": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "218": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "219": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "220": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "221": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "222": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "223": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "224": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "225": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "226": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "227": {
+      "question_correct": 5,
+      "question_total": 10,
+      "question_r": 0.5,
+      "question_invalid": 0,
+      "question_weight": 0.0
+    },
+    "228": {
+      "question_correct": 7,
+      "question_total": 10,
+      "question_r": 0.7,
+      "question_invalid": 0,
+      "question_weight": 0.16
+    },
+    "229": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "230": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "231": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "232": {
+      "question_correct": 7,
+      "question_total": 8,
+      "question_r": 0.875,
+      "question_invalid": 0,
+      "question_weight": 0.5625
+    },
+    "233": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "234": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "235": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "236": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "237": {
+      "question_correct": 7,
+      "question_total": 8,
+      "question_r": 0.875,
+      "question_invalid": 0,
+      "question_weight": 0.5625
+    },
+    "238": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "239": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "240": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "241": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "242": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "243": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "244": {
+      "question_correct": 6,
+      "question_total": 10,
+      "question_r": 0.6,
+      "question_invalid": 0,
+      "question_weight": 0.04
+    },
+    "245": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "246": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "247": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "248": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "249": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "250": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "251": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "252": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "253": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "254": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "255": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "256": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "257": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "258": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "259": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "260": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "261": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "262": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "263": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "264": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "265": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "266": {
+      "question_correct": 7,
+      "question_total": 10,
+      "question_r": 0.7,
+      "question_invalid": 0,
+      "question_weight": 0.16
+    },
+    "267": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "268": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "269": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "270": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "271": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "272": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "273": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "274": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "275": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "276": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "277": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "278": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "279": {
+      "question_correct": 7,
+      "question_total": 8,
+      "question_r": 0.875,
+      "question_invalid": 0,
+      "question_weight": 0.5625
+    },
+    "280": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "281": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "282": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "283": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "284": {
+      "question_correct": 7,
+      "question_total": 10,
+      "question_r": 0.7,
+      "question_invalid": 0,
+      "question_weight": 0.16
+    },
+    "285": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "286": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "287": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "288": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "289": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "290": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "291": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "292": {
+      "question_correct": 7,
+      "question_total": 10,
+      "question_r": 0.7,
+      "question_invalid": 0,
+      "question_weight": 0.16
+    },
+    "293": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "294": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "295": {
+      "question_correct": 6,
+      "question_total": 8,
+      "question_r": 0.75,
+      "question_invalid": 0,
+      "question_weight": 0.25
+    },
+    "296": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "297": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "298": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "299": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "300": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "301": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "302": {
+      "question_correct": 6,
+      "question_total": 8,
+      "question_r": 0.75,
+      "question_invalid": 0,
+      "question_weight": 0.25
+    },
+    "303": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "304": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "305": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "306": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "307": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "308": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "309": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "310": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "311": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "312": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "313": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "314": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "315": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "316": {
+      "question_correct": 7,
+      "question_total": 8,
+      "question_r": 0.875,
+      "question_invalid": 0,
+      "question_weight": 0.5625
+    },
+    "317": {
+      "question_correct": 6,
+      "question_total": 10,
+      "question_r": 0.6,
+      "question_invalid": 0,
+      "question_weight": 0.04
+    },
+    "318": {
+      "question_correct": 4,
+      "question_total": 10,
+      "question_r": 0.4,
+      "question_invalid": 0,
+      "question_weight": 0
+    },
+    "319": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "320": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "322": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "323": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "324": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "325": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "326": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "327": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "328": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "329": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "330": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "331": {
+      "question_correct": 3,
+      "question_total": 6,
+      "question_r": 0.5,
+      "question_invalid": 0,
+      "question_weight": 0.0
+    },
+    "332": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "333": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "334": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "335": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "336": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "337": {
+      "question_correct": 5,
+      "question_total": 6,
+      "question_r": 0.8333,
+      "question_invalid": 0,
+      "question_weight": 0.4444
+    },
+    "338": {
+      "question_correct": 3,
+      "question_total": 6,
+      "question_r": 0.5,
+      "question_invalid": 0,
+      "question_weight": 0.0
+    },
+    "339": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "340": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "341": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "342": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "343": {
+      "question_correct": 7,
+      "question_total": 8,
+      "question_r": 0.875,
+      "question_invalid": 0,
+      "question_weight": 0.5625
+    },
+    "344": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "345": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "346": {
+      "question_correct": 6,
+      "question_total": 8,
+      "question_r": 0.75,
+      "question_invalid": 0,
+      "question_weight": 0.25
+    },
+    "347": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "348": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "349": {
+      "question_correct": 7,
+      "question_total": 8,
+      "question_r": 0.875,
+      "question_invalid": 0,
+      "question_weight": 0.5625
+    },
+    "350": {
+      "question_correct": 6,
+      "question_total": 8,
+      "question_r": 0.75,
+      "question_invalid": 0,
+      "question_weight": 0.25
+    },
+    "351": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "352": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "353": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "354": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "355": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "356": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "357": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "358": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "359": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "360": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "361": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "362": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "363": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "364": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "365": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "366": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "367": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "368": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "369": {
+      "question_correct": 6,
+      "question_total": 10,
+      "question_r": 0.6,
+      "question_invalid": 0,
+      "question_weight": 0.04
+    },
+    "370": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "371": {
+      "question_correct": 7,
+      "question_total": 10,
+      "question_r": 0.7,
+      "question_invalid": 0,
+      "question_weight": 0.16
+    },
+    "372": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "373": {
+      "question_correct": 5,
+      "question_total": 6,
+      "question_r": 0.8333,
+      "question_invalid": 0,
+      "question_weight": 0.4444
+    },
+    "374": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "375": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "376": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "377": {
+      "question_correct": 6,
+      "question_total": 8,
+      "question_r": 0.75,
+      "question_invalid": 0,
+      "question_weight": 0.25
+    },
+    "378": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "379": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "380": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "381": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "382": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "383": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "384": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "385": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "386": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "387": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "388": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "389": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "390": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "391": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "392": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "393": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "394": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "395": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "396": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "397": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "398": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "399": {
+      "question_correct": 6,
+      "question_total": 10,
+      "question_r": 0.6,
+      "question_invalid": 0,
+      "question_weight": 0.04
+    },
+    "400": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "401": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "402": {
+      "question_correct": 7,
+      "question_total": 8,
+      "question_r": 0.875,
+      "question_invalid": 0,
+      "question_weight": 0.5625
+    },
+    "403": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "404": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "405": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "406": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "407": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "408": {
+      "question_correct": 7,
+      "question_total": 8,
+      "question_r": 0.875,
+      "question_invalid": 0,
+      "question_weight": 0.5625
+    },
+    "409": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "410": {
+      "question_correct": 12,
+      "question_total": 12,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "411": {
+      "question_correct": 12,
+      "question_total": 12,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "412": {
+      "question_correct": 12,
+      "question_total": 12,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "413": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "414": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "415": {
+      "question_correct": 11,
+      "question_total": 12,
+      "question_r": 0.9167,
+      "question_invalid": 0,
+      "question_weight": 0.6944
+    },
+    "416": {
+      "question_correct": 12,
+      "question_total": 12,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "417": {
+      "question_correct": 12,
+      "question_total": 12,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "418": {
+      "question_correct": 11,
+      "question_total": 12,
+      "question_r": 0.9167,
+      "question_invalid": 0,
+      "question_weight": 0.6944
+    },
+    "419": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "420": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "421": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "422": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "423": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "424": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "425": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "426": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "427": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "428": {
+      "question_correct": 6,
+      "question_total": 8,
+      "question_r": 0.75,
+      "question_invalid": 0,
+      "question_weight": 0.25
+    },
+    "429": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "430": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "431": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "432": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "433": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "434": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "435": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "436": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "437": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "438": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "439": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "440": {
+      "question_correct": 5,
+      "question_total": 6,
+      "question_r": 0.8333,
+      "question_invalid": 0,
+      "question_weight": 0.4444
+    },
+    "441": {
+      "question_correct": 6,
+      "question_total": 8,
+      "question_r": 0.75,
+      "question_invalid": 0,
+      "question_weight": 0.25
+    },
+    "442": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "443": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "444": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "445": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "446": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "447": {
+      "question_correct": 5,
+      "question_total": 6,
+      "question_r": 0.8333,
+      "question_invalid": 0,
+      "question_weight": 0.4444
+    },
+    "448": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "449": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "450": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "451": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "452": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "453": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "454": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "455": {
+      "question_correct": 7,
+      "question_total": 8,
+      "question_r": 0.875,
+      "question_invalid": 0,
+      "question_weight": 0.5625
+    },
+    "456": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "457": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "458": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "459": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "460": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "461": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "462": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "463": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "464": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "465": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "466": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "467": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "468": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "469": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "470": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "471": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "472": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "473": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "474": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "475": {
+      "question_correct": 6,
+      "question_total": 8,
+      "question_r": 0.75,
+      "question_invalid": 0,
+      "question_weight": 0.25
+    },
+    "476": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "477": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "478": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "479": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "480": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "481": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "482": {
+      "question_correct": 12,
+      "question_total": 12,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "483": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "484": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "485": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "486": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "487": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "488": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "489": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "490": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "491": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "492": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "493": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "494": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "495": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "496": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "497": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "498": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "499": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "500": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "501": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "502": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "503": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "504": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "505": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "506": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "507": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "508": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "509": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "510": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "511": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "512": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "513": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "514": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "515": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "516": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "517": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "518": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "519": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "520": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "521": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "522": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "523": {
+      "question_correct": 16,
+      "question_total": 16,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "524": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "525": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "526": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "527": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "528": {
+      "question_correct": 4,
+      "question_total": 8,
+      "question_r": 0.5,
+      "question_invalid": 0,
+      "question_weight": 0.0
+    },
+    "529": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "530": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "531": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "532": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "533": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "534": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "535": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "536": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "537": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "538": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "540": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "541": {
+      "question_correct": 15,
+      "question_total": 16,
+      "question_r": 0.9375,
+      "question_invalid": 0,
+      "question_weight": 0.7656
+    },
+    "542": {
+      "question_correct": 15,
+      "question_total": 16,
+      "question_r": 0.9375,
+      "question_invalid": 0,
+      "question_weight": 0.7656
+    },
+    "543": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "544": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "545": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "546": {
+      "question_correct": 2,
+      "question_total": 6,
+      "question_r": 0.3333,
+      "question_invalid": 0,
+      "question_weight": 0
+    },
+    "547": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "548": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "549": {
+      "question_correct": 7,
+      "question_total": 8,
+      "question_r": 0.875,
+      "question_invalid": 0,
+      "question_weight": 0.5625
+    },
+    "550": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "551": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "552": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "553": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "554": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "555": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "556": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "557": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "558": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "559": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "560": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "561": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "562": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "563": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "564": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "565": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "566": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "567": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "568": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "569": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "570": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "571": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "572": {
+      "question_correct": 7,
+      "question_total": 10,
+      "question_r": 0.7,
+      "question_invalid": 0,
+      "question_weight": 0.16
+    },
+    "573": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "574": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "575": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "576": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "577": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "578": {
+      "question_correct": 7,
+      "question_total": 8,
+      "question_r": 0.875,
+      "question_invalid": 0,
+      "question_weight": 0.5625
+    },
+    "579": {
+      "question_correct": 5,
+      "question_total": 6,
+      "question_r": 0.8333,
+      "question_invalid": 0,
+      "question_weight": 0.4444
+    },
+    "580": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "581": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "582": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "583": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "584": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "585": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "586": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "587": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "588": {
+      "question_correct": 6,
+      "question_total": 8,
+      "question_r": 0.75,
+      "question_invalid": 0,
+      "question_weight": 0.25
+    },
+    "589": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "590": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "591": {
+      "question_correct": 8,
+      "question_total": 12,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "592": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "593": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "594": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "595": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "596": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "597": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "598": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "599": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "600": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "601": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "602": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "603": {
+      "question_correct": 12,
+      "question_total": 12,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "604": {
+      "question_correct": 12,
+      "question_total": 12,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "605": {
+      "question_correct": 12,
+      "question_total": 12,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "606": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "607": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "608": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "609": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "610": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "611": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "612": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "613": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "614": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "615": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "616": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "617": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "618": {
+      "question_correct": 12,
+      "question_total": 12,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "619": {
+      "question_correct": 12,
+      "question_total": 12,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "620": {
+      "question_correct": 5,
+      "question_total": 6,
+      "question_r": 0.8333,
+      "question_invalid": 0,
+      "question_weight": 0.4444
+    },
+    "621": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "622": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "623": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "624": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "625": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "626": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "627": {
+      "question_correct": 11,
+      "question_total": 12,
+      "question_r": 0.9167,
+      "question_invalid": 0,
+      "question_weight": 0.6944
+    },
+    "628": {
+      "question_correct": 5,
+      "question_total": 6,
+      "question_r": 0.8333,
+      "question_invalid": 0,
+      "question_weight": 0.4444
+    },
+    "629": {
+      "question_correct": 16,
+      "question_total": 16,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "630": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "631": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "632": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "633": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "634": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "635": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "636": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "637": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "638": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "639": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "640": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "641": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "642": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "643": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "644": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "645": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "646": {
+      "question_correct": 2,
+      "question_total": 6,
+      "question_r": 0.3333,
+      "question_invalid": 0,
+      "question_weight": 0
+    },
+    "647": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "648": {
+      "question_correct": 4,
+      "question_total": 6,
+      "question_r": 0.6667,
+      "question_invalid": 0,
+      "question_weight": 0.1111
+    },
+    "649": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "650": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "651": {
+      "question_correct": 5,
+      "question_total": 6,
+      "question_r": 0.8333,
+      "question_invalid": 0,
+      "question_weight": 0.4444
+    },
+    "652": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "653": {
+      "question_correct": 5,
+      "question_total": 6,
+      "question_r": 0.8333,
+      "question_invalid": 0,
+      "question_weight": 0.4444
+    },
+    "654": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "655": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "656": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "657": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "658": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "659": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "660": {
+      "question_correct": 3,
+      "question_total": 6,
+      "question_r": 0.5,
+      "question_invalid": 0,
+      "question_weight": 0.0
+    },
+    "661": {
+      "question_correct": 16,
+      "question_total": 16,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "662": {
+      "question_correct": 5,
+      "question_total": 6,
+      "question_r": 0.8333,
+      "question_invalid": 0,
+      "question_weight": 0.4444
+    },
+    "663": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "664": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "665": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "666": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "667": {
+      "question_correct": 4,
+      "question_total": 8,
+      "question_r": 0.5,
+      "question_invalid": 0,
+      "question_weight": 0.0
+    },
+    "668": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "669": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "670": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "671": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "672": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "673": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "674": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "675": {
+      "question_correct": 12,
+      "question_total": 12,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "676": {
+      "question_correct": 12,
+      "question_total": 12,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "677": {
+      "question_correct": 12,
+      "question_total": 12,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "678": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "679": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "680": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "681": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "682": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "683": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "684": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "685": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "686": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "687": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "688": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "689": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "690": {
+      "question_correct": 6,
+      "question_total": 8,
+      "question_r": 0.75,
+      "question_invalid": 0,
+      "question_weight": 0.25
+    },
+    "691": {
+      "question_correct": 3,
+      "question_total": 6,
+      "question_r": 0.5,
+      "question_invalid": 0,
+      "question_weight": 0.0
+    },
+    "692": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "693": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "694": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "695": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "696": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "697": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "698": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "699": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "700": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "701": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "702": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "703": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "704": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "705": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "706": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "707": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "708": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "709": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "710": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "711": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "712": {
+      "question_correct": 6,
+      "question_total": 6,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "713": {
+      "question_correct": 6,
+      "question_total": 8,
+      "question_r": 0.75,
+      "question_invalid": 0,
+      "question_weight": 0.25
+    },
+    "714": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "539": {
+      "question_correct": 11,
+      "question_total": 16,
+      "question_r": 0.6875,
+      "question_invalid": 0,
+      "question_weight": 0.1406
+    },
+    "715": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "716": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "717": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "738": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "740": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "741": {
+      "question_correct": 7,
+      "question_total": 8,
+      "question_r": 0.875,
+      "question_invalid": 0,
+      "question_weight": 0.5625
+    },
+    "742": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "743": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "744": {
+      "question_correct": 6,
+      "question_total": 10,
+      "question_r": 0.6,
+      "question_invalid": 0,
+      "question_weight": 0.04
+    },
+    "748": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "749": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "750": {
+      "question_correct": 6,
+      "question_total": 8,
+      "question_r": 0.75,
+      "question_invalid": 0,
+      "question_weight": 0.25
+    },
+    "751": {
+      "question_correct": 6,
+      "question_total": 8,
+      "question_r": 0.75,
+      "question_invalid": 0,
+      "question_weight": 0.25
+    },
+    "752": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "753": {
+      "question_correct": 2,
+      "question_total": 8,
+      "question_r": 0.25,
+      "question_invalid": 0,
+      "question_weight": 0
+    },
+    "754": {
+      "question_correct": 4,
+      "question_total": 8,
+      "question_r": 0.5,
+      "question_invalid": 0,
+      "question_weight": 0.0
+    },
+    "776": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "777": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "778": {
+      "question_correct": 7,
+      "question_total": 8,
+      "question_r": 0.875,
+      "question_invalid": 0,
+      "question_weight": 0.5625
+    },
+    "779": {
+      "question_correct": 16,
+      "question_total": 16,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "791": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "801": {
+      "question_correct": 3,
+      "question_total": 10,
+      "question_r": 0.3,
+      "question_invalid": 0,
+      "question_weight": 0
+    },
+    "802": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "809": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "810": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "811": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "812": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "813": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "814": {
+      "question_correct": 4,
+      "question_total": 8,
+      "question_r": 0.5,
+      "question_invalid": 0,
+      "question_weight": 0.0
+    },
+    "815": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "816": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "817": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "818": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "819": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "820": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "821": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "822": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "823": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "824": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "825": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "826": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "827": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "828": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "829": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "830": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "831": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "832": {
+      "question_correct": 3,
+      "question_total": 8,
+      "question_r": 0.375,
+      "question_invalid": 0,
+      "question_weight": 0
+    },
+    "833": {
+      "question_correct": 8,
+      "question_total": 10,
+      "question_r": 0.8,
+      "question_invalid": 0,
+      "question_weight": 0.36
+    },
+    "834": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "835": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "836": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "837": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "838": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "839": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "840": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "841": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "842": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "843": {
+      "question_correct": 6,
+      "question_total": 8,
+      "question_r": 0.75,
+      "question_invalid": 0,
+      "question_weight": 0.25
+    },
+    "844": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "845": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "846": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "847": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "848": {
+      "question_correct": 5,
+      "question_total": 10,
+      "question_r": 0.5,
+      "question_invalid": 0,
+      "question_weight": 0.0
+    },
+    "849": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "850": {
+      "question_correct": 5,
+      "question_total": 10,
+      "question_r": 0.5,
+      "question_invalid": 0,
+      "question_weight": 0.0
+    },
+    "852": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "853": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "858": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "861": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "864": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "872": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "873": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "875": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "877": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "879": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "882": {
+      "question_correct": 6,
+      "question_total": 8,
+      "question_r": 0.75,
+      "question_invalid": 0,
+      "question_weight": 0.25
+    },
+    "885": {
+      "question_correct": 10,
+      "question_total": 10,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    },
+    "886": {
+      "question_correct": 9,
+      "question_total": 10,
+      "question_r": 0.9,
+      "question_invalid": 0,
+      "question_weight": 0.64
+    },
+    "887": {
+      "question_correct": 8,
+      "question_total": 8,
+      "question_r": 1.0,
+      "question_invalid": 0,
+      "question_weight": 1.0
+    }
+  }
+}

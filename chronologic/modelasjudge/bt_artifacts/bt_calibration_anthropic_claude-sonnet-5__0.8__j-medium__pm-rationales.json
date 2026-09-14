@@ -1,0 +1,17 @@
+{
+ "intercept": 2.1972245773362196,
+ "slope": 0.9855640812820544,
+ "l2": 0.01,
+ "n": 505,
+ "n_by_source": {
+  "distractor": 418,
+  "partial": 41,
+  "ground_truth": 46
+ },
+ "loss": 204.8556476553046,
+ "converged": true,
+ "pin_p": 0.9,
+ "class_balance": true,
+ "prior_scale": 3.0,
+ "reference_policy": "mean-of-all-gts"
+}

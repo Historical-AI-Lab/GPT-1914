@@ -1,0 +1,8 @@
+model,overall_brier,cloze_acc,constrained_generation_acc,knowledge_and_inference_acc
+Talkie 1930 base,0.1574,39.5,24.9,44.0
+Talkie 1930 it,0.1593,37.4,23.8,25.1
+Qwen 7B ft (ckpt-3500),0.1601,36.2,14.9,34.4
+Qwen 72B,0.1607,10.8,8.8,38.0
+Qwen 3.5 35B-A3B base,0.1623,12.6,8.0,37.1
+Talkie web base,0.1627,18.2,13.6,34.1
+Qwen 7B,0.1628,8.6,9.5,37.0

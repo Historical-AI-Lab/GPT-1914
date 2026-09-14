@@ -1,0 +1,32 @@
+{
+  "n_fit": 2645,
+  "n_val": 531,
+  "t_nll": 1.0551288675401747,
+  "t_crps": 1.2334409741115162,
+  "validation_on_benchmarkbooks": {
+    "T=1": {
+      "temperature": 1.0,
+      "nll": 2.461626200709858,
+      "crps": 16.85908139721838,
+      "coverage_50": 0.6252354048964218,
+      "coverage_90": 0.928436911487759
+    },
+    "T*_nll": {
+      "temperature": 1.0551288675401747,
+      "nll": 2.464570050233333,
+      "crps": 16.83019168874048,
+      "coverage_50": 0.64030131826742,
+      "coverage_90": 0.9340866290018832
+    },
+    "T*_crps": {
+      "temperature": 1.2334409741115162,
+      "nll": 2.484824021205971,
+      "crps": 16.80292241118213,
+      "coverage_50": 0.6760828625235404,
+      "coverage_90": 0.9642184557438794
+    }
+  },
+  "date_model": "deberta-e3",
+  "n_fit_fragments_dropped": 338,
+  "n_val_fragments_dropped": 75
+}
