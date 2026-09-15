@@ -1,7 +1,7 @@
-booksample: the directory where sources were stored and questions developed
-===========================================================================
+booksample: the directory where questions were developed
+========================================================
 
-This directory holds metadata and code for the initial (1875-1924) section of the ChronoLogic English-language benchmark.
+This directory holds metadata and code for the Chronologic English-language benchmark.
 
 The documentation below explores corpus development, reviews the general strategy of the benchmark, and briefly describes the function of subdirectories. (Consult documentation in the subdirectories for more detail.) It also outlines the structure of the JSON objects that represent questions in the benchmark.
 
