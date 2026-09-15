@@ -108,27 +108,36 @@ from sample_passages import read_jsonl, write_jsonl               # noqa: E402
 from measure_length_distribution import count_words                # noqa: E402
 import date_predictor as dp                                        # noqa: E402
 import authenticity_detector as ad                                 # noqa: E402
+from paths import (CHRONOLOGIC_DATA, HF_AUTHENTICITY_REPO,          # noqa: E402
+                   HF_DATE_REPO, resolve_model_dir)
 
-DEFAULT_CALIBRATION = (Path.home() / "workdata" / "chronologic-dating-corpus"
-                        / "calibration_passages.jsonl")
-DEFAULT_E1_MODEL_DIR = (Path.home() / "workdata" / "chronologic-dating-corpus"
-                         / "passages" / "e1" / "model")
+DEFAULT_CALIBRATION = CHRONOLOGIC_DATA / "calibration_passages.jsonl"
+DEFAULT_E1_MODEL_DIR = CHRONOLOGIC_DATA / "passages" / "e1" / "model"
 DEFAULT_E2_RUN_DIR = REPO_ROOT / "bertclassify" / "model_output" / "e2_v1"
 DEFAULT_TEMPERATURE_FIT = SCRIPT_DIR / "e1_temperature_fit.json"
-DEFAULT_REFERENCE_OUT = (Path.home() / "workdata" / "chronologic-dating-corpus"
-                          / "calibration_reference_scored.jsonl")
+DEFAULT_REFERENCE_OUT = CHRONOLOGIC_DATA / "calibration_reference_scored.jsonl"
 DEFAULT_LENGTH_BIN_EDGES = SCRIPT_DIR / "length_bin_edges.json"
 DEFAULT_N_LENGTH_BINS = 6
 
 # E3 date-channel defaults (phase-e4-plan.md). Used by score_style.py --e3 to
 # repoint the four date-side artifact paths at the DeBERTa instrument and its
 # fragment-free calibration layer. The E2/authenticity side is unchanged.
-DEFAULT_REFERENCE_OUT_E3 = (Path.home() / "workdata" / "chronologic-dating-corpus"
-                             / "calibration_reference_scored_e3.jsonl")
-DEFAULT_E1_MODEL_DIR_E3 = (Path.home() / "workdata" / "chronologic-dating-corpus"
-                            / "passages" / "e3_v2" / "deberta_model")
+DEFAULT_REFERENCE_OUT_E3 = CHRONOLOGIC_DATA / "calibration_reference_scored_e3.jsonl"
+DEFAULT_E1_MODEL_DIR_E3 = CHRONOLOGIC_DATA / "passages" / "e3_v2" / "deberta_model"
 DEFAULT_TEMPERATURE_FIT_E3 = SCRIPT_DIR / "e3_temperature_fit.json"
 DEFAULT_LENGTH_BIN_EDGES_E3 = SCRIPT_DIR / "e3_length_bin_edges.json"
+
+
+def authenticity_model_dir(local_dir=None):
+    """The E2 authenticity instrument, local if present else from the Hub."""
+    return resolve_model_dir(local_dir or DEFAULT_E2_RUN_DIR,
+                             HF_AUTHENTICITY_REPO, "authenticity detector")
+
+
+def date_model_dir(local_dir=None):
+    """The E3 date instrument, local if present else from the Hub."""
+    return resolve_model_dir(local_dir or DEFAULT_E1_MODEL_DIR_E3,
+                             HF_DATE_REPO, "date predictor")
 
 
 def load_temperature(path):
@@ -292,8 +301,7 @@ def cmd_score_reference(args):
 DEFAULT_WINDOW_H = 10
 TARGET_DATE_LO_DEFAULT = 1831
 TARGET_DATE_HI_DEFAULT = 1930
-DEFAULT_ANSWERS_Q_OUT = (Path.home() / "workdata" / "chronologic-dating-corpus"
-                          / "answers_q.jsonl")
+DEFAULT_ANSWERS_Q_OUT = CHRONOLOGIC_DATA / "answers_q.jsonl"
 
 
 def q_score(value, reference_values):

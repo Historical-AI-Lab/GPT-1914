@@ -52,7 +52,11 @@ STYLEJUDGE_DIR = SCRIPT_DIR.parent / "stylejudge"
 
 DEFAULT_JUDGE = "anthropic/claude-sonnet-4-6"
 DEFAULT_BT_JUDGE = "anthropic/claude-sonnet-5"
-DEFAULT_PYTHON = "/Users/tunder/Library/CloudStorage/Dropbox/python/py310hf/bin/python"
+# The interpreter the 13 stages are spawned with. sys.executable means the
+# pipeline runs under whatever environment invoked it -- including a venv --
+# rather than one hardcoded checkout. Override with --python when the stages
+# need an interpreter other than the caller's (e.g. a separate PyMC install).
+DEFAULT_PYTHON = sys.executable
 
 # Rough calls-per-question ratios lifted from the plan §8 cost table's worked
 # numbers (680/79, 9152/310, 3900/80, 3508/310). These size the --dry-run

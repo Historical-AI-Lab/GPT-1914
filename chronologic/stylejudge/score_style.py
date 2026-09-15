@@ -59,11 +59,11 @@ import numpy as np
 import typicality as tp                                 # noqa: E402
 from measure_length_distribution import count_words      # noqa: E402
 import naming                                            # noqa: E402
+from paths import CHRONOLOGIC_DATA                        # noqa: E402
 
 BOOKSAMPLE_DIR = REPO_ROOT / "booksample"
 DEFAULT_OUT_DIR = REPO_ROOT / "modelasjudge" / "results"
-DEFAULT_INTERMEDIATE_DIR = (Path.home() / "workdata" / "chronologic-dating-corpus"
-                            / "style_intermediates")
+DEFAULT_INTERMEDIATE_DIR = CHRONOLOGIC_DATA / "style_intermediates"
 
 SCHEMA_VERSION = "stylejudge-2.0"
 DEFAULT_H = 10
