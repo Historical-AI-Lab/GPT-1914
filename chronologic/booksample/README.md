@@ -1,5 +1,5 @@
-ChronoLogic_EN_1875-1924 pipeline
-=================================
+booksample: the directory where sources were stored and questions developed
+===========================================================================
 
 This directory holds metadata and code for the initial (1875-1924) section of the ChronoLogic English-language benchmark.
 
@@ -20,149 +20,199 @@ corpus
 
 The currently active metadata for the benchmark is in ```primary_metadata.csv```. This shows not only the original library metadata for each volume, but information about genre, author nationality, author profession, etc that the pipeline elicited from me through dialogue each time a new book was selected. Benchmarks for other national contexts might need a column ```linguistic_register,``` with potential values such as 文言文, 白话文, or 早期白话, or 文白夹杂.
 
-```metadata_history.csv``` is the curated corpus underlying ```primary_metadata.csv```: it now merges two generations of sampling, the original 1875-1924 sample and a later, actively-developed sample, each restricted to the volumes actually selected (```include_yn == 'y'```) and backed by source text. Source texts for both generations live together in ```benchmarkbooks/```. If you're interested in the raw process of corpus development for the 1875-1924 generation — including volumes considered but not selected — see ```1875-1924/1875-1924_metadata_history.csv```, which includes all 400+ files initially sampled and reveals something about the process used: approving everything at first, then leaping forward as needed to cover sparse parts of the timeline, or get nationalities/genres/author demographics that seemed underrepresented. Some volumes were added manually at the end, mainly to get reference/encyclopedias at three points in the timeline (early/middle/late).
+```metadata_history.csv``` is a document used to create ```primary_metadata.csv```, now mostly obsolete, but it does have some columns not present in the other file.
 
-how metadata updates
---------------------
-
-When a volume is processed, the user may be queried for missing fields like author_profession, and a json metadata file for that volume is produced in ```json_metadata/```.
-
-The script ```metadata_updater.py``` draws values both from metadata_history and from these enriched metadata files. It also checks the ```process_files/``` directories in each of the subfolders to see if there are {barcode}...questions.jsonl files associated with a volume. If so, it updates the columns that report number of questions created for that volume.
+The corpus includes 187 sources linked to questions. This doesn't fully account for all the questions in the benchmark, because there are also a few questions where the source is diffuse. For instance, when an abstention question is asking for knowledge that *would not have been* available at the time, there is no actual period source for the question, although the metadata frame may posit a hypothetical one ("provide knowledge that would have been available in a British encyclopedia from 1875").
 
 a general note on metadata and "coverage"
 -----------------------------------------
 
-There are a lot of different ways to envision historical coverage. Are we trying to represent the actual population of the US in 1890? Should we rebalance our corpus to get 50/50 gender representation? What about geography and dialect?
+There are a lot of different ways to envision historical coverage. Our goal was to get a diverse sample of English-language texts published between 1831 and 1930. 
 
-It would be easy to reach paralysis. The strategy that allows this project to go forward without endlessly debating different normative rationales is to record metadata like genre, profession, nationality, and gender for each volume, and then associate it directly with questions based on that volume. So if we want to know whether a model is biased toward the UK or US, or men, or women, we can ask how well it performs on those questions.
+It is definitely not a population sample of English speakers between those dates; the vast majority of people were not published writers. Nor does it aim to be a population sample of texts published in the period. (We don't even have a complete census of texts published in the period.)
 
-This means that it's not necessary to have an absolutely balanced corpus. Generally, we want to attempt to get a range of volumes that is roughly representative of things published in English 1875-1924. (We concede in advance that we're representing writing, and not the actual English-speaking population.) But the *balance* of the corpus matters less than simply having some modest representation of books by Britons, or women, or conduct books that can tell us if a model is underperforming there.
-
-Many debatable aspects of question-formation have been handled in a similar way. What types of questions are most valuable? How much should we hand-craft them? How should we handle "wrong answers" that are, rationally, possible answers to a question, but expressed in anachronistic terms? All of these variables are recorded in metadata attached to each question (or answer), and the variables can be used to slice our benchmark from different angles, or even give "wrong answers," provisionally, different *degrees of wrongness*.
-
-We will report a top-line number. But the real interest of this benchmark will be our ability to particularize performance by source genre, question type, date, and degree of importance attributed to period style. Perhaps also linguistic register? Uncertainty about the "correctly representative" balance of genres should not daunt or delay us.
+Instead, the hope was simply to cover a wide enough range of genres and topics that the broad outlines of English-language publication would be dimly visible. A small sample like this will never be *sufficient* for coverage of history. But the goal of a benchmark is rather to establish a *necessary* test. A model that can answer these questions may still have important gaps. But one that cannot answer them definitely does.
 
 overview of question types
 --------------------------
 
-So far, I've written code that creates questions in five subdirectories:
+Questions are produced by seven pipelines, each in its own subdirectory:
 
 1. character/
-2. connectors/
+2. connectors/ and batchconnectors/
 3. knowledge/
 4. manual/
 5. poetry/
+6. summary/
 
-These are each a separate software pipeline, but there can be multiple question categories in each directory. For instance, the questions in ```connectors``` can have question_category "cloze_concessiveclause" or "cloze_effectsentence," among a total of seven types of rhetorical connection associated with different logical moves. 
+These are each a separate software pipeline, but there can be multiple question categories in each directory. For instance, the questions in ```connectors``` can have question_category "cloze_concessiveclause" or "cloze_effectsentence," among a total of seven types of rhetorical connection associated with different logical moves. ```batchconnectors``` is the batch wrapper around the same cloze pipeline, separating LLM processing from interactive approval; both write the same ```*_clozequestions.jsonl```.
 
-In ```manual,``` we have "textbook" questions that were actually formulated in period textbooks of arithmetic &c, "refusal" questions where the model should say it cannot answer, "attribution" questions where the model is asked to identify period, genre, or author, and a generic category of "handcrafted" questions we can thoughtfully design with a variety of explicit aims. This will include handcrafted knowledge questions, multi-hop reasoning questions, and poetry generation tasks.
+In ```manual,``` we have "textbook" questions that were actually formulated in period textbooks of arithmetic &c, "refusal" questions where the model should say it cannot answer, "attribution" questions where the model is asked to identify period, genre, or author, and ```parallax``` questions that contrast different perspectives.
 
 The ```character``` and ```knowledge``` directories are more unified. ```character``` is based on works of fiction, and asks the model to invent dialogue appropriate to a character, genre, and dramatic situation provided. ```knowledge``` is based on reference works, especially encyclopedias, and asks the model for knowledge not provided in the question.
 
 The ```poetry``` directory is a branch of ```manual``` that allows easier entry of questions and answers that contain linebreaks. Categories here include "poetry_generation"", where the answer is a poem, but also "poetic_form", which asks for knowledge of meter and stanza form. "Attribution" questions here may ask for biographical or historical knowledge about famous texts we know were reprinted and discussed in our period.
 
+The ```summary``` directory reframes summarization as infill: it finds paragraphs that contain their own topic sentence, masks it, and asks for a replacement. That yields a ground truth written in the period rather than by us.
+
 In all cases except for "refusal," "attribution," and some "handcrafted," the right answer is drawn from a period text. But the importance of style varies greatly. In "knowledge" questions the right answer is typically a named entity, and wrong answers are different named entities; expression is not a major factor. The same is largely true of "textbook" questions. 
 
-On the other hand, style can play a large role in ```character/``` and ```connectors/.``` Here answers are typically a clause, a full sentence, or even several sentences. Also, these questions have "anachronistic distractors" produced by a contemporary language model's effort to answer the question. If these distractors are counted, and probability is set to zero, anachronistic style will be strongly penalized. However, this is adjustable. Probability of these answers can vary smoothly from 0 to 1 if we want to examine a curve. Alternatively, we could use a model trained to measure divergence from 1875-1924 style in order to assign each "wrong answer" a degree of stylistic wrongness.
-
-Answer types in ```connectors/``` have names like "cloze_effectsentence." But they are not really pure cloze questions. In answering these questions, the model is instructed to fill in a blank labeled e.g. "[masked clause describing an inference or effect]" or "[masked sentence revising an implied expectation]". The model can thus benefit both from verbal context and from abstract logical reasoning. Finally, these questions--like most questions in the benchmark--come with "metadata frames" that provide the author's profession and the book's title and date, details which can also inform inference.
-
-In a sense, whenever a question is asked with a metadata frame, the model is being invited to do a kind of multi-hop reasoning. How valuable is this guidance? We don't know *a priori,* and the answer might vary from one model to another. However, the metadata frame is provided separately from the main question, and can be regenerated differently using the metadata fields in the question, so it will possible to suppress or provide particular kinds of metadata and ask how much they help.
+On the other hand, style can play a large role in ```character/``` and ```connectors/.``` 
 
 guide to specific fields in the json question format
 ----------------------------------------------------
 
-The documentation below was written by Claude Code after an inspection of existing *questions.jsonl files.
+The documentation below was written by Claude Opus 5 to explain why the format produced by scripts in this directory will not align precisely with the final benchmark. It gets into the weeds a bit.
 
-All questions across the benchmark share a common JSON structure, though some fields are optional depending on the pipeline. Each question is stored as a single JSON object per line in JSONL files.
+**There are two formats.** This section documents the
+**pipeline format** — what the seven question-writing pipelines emit into their
+`process_files/` directories. `QuestionCategorizer.py` then assembles those files into the
+**released benchmark format**, which is documented in [`../DATA.md`](../DATA.md).
 
-### Core fields (present in all questions)
+If you are writing code against the benchmark, use `../DATA.md`. Use this section if you
+are working on a question pipeline.
+
+Assembly into the benchmark drops two fields and adds eight:
+
+| | Field | Why |
+|---|---|---|
+| **dropped** | `passage` | Folded into `main_question`; the released file has no separate passage field |
+| | `context_judged` | Superseded by `partial_credit`, which records the same routing decision |
+| **added** | `question_number` | Stable identifier, assigned at assembly |
+| | `reasoning_type` | The eight-way grouping the paper reports (see the mapping below) |
+| | `frame_type` | `world_context`, `book_context` or `passage_context` |
+| | `partial_credit` | 1 if Bradley-Terry scored, 0 if pass/fail |
+| | `answer_length` | `short_answer`, `phrase` or `sentence_plus`, derived from answer lengths |
+| | `reject_reasons` | Per-option rubric for the BT judge, on partial-credit questions |
+| | `substantive_metadata_frame` | A trimmed frame for substantive judging, where the full frame would give the answer away |
+| | `added_answers` | Provenance for distractors added after the first pass |
+
+### Core fields (present in all pipeline output)
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `metadata_frame` | string | Contextual preamble describing the source (title, date, author, genre). Can be regenerated from metadata fields if needed. May be blank for some manual questions. |
 | `main_question` | string | The question or prompt presented to the model. |
-| `answer_strings` | list[string] | Parallel array of possible answers. First element is always the ground truth. |
-| `answer_types` | list[string] | Parallel array labeling each answer's type (see below). |
-| `answer_probabilities` | list[float] | Parallel array of probabilities. Ground truth is 1.0; distractors default to 0.0 but can be adjusted. |
-| `question_category` | string | Categorizes the question type (see below). |
-| `question_process` | string | Either `"automatic"` (pipeline-generated) or `"manual"` (hand-crafted). |
+| `answer_strings` | list[string] | Parallel array of possible answers. First element is always a ground truth. |
+| `answer_types` | list[string] | Parallel array labeling each answer's provenance (see below). |
+| `answer_probabilities` | list[float] | Parallel array of admissibility scores (see below). |
+| `question_category` | string | Fine-grained question type (see below). |
+| `question_process` | string | `"automatic"` (pipeline-generated), `"manual"` (hand-crafted), or `"poetry"` (entered through the poetry writer, which tolerates linebreaks). |
 
 ### Source metadata fields
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `source_htid` | string | HathiTrust identifier (e.g., `"hvd.hnnwy1"`) or special value (`"attribution"`, `"handcrafted"`, `"refusal"`). |
+| `source_htid` | string | HathiTrust identifier (e.g., `"hvd.hnnwy1"`), a newspaper or periodical slug (e.g. `"hvd.exeterandplymouthgazette"`, `"1875-07-15_p4_sn85026421"`), or a special value naming a diffuse source. Three such values survive into the released file: `"knowledge"`, `"attribution"`, `"refusal"` — these are the questions the corpus note above describes as having no single period source. |
 | `source_title` | string | Book title. |
-| `source_author` | string | Author name in "First Last" format. |
+| `source_author` | string | Author name in "First Last" format. `"Anonymous"` where unknown. |
 | `source_date` | int | Publication year. |
 | `source_genre` | string | Genre label (e.g., `"novel"`, `"encyclopedia"`, `"work of history and social description"`). |
 | `author_nationality` | string | Author's nationality as an adjective (e.g., `"American"`, `"British"`, `"Irish"`). |
-| `author_birth` | int or null | Author's birth year, if known. |
-| `author_profession` | string | Author's profession (e.g., `"novelist"`, `"historian"`, `"physician"`). |
+| `author_birth` | int or null | Author's birth year; null where unknown. |
+| `author_profession` | string | Author's profession (e.g., `"novelist"`, `"historian"`, `"physician"`). May be empty. |
 
 ### Optional fields
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `passage` | string | The relevant passage from the source text. Present in most automatic questions; absent in some manual questions where no specific passage applies. |
-| `period_words_in_main_question` | int | Count of words in the main question drawn verbatim from the original source text. 0 means entirely paraphrased; equal to word count means entirely quoted. Present in manual questions. |
-| `manual_comment` | string | Optional comment explaining the rationale for this question's design or any notable considerations. Present in manual questions. |
+| `passage` | string | The relevant passage from the source text. Present in most automatic questions; absent where no specific passage applies. **Not carried into the released file** — it is folded into `main_question`. |
+| `context_judged` | int | Whether the question needs context-sensitive judging. **Superseded** by `partial_credit` in the released file. |
+| `period_words_in_main_question` | int | Count of words in the main question drawn verbatim from the original source text. 0 means entirely paraphrased; equal to word count means entirely quoted. |
+| `manual_comment` | string | Comment explaining the question's design or any notable considerations. |
 
 ### question_category values
 
-**From `character/` pipeline:**
-- `character_modeling_with_summary` — asks the model to generate dialogue appropriate to a character, given character descriptions and a dramatic situation.
+Eighteen categories appear in the released benchmark. Grouped by the pipeline that emits
+them:
 
-**From `connectors/` pipeline (cloze-style questions):**
-- `cloze_causalsentence` — masked sentence expressing cause/reason
-- `cloze_causalclause` — masked clause expressing cause/reason
-- `cloze_effectsentence` — masked sentence expressing inference/effect
-- `cloze_effectclause` — masked clause expressing inference/effect
-- `cloze_contrastsentence` — masked sentence revising an implied expectation
-- `cloze_contrastclause` — masked clause revising an implied expectation
-- `cloze_conditionalclause` — masked clause describing a condition or proviso
-- `cloze_concessiveclause` — masked clause acknowledging a countervailing fact
+**`character/`** — `character_modeling_with_summary`: generate dialogue appropriate to a character, given descriptions and a dramatic situation.
 
-**From `manual/` pipeline:**
-- `textbook` — questions drawn from period textbooks (arithmetic problems, grammar exercises, etc.)
-- `attribution` — questions asking the model to identify period, genre, or author
-- `refusal` — questions where the model should recognize it cannot answer (testing appropriate epistemic humility)
-- `handcrafted` — general category for carefully designed questions with explicit aims (multi-hop reasoning, poetry generation, etc.)
+**`connectors/` and `batchconnectors/`** — cloze questions, named for the logical relation the masked span carries. Sentence-level: `cloze_causalsentence`, `cloze_effectsentence`, `cloze_contrastsentence`. Clause-level: `cloze_causalclause`, `cloze_effectclause`, `cloze_contrastclause`, `cloze_conditionalclause`, `cloze_concessiveclause`.
 
-**From `knowledge/` pipeline:**
-- Knowledge questions test factual recall from encyclopedias and reference works. These may have categories added in later development.
+**`knowledge/`** — `knowledge`: factual recall from encyclopedias and reference works.
+
+**`manual/`** — `textbook` (problems posed in period textbooks), `refusal` (the model should recognize it cannot answer), `parallax` (contrasting perspectives on one question), `constrained_generation` (write to a subject and a form), `inference`.
+
+**`poetry/`** — `poetry_generation` (the answer is a poem), `poetic_form` (knowledge of meter and stanza form).
+
+**`summary/`** — `topic_sentence`.
+
+### How question_category maps to reasoning_type
+
+The released file carries a coarser `reasoning_type`, and this is the grouping the paper's
+tables report. The mapping is **not** one-to-one: several categories split across
+reasoning types, because the same pipeline can produce questions that test different
+abilities. `textbook` is the clearest case — a period arithmetic problem is inference, but
+a period definition is knowledge.
+
+| `reasoning_type` | N | from `question_category` |
+|---|---:|---|
+| `sentence_cloze` | 160 | cloze_effectsentence (63), cloze_contrastsentence (63), cloze_causalsentence (34) |
+| `constrained_generation` | 158 | parallax (98), constrained_generation (30), poetry_generation (18), textbook (11), refusal (1) |
+| `phrase_cloze` | 155 | cloze_causalclause (36), cloze_contrastclause (32), cloze_concessiveclause (30), cloze_conditionalclause (30), cloze_effectclause (27) |
+| `character_modeling` | 115 | character_modeling_with_summary (115) |
+| `knowledge` | 94 | knowledge (91), textbook (3) |
+| `inference` | 78 | textbook (32), inference (24), knowledge (13), poetic_form (9) |
+| `abstention` | 62 | refusal (62) |
+| `topic_sentence` | 44 | topic_sentence (44) |
+
+Where the split is not mechanical it was made by hand; see `apply_handcrafted_recategorization.py`.
 
 ### answer_types values
 
-**Ground truth:**
-- `ground_truth` — the correct answer drawn directly from the period text. Always probability 1.0.
+The suffix on a type is not always a model name — it can be a **year**. Two whole families
+are period-displaced rather than model-generated, and they test a different failure mode:
+a passage that is authentic prose but from the wrong moment.
 
-**Same-source distractors (period-appropriate alternatives):**
-- `same_character` — dialogue from the same character in a different scene (character/ pipeline)
-- `same_book` — clause or sentence from elsewhere in the same book (connectors/ and character/ pipelines)
-- `negation` — semantically inverted version of the ground truth (connectors/ pipeline)
+Across the released file's 4,743 answer options, the families break down as:
 
-**Anachronistic distractors (generated by contemporary models):**
-- `anachronistic_gpt-oss:20b` — generated by the gpt-oss:20b model (fine-tuned on period text)
-- `anachronistic_mistral-small:24b` — generated by mistral-small:24b
-- `anachronistic_metadataless_gpt-oss:20b` — generated by gpt-oss:20b without metadata context
-- Additional model names may appear as `anachronistic_{model_name}`
+| Family | N | % | What it is |
+|---|---:|---:|---|
+| `anachronistic_<model>` | 1042 | 22.0 | Generated by the named model, given the metadata frame |
+| `ground_truth` | 952 | 20.1 | Drawn from the period text |
+| `manual` | 807 | 17.0 | Written by an editor |
+| `same_book` | 782 | 16.5 | Passage from elsewhere in the same source |
+| `anachronistic_manual` | 283 | 6.0 | An anachronism written by an editor |
+| `anachronistic_metadataless_<model>` | 279 | 5.9 | Generated *without* the frame, so it reads as generically modern |
+| `negation` | 212 | 4.5 | Semantically inverted ground truth |
+| `same_character` | 110 | 2.3 | Dialogue by the same character in a different scene |
+| `other_book_<year>` | 87 | 1.8 | Authentic prose from a *different* book of that year (1875–1995) |
+| `manual_negation` | 80 | 1.7 | Editor-written inversion |
+| `anachronistic_<year>` | 63 | 1.3 | Authentic prose from the wrong period (1647–2025) |
+| `manual_anachronistic_<model>` | 46 | 1.0 | Editor's replacement for a model-generated anachronism |
 
-**Manual distractors:**
-- `manual` — distractor entered by a human annotator
-- `anachronistic_manual` — anachronistic distractor entered by a human annotator
-- `manual_{original_type}` — a human replacement for an automatically-generated distractor
+Notes on the families that are easy to misread:
+
+- **`ground_truth` is not one per question.** 86 questions carry two, which is what makes
+  the Bradley-Terry calibration possible: hold one out, score it as a candidate.
+- **`same_book` is not wrong about the context**, only about the question. A judge that
+  accepts it is making a different error from one that accepts an anachronism, which is why
+  judge reliability is measured separately by distractor type.
+- **`anachronistic_<year>` and `other_book_<year>`** carry a date, not a model. These are
+  real passages placed in the wrong period — the hardest distractors stylistically, since
+  nothing about the prose itself is synthetic.
+- **Model slugs are recorded verbatim**, including `distort1_` / `distort2_` prefixes for
+  deliberately degraded variants. Because the slug names the generator, it is always
+  visible when a model would be scored against its own output.
+
+Model names appearing in the file include `gpt-oss:20b`, `mistral-small:24b`,
+`qwen3-30b-a3b-instruct-2507`, `gemma-4-31b-it`, `claude-opus-5`, `gpt-5.4` and
+`talkie-1930-13b-it`, along with non-model sources `wikipedia`, `google` and `older`.
 
 ### answer_probabilities
 
-The probability array allows flexible scoring:
-- Ground truth answers have probability `1.0`
-- Distractors default to `0.0` but can be adjusted to represent degrees of acceptability
-- Setting an anachronistic distractor to a small positive value (e.g., 0.2) would give it partial credit, penalizing anachronism less severely
-- The benchmark can be sliced by treating different probability thresholds as "correct enough"
+A graded admissibility score, not a binary flag.
 
-### Example question (from connectors/)
+- `1.0` marks a ground truth.
+- `0.0` marks a plain distractor.
+- **Intermediate values are used**, not merely available: the released file contains 0.1, 0.2, 0.25, 0.3, 0.4, 0.5, 0.75, 0.8, 0.9 and 0.95. 0.5 is the commonest, marking a distractor that editors judged partly defensible in the given context.
+
+This is what lets the benchmark be sliced by how severely a given failure mode should be penalized, and it is read directly by the Bradley-Terry calibration, which treats probability-0 distractors as the negative class.
+
+### Example question (pipeline format, from connectors/)
+
+Note the `passage` field, which the released file does not have.
 
 ```json
 {
@@ -185,3 +235,6 @@ The probability array allows flexible scoring:
 }
 ```
 
+For the same question as it appears in the released benchmark — with `question_number`,
+`reasoning_type`, `frame_type` and `partial_credit`, and without `passage` — see
+[`../DATA.md`](../DATA.md), or look it up in the public sample.
