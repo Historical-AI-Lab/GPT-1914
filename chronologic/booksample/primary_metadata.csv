@@ -8,7 +8,7 @@ barcode_src,title_src,author_src,firstpub,reason,pubplace,authgender,authnationa
 32044024191629,"The Old world and the New : or, A journal of reflections and observations made on a tour in Europe","Dewey, Orville",1836.0,travel,New York,m,US,1794-1882,Unitarian minister,412.0,120913.0,travelogue,0,0,1,0,0,0,3,0,0,4
 HN53EZ,"CaÃÂ¯ssa rediviva; or, The Muzio gambit,","Arblay, Alexander Charles Louis Piochard d'",1837.0,poem about chess,London,m,UK,1894-1837,clergyman and mathematician,62.0,12168.0,,0,0,1,0,0,0,0,0,0,1
 32044091939926,"A popular treatise on the warming and ventilation of buildings; showing the advantages of the improved system of heated water circulation, &c. ...","Richardson, C. J.",1837.0,architecture,London,m,UK,1806-1871,architect,170.0,39780.0,,0,0,1,0,0,0,0,0,0,1
-HC3ZMK,"The Phrenological journal, and magazine of moral science.",,1841.0,,Edinburgh,,UK,,,832.0,526353.0,,0,0,0,0,0,0,0,0,0,0
+HC3ZMK,"The Phrenological journal, and magazine of moral science.",,1841.0,,Edinburgh,,UK,,,832.0,526353.0,,0,0,2,0,0,0,0,0,0,2
 32044004358602,"Biographical sketches and interesting anecdotes of persons of color. To which is added, a selection of pieces in poetry.","Mott, Abigail",1837.0,"abolitionist biographies, contrast to Alison Carmichael",New York,f,US,1795-1846,Quaker abolitionist,268.0,116990.0,,0,0,1,0,0,0,0,0,0,1
 32044103077657,Journal of the Statistical Society of London.,Statistical Society (Great Britain),1860.0,economics,,,UK,,,618.0,436573.0,,0,0,1,0,0,0,0,1,0,2
 HNEA1C,"Incidents of travel in Egypt, Arabia Petraea, and the Holy Land","Stephens, John L.",1836.0,early travel,New York,m,US,1805-1852,explorer,272.0,109385.0,travel narrative,0,0,0,0,0,0,2,0,0,2
@@ -186,7 +186,7 @@ hn23kk,The Lowell lectures on the ascent of man,"Drummond, Henry",1894.0,author 
 32044010592319,Spicewood.,"Reese, Lizette Woodworth",1921.0,poetry; some free verse,US,f,US,1856-1935,poet and teacher,72.0,9368.0,,0,0,3,2,0,0,0,0,0,5
 hn1eg5,"Radio up to the minute,","Irwin, John R.; Nilson, Arthur R.",1924.0,radio,US,m,US,1897-1945,radio engineer,408.0,105196.0,,2,0,0,0,2,5,2,2,0,13
 32044080290661,Author vs. publisher,"Geddes, James",1923.0,publishing,US,m,US,1858-1948,,16.0,5836.0,,0,0,0,0,0,0,0,0,0,0
-hn52hs,The Encyclopedia Americana,,1918.0,reference work; volume B,US,unknown,unknown,unknown,,,,,8,0,0,0,0,0,0,0,0,8
+hn52hs,The Encyclopedia Americana,,1918.0,reference work; volume B,US,unknown,unknown,unknown,,,,,9,0,0,1,0,0,0,0,0,10
 hn1nxy,Centennial Gleanings,"McCarthy, Kate",1876.0,need early poems,US,f,US,unknown,,,,,0,0,4,0,0,0,0,0,0,4
 iaappleton,The American Cyclopedia of General Knowledge,"Ripley, George; Dana, Charles A.",1879.0,"Vol 5, Code - Demotica",US,unknown,unknown,unknown,,,,,2,0,1,9,3,0,0,0,0,15
 ah5vvw,"Andrew A. Bonar, D.D., diary and letters","Bonar, Andrew A.",1894.0,letters and diary,US,m,US,,clergyman,432.0,177386.0,,0,0,1,0,0,1,1,0,0,3
@@ -199,6 +199,16 @@ ah5vvw,"Andrew A. Bonar, D.D., diary and letters","Bonar, Andrew A.",1894.0,lett
 32044010396745,"The Indian eye on English life, or, Rambles of a pilgrim reformer","Malabari, Behramji M.",1891.0,Indian view of UK,Bombay,m,Indian,-1853,poet and social reformer,304.0,114629.0,,0,0,2,0,0,0,0,0,0,2
 hn1k17,"The autobiography of a ""newspaper girl"" ...","Banks, Elizabeth L.",1902.0,working-class woman's narrative Ã or as close as I could get,US,f,US,1870-1938,journalist,338.0,117676.0,,0,0,3,0,1,0,0,0,0,4
 brunerslavesadventurestowardfreedom1918,A Slave's Adventures Toward Freedom,"Bruner, Peter",1918.0,slave autobiography,US,m,US,1845-1938,soldier and writer,,,,0,0,0,0,0,1,2,0,0,3
-britannica1911ab,Encyclopaedia Britannica 1911,,1911.0,encyclopedia,UK,,UK,,,,,,0,0,7,1,8,0,0,0,0,16
+britannica1911ab,Encyclopaedia Britannica 1911,,1911.0,encyclopedia,UK,,UK,,,,,,14,0,7,1,8,0,0,0,0,30
 washingtonpost,The Washington Post,,1911.0,newspaper,US,,US,,,,,,0,0,4,0,0,0,0,0,0,4
 RSLXIN,Poems,"Blackwell, Anna",1853.0,poetry,London,f,UK,1816-1900,journalist and spiritualist,,,,0,0,2,0,0,0,0,0,0,2
+uc1.$b257893,How to Write Letters: A Manual of Correspondence,"Westlake, J. Willis",1876,Correspondence manual,US,m,US,,,,,,0,0,6,0,2,0,0,0,0,8
+hvd.32044102848413,A Primer of English Verse,"Corson, Hiram",1892,Versification guide,US,m,US,1828-1911,,,,,0,0,0,2,0,0,0,0,0,2
+nyp.33433057754842,A Day in the Moon,"Moreux, Théophile",1913,,UK,m,French,,,,,,0,0,3,0,0,0,0,0,0,3
+mdp.39015013443497,Interpreters of Life and the Modern Spirit,"Henderson, Archibald",1911,,,,,,,,,,0,0,1,0,0,0,0,0,0,1
+hvd.hwplxh,A Handbook of Modern English Metre,"Mayor, Joseph B.",1903,Versification guide,UK,m,UK,,,,,,0,0,0,2,0,0,0,0,0,2
+1875-07-15_p4_sn85026421_00415669203_1875071501_0470,Lake County Star,,1875,Newspaper,,,,,,,,,0,0,0,0,1,2,0,0,0,3
+britannica1875ab,Encyclopedia Britannica 1875,,1875,encyclopedia,UK,,UK,,,,,,2,0,9,6,5,0,0,1,0,23
+Edgington_dailymail_1928,Marrying is not a Brilliant Joke,"Edgington, May",1928,Newspaper column in The Daily Mail,UK,f,UK,1883-1957,novelist,,,,0,0,1,0,0,0,0,0,0,1
+exeterandplymouthgazette,Exeter and Plymouth Gazette,,1925,newspaper,UK,,UK,,,,,,0,0,1,0,0,0,0,0,0,1
+cheltenhamchronicle,The Cheltenham Chronicle,,1899,newspaper,UK,,,,,,,,0,0,0,0,1,0,0,0,0,1
