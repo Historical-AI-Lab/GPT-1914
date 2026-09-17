@@ -34,9 +34,6 @@ output file.
 
 | File | Contents |
 |---|---|
-| `memobench.jsonl`, `memobenchfull.jsonl` | The 60 proper-noun cloze items |
-| `memotest.jsonl`, `memotest_benchmark.jsonl` | The MCQ reframing |
+| `memobenchfull.jsonl` | The 60 proper-noun cloze items |
 | `freegen60questions/`, `mcq60questions/` | Per-model answers |
 | `transform_memotest.py` | Builds the MCQ form from the free-generation form |
-| `enter_memobench.py`, `enter_test.py` | Interactive entry of items and answers |
-| `freegen_pairs.txt`, `memos.txt` | Working notes from item selection |
