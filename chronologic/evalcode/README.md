@@ -1,4 +1,4 @@
-# evalcode: directly evaluating models against ground truths and distractors
+# evalcode - directly evaluating models against ground truths and distractors
 
 This directory contains `benchmark_evaluation.py`, the primary script for directly testing language models against the Chronologic benchmark. The script accepts a JSONL file of benchmark questions and a HuggingFace model identifier, loads the model locally via `transformers`, and writes a per-question markdown report alongside the JSONL file. A summary line is also printed to stdout. The default device is auto-detected (MPS on Apple Silicon, then CUDA, then CPU), making the script usable without a GPU server. A legacy path using a running vLLM endpoint is available via `--vllm` but is no longer the primary route.
 

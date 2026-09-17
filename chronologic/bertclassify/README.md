@@ -1,4 +1,4 @@
-# bertclassify: training the style instruments
+# bertclassify - training the style instruments
 
 Two DeBERTa-v3-large models judge whether a generated answer *reads* like prose of the
 period a question targets. This directory trains them. The scoring layer that turns their
