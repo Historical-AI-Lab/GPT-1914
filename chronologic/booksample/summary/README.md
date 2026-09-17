@@ -1,7 +1,15 @@
 summary
 =======
 
-This module finds paragraphs that contain their own summary sentence (a topic sentence or concluding synopsis). The extracted passage + synopsis pairs can later be used to frame summarization questions with ground-truth answers guaranteed to be in period style.
+**This pipeline produced the benchmark's `topic_sentence` questions** — 36 of the 44 in the
+released file; the other 8 were written by hand in [`../manual/`](../manual). The directory
+can look dormant because `process_files/` is empty: its outputs were moved to
+`old_process_files/`, which is gitignored.
+
+The idea is to reframe summarization as infill. Asking a model to summarize a paragraph has
+no period-authentic ground truth, so instead we find paragraphs that contain their own
+topic sentence, mask it, and ask for a replacement. Ground truth is then a real sentence,
+written in the period, by the author in question.
 
 ## Pipeline overview
 
@@ -22,9 +30,28 @@ benchmarkbooks/*.txt
         v
   process_files/
     {barcode}_potentialquestions.jsonl
+        |
+        v
+  topic_question_writer.py  Interactive. Masks the topic sentence, builds the
+        |                   question, and calls topic_distractor_generator for
+        |                   distractors. An editor approves each question.
+        v
+  process_files/
+    {barcode}_topicquestions.jsonl
+        |
+        v
+  ../QuestionCategorizer.py Gathers *_topicquestions.jsonl, along with the six
+                            other pipelines' output, into the benchmark file.
 ```
 
-Both scripts are incremental: they check what has already been processed and pick up where they left off.
+All four scripts are incremental: they check what has already been processed and pick up
+where they left off.
+
+Distractors come from three sources, in `topic_distractor_generator.py`: `same_book`
+sentences from elsewhere in the same text, ranked by Jaccard similarity; `anachronistic`
+topic sentences generated via OpenRouter to be stylistically dissonant; and `manual` ones
+supplied by the editor. That module is deliberately independent of the cloze pipeline's
+`distractor_generator_wcats.py` — the two solve different problems and are not shared.
 
 ## Prerequisites
 
@@ -75,6 +102,28 @@ Options:
 | `--credentials PATH` | `summary/credentials.txt` | Path to OpenAI credentials file |
 | `--model MODEL` | `ft:gpt-4.1-mini-2025-04-14:tedunderwood::CbB93x2c` | Fine-tuned model ID |
 | `--dry-run` | | List files that would be filtered, then exit |
+
+### Stage 3: Write the questions
+
+```bash
+python summary/topic_question_writer.py --file BARCODE   # one book
+python summary/topic_question_writer.py                  # all unfinished
+```
+
+Interactive. For each candidate passage it masks the topic sentence, assembles the
+question, generates distractors, and asks the editor to approve, edit or reject. Output is
+`process_files/{barcode}_topicquestions.jsonl`, in the benchmark's question format — see
+[`../../DATA.md`](../../DATA.md).
+
+Needs `OpenRouterCredentials.txt` (in `../../bertclassify/`) or `$OPENROUTER_API_KEY` for
+the anachronistic distractors, and imports `metadata_elicitation` from
+[`../batchconnectors/`](../batchconnectors) to build the metadata frame.
+
+### Stage 4: Into the benchmark
+
+`../QuestionCategorizer.py` collects `*_topicquestions.jsonl` — its `FILE_PATTERNS` maps
+`summary` to that glob — together with the output of the other six question pipelines, and
+assembles the benchmark file.
 
 ## Progress tracking
 
