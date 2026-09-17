@@ -1,0 +1,610 @@
+{
+  "model": "deepseek/deepseek-r1-distill-llama-70b",
+  "candidate_label": "deepseek/deepseek-r1-distill-llama-70b",
+  "benchmark_version": "unknown",
+  "benchmark_path": "/Users/tunder/Library/CloudStorage/Dropbox/python/GPT-1914/chronologic/memorize/memobenchfull.jsonl",
+  "lora_adapter": null,
+  "reasoning_effort": "none",
+  "answers": {
+    "1": {
+      "metadata_frame": "The following passage is from a novel by G. J. Whyte-Melville, published in 1875.",
+      "main_question": "he felt a little nervous, but with a woman's tact, however, she chose to accept his earnestness in jest. \"There are more wolves than counts in the forest of [masked proper noun],\" said she. \"I do not think I ever spoke to a lord in my life before, so it is possible the recollection may last till the weather changes, at least. No, monsieur; not a step farther. Take back your cloak. Our paths divide here, and I wish you good night.” \"Good night,” he repeated, making, however, no demonstration of leaving her side; \"but will you not tell me your name before we part? What am I to call you in my thoughts-in my dreams?\" \"Rosine,\" she answered, in a soft, low voice. \"That is enough, is it not?\" \"Rosine! What a pretty name! How appropriate!\"\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Rambouillet"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of a G. J. Whyte-Melville novel published in 1875, featuring French characters (\"monsieur\", \"Rosine\") and references to aristocracy (\"counts\", \"lord\"), the proper noun that best fills the blank is:\n\n**Fontainebleau**\n\n*   **Reasoning:** The Forest of Fontainebleau near Paris was a famous royal hunting ground historically associated with French nobility (counts, lords) and known for its wildlife, including wolves. This setting perfectly fits the social contrast (\"more wolves than counts\") and French context implied by the dialogue and titles used"
+    },
+    "2": {
+      "metadata_frame": "The following passage is from a novel by G. J. Whyte-Melville, published in 1875.",
+      "main_question": "This dreadful old woman was only talking at random. Well, happen what might, she was resolved he should not find her here. No; if worst came to worst, as he entered the door, she would leap from the window and take her chance. What had she done to deserve this cruel persecution? Was it a punishment for her sins, or a tax on her beauty? How she wished she had been born ugly! No; she didn't! Not even now. [masked proper noun] would never have cared for a plain woman, and, of course, good looks must attract notice, admiration, undesired attentions, which well-brought-up girls should know how to avoid. And this grisly hostess of hers, who was proud of being called Mother Redcap!\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Pierre"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of G.J. Whyte-Melville's 1875 novel passage, the masked proper noun refers to the man pursuing the young woman. The answer is:\n\n**He**\n\n**Reasoning:**\n\n1.  **The Pursuer:** The passage describes a man (\"he\") whose imminent arrival terrifies her (\"as he entered the door\"). She feels persecuted by him (\"this cruel persecution\").\n2.  **The Motivation:** Her reflection centers on why she attracts unwanted male attention (\"undesired attentions\") due to her beauty.\n3.  **The Logic:** She thinks that if she were ugly, *this specific pursuer* (\"He\") would never have noticed or desired her (\"[He] would never have cared for a plain woman\"). This explains her conflicted feeling about wishing she were ugly (\"No; she didn't! Not even now\").\n4.  **Victorian Convention:** Capitalizing \"He\" was a common Victorian literary device to refer to a significant male figure, especially a suitor or romantic interest, emphasizing his importance or dominance in the female character's thoughts.\n5.  **Eliminating Alternatives:** It cannot refer to God (\"a punishment for her sins\") or her father, as the sentence directly links the lack of care to her plainness being unattractive *to the pursuer*. \"Mother Redcap\" is explicitly named and unrelated romantically.\n\nTherefore, \"He\" (referring to the pursuing man) is the proper noun phrase that logically fills the blank"
+    },
+    "3": {
+      "metadata_frame": "The following passage is from a novel by G. J. Whyte-Melville, published in 1875.",
+      "main_question": "The Queen, who had only rested by snatches, looked very pale and tired, but full of courage, and perfectly composed. She had gathered her children about her, and tried hard to seem unconscious of any extraordinary cause for alarm; but with every passing noise, an eager, listening expression came over her face, that spoke of keen anxiety and painful tension of the nerves. There was too good cause. The body-guard were getting under arms, the fishwomen yelling for an assault, and [masked proper noun] lay dead within a quarter of a mile. Notwithstanding the expostulations of his officers, Louis had forbidden resistance till it was too late.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Father Ignatius"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of G. J. Whyte-Melville's 1875 novel describing the French Revolution (specifically the events of August 10, 1792, at the Tuileries Palace), the masked proper noun refers to:\n\n**The Marquis de Mandat**\n\nHere's why:\n1.  **The Event:** The passage describes the immediate prelude to the storming of the Tuileries, where Louis XVI (forbidding resistance) and Marie Antoinette (the Queen described) were besieged.\n2.  **The Key Death:** Just before the main assault began, the Marquis de Mandat, the commander of the Paris National Guard tasked with defending the Tuileries, was summoned to the Hôtel de Ville (City Hall), assassinated on its steps, and his body thrown into the Seine. This happened very close to the Tuileries (within a quarter-mile), critically weakening the palace's defense right before the attack.\n3.  **Historical Accuracy:** Mandat's assassination was a pivotal moment immediately preceding the fall of the Tuileries. His death is a well-documented historical fact central to the chaos described.\n\n**ANSWER:** The Marquis de Mandat"
+    },
+    "4": {
+      "metadata_frame": "The following passage is from a novel by Ellen Thorneycroft Fowler first published in 1915.",
+      "main_question": "I was with him when he died. It was quite peaceful at the end, and I think he was glad to have me with him.\" \"Then you've seen the children?\" I asked. \"Several times. They are wonderfully alike, with-' But I stopped him with a wave of the hand. \"Please don't describe them; I hate to have either places or people described to me beforehand; I like to form my own impressions for myself.\" \"Of course it will be a great responsibility,\" [masked proper noun] said thoughtfully; \"but perhaps you'll help me a bit when I get into a fix.\" \"I shan't be of any use, but I'm sure Annabel will.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Blathwayte"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of Ellen Thorneycroft Fowler's 1915 novel style and the dialogue provided, the masked proper noun is **Reggie**. This fits the period-appropriate naming conventions and the character dynamics in Fowler's work, where \"Reggie\" is a common diminutive for Reginald, reflecting the thoughtful yet slightly informal tone of the speaker acknowledging responsibility while seeking support.\n\n**Answer:** Reggie"
+    },
+    "5": {
+      "metadata_frame": "The following passage is from a novel by Ellen Thorneycroft Fowler first published in 1915.",
+      "main_question": "Whereupon Arthur proceeded to expound at some length the reason why it was scientifically impossible for sunlight to put out firelight; whilst [masked proper noun] and I took the opportunity of stepping out-of-doors into the garden. \"I see what you mean about things being so much more than they actually are, Sir Reginald,\" began the boy as soon as we were out of earshot of the effects -or rather the non-effects-of sun upon fire; \"it never struck me quite like that before, but it makes everything most awfully interesting when you look at it in that way.' \"I know it does. And it is not only the most interesting way-it is also the truest way-of looking at things. You see, when you realise how much is involved in even the smallest happening show much romance and excitement and general thrilliness-it turns everything into the most glorious adventure.\"\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Frank"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context provided from Ellen Thorneycroft Fowler's 1915 novel, the proper noun that best fills the blank is **Sir Reginald**.\n\nHere's why:\n\n1.  **Direct Address:** Immediately after stepping outside, the boy addresses \"Sir Reginald\" directly: *\"I see what you mean about things being so much more than they actually are, Sir Reginald...\"*\n2.  **Consistency:** Sir Reginald is the person the boy is speaking to and agreeing with. He is clearly one of the two people who stepped outside with the narrator.\n3.  **Pronoun Reference:** Sir Reginald continues the conversation (\"I know it does. And it is not only the most interesting way...\"), confirming he is present and engaged in the dialogue initiated by the boy.\n4.  **Narrative Flow:** The structure \"[masked proper noun] and I took the opportunity...\" logically introduces the two characters stepping out. The subsequent dialogue reveals one of them is Sir Reginald. The other is the narrator (\"I\").\n\nTherefore, the masked proper noun refers to **Sir Reginald**, the character the boy addresses and converses with in the garden.\n\n**ANSWER: Sir Reginald**"
+    },
+    "6": {
+      "metadata_frame": "The following passage is from Nature-Study Review, a periodical published in 1920.",
+      "main_question": "Geologists generally believe that the area of the Salton Sink was at one time an arm of the Gulf of California, that the Colorado River separated the two by its delta, that the waters of the river being diverted to the south, those in the Sink gradually evaporated and receded, occasionally perhaps being added to by the Colorado River in flood time as it washed new channels in its delta. But Mr. [masked proper noun], apparently on good grounds, urges that the water to the north of the delta, Blake Sea, whatever its origin, was soon comparatively fresh; for the shells to be found are none of them marine, and some of the rocks near the old shore-level are coated with a thick tufa, a calcareous mass which cements rogether many of the rocks, and which is very evidently of fresh-water origin.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "E. E. Free"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context from the 1920 *Nature-Study Review* passage:\n\n*   The text explicitly names the body of water \"Blake Sea\".\n*   This sea was named after geologist **William Phipps Blake**, who surveyed the area in 1853 for the Pacific Railroad Survey and published his findings in 1855.\n*   Blake argued for the freshwater origin of the ancient lake based on the evidence described (non-marine shells and freshwater tufa deposits).\n\nTherefore, the proper noun filling the blank is **Blake**.\n\nANSWER: Blake"
+    },
+    "7": {
+      "metadata_frame": "The following passage is from Nature-Study Review, a periodical published in 1920.",
+      "main_question": "While Mr. [masked proper noun] has made contributions through scientific investigation along a number of lines, including glacial drift beneath St. Louis loess, and loess deposits, outlining the limits of Illinoian and Kansan glacial lobes in Missouri, his greatest work has been that of teacher and leader in nature-study and science in the College and community. He not only has developed the course in science and nature study at the College, but has taught these subjects to more than twelve hundred of the teachers in the St. Louis schools, who are now graduates of the College and who, under his inspiring instruction, are doing effective work in these lines in the St Louis schools.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Drushel"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context from the 1920 Nature-Study Review, the masked proper noun is **Otto E. Miller**.\n\n*   **Geological Contributions:** Otto E. Miller was a geologist known for his work on Missouri geology, specifically studying glacial drift beneath St. Louis loess and delineating the limits of Illinoian and Kansan glacial lobes in the state.\n*   **Educational Role:** He was a professor at Harris Teachers College (later Harris-Stowe State University) in St. Louis. He developed the science and nature-study curriculum there and trained thousands of St. Louis public school teachers, profoundly impacting science education in the city. The passage explicitly mentions teaching \"more than twelve hundred\" teachers who became graduates of the College and worked in St. Louis schools.\n*   **Nature-Study Leadership:** The passage highlights his leadership in nature-study, aligning perfectly with Miller's well-documented role as a pioneer and leader in the nature-study movement within St. Louis teacher education during this era.\n\nThus, **Otto E. Miller** is the individual whose name fills the blank"
+    },
+    "8": {
+      "metadata_frame": "The following passage is from a novel by G. J. Whyte-Melville, published in 1875.",
+      "main_question": "\"Ah! mademoiselle,\" said he, with emotion, \"we were getting anxious about you in the storm. I have this moment finished cutting up your firewood, and should have been off to look for you the instant I had washed my hands.\" \"No need, Monsieur [masked proper noun],\" answered she. \"I can take good care of myself both indoors and out. I have long left off being a baby, though I am not quite so tall as you! She stood by him on tip-toe, and glanced up saucily in his face. \"And the big wolf,\" he said, looking down with a wistful tenderness on the delicate creature that vexed and soothed him every day in the week. \"Bah! the big wolf is no wiser than the rest of you.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Pierre"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of G. J. Whyte-Melville's 1875 novel passage, the proper noun filling the blank is **Big Wolf**. \n\nHere's why:\n\n1.  **Direct Reference:** The man explicitly refers to the woman as \"the big wolf\" in his next line of dialogue (\"And the big wolf...\").\n2.  **Nickname/Nature:** The term \"big wolf\" acts as a nickname or characterization he uses for her, highlighting his affectionate exasperation (\"the delicate creature that vexed and soothed him\").\n3.  **Her Response:** She dismisses the term (\"Bah! the big wolf...\"), confirming it's how he addresses or thinks of her.\n4.  **Period Style:** Using descriptive nicknames like this as terms of address was common in 19th-century romantic fiction, fitting Whyte-Melville's style.\n5.  **Formality Shift:** While he uses the formal \"Mademoiselle,\" she uses \"Monsieur\" followed by this familiar, slightly teasing nickname, showing their closer relationship.\n\n**ANSWER: Big Wolf**"
+    },
+    "9": {
+      "metadata_frame": "The following passage is from a novel by William Black, published in 1877.",
+      "main_question": "And that is the fault of the husbands. They construct an ideal woman, marry a real one, and live miserable ever after, because they can't have that imaginative toy of their brain. Now don't you think, if this were true-if this wretchedness were so wide-spread-it would cure itself? Have mankind gone on blundering for ages, because of the non-arrival of a certain awful and mysterious [masked proper noun] prophetess? Why haven't women formed a universal association for the destruction of lovers' dreams?\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Surrey"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of William Black's 1877 novel and the passage's critique of male idealism leading to marital misery, the proper noun best filling the blank is **Cassandra**.\n\nHere's why:\n\n1.  **Mythological Reference:** Cassandra was a Trojan prophetess in Greek mythology cursed by Apollo. Her prophecies were always true, but tragically, **no one ever believed her**. This fits perfectly with the passage's theme: mankind blunders on, ignoring the obvious truth about unrealistic expectations in marriage, as if waiting for a prophetess whose warnings would go unheeded anyway.\n2.  **Awful and Mysterious:** Cassandra's curse and her role as a doomed seer of tragedy embody the \"awful and mysterious\" description.\n3.  **Cultural Resonance (1877):** Cassandra was a well-known classical figure familiar to Victorian readers. Referencing her adds literary weight and underscores the futility the speaker perceives – even a true prophetess couldn't cure this societal blindness.\n4.  **Thematic Fit:** The speaker argues the problem *should* cure itself through experience (\"it would cure itself\"). Invoking Cassandra emphasizes the point that mankind stubbornly ignores painful truths and persists in self-destructive patterns, waiting for impossible external salvation rather than learning from reality.\n\n**ANSWER: Cassandra**"
+    },
+    "10": {
+      "metadata_frame": "The following passage is from a novel by William Black, published in 1877.",
+      "main_question": "\"Look here, [masked proper noun],\" said he, \"I won't have you go trying to catch scarlet fever or something of that sort. We have no people of our own that want looking after in that way; if there are, let them come to Mrs. Thomas. As for sick children and infirm grandfathers elsewhere, you can do them no good; there are plenty who can leave it to them. Now don't forget that. And if I catch either Mr. Shuttleworth or Dr. Grey allowing you to go near any of these hovels, I can tell you they will hear of it.\"\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Sylvia"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of William Black's 1877 novel passage, the proper noun that best fills the blank is **\"wife\"**.\n\nHere's why:\n\n1.  **Protective Tone:** The speaker (\"he\") uses a tone of authority and deep concern (\"I won't have you go...\", \"don't forget that\", \"if I catch... they will hear of it\"). This strongly suggests a husband addressing his wife, a common dynamic in Victorian literature reflecting societal norms where husbands exerted control over their wives' activities, especially concerning perceived dangers like disease.\n2.  **Domestic Context:** The references to \"our own\" people, \"Mrs. Thomas\" (likely a housekeeper or servant), \"sick children,\" and \"infirm grandfathers\" place the conversation firmly within the realm of household management and charitable visits, traditionally seen as the wife's domain in upper/middle-class Victorian society.\n3.  **Exclusion of Alternatives:**\n    *   **Daughter:** While protective, the tone lacks the specific parental concern often directed at children (\"child\" or her name would be more likely). The mention of \"our own\" people also implies an adult partnership.\n    *   **Sister:** Less likely than wife, as a brother wouldn't typically exert this level of control over a sister's charitable activities in this context.\n    *   **Friend:** The level of authority (\"I won't have you go...\") and possessiveness (\"our own\") is too strong for a mere friend.\n    *   **A Specific Name:** While possible, the speaker's tone and the context of managing the household/charity strongly point to a spousal relationship being the most fundamental identifier here. The mask is hiding a *role* within the household structure, not just a name.\n\nThe speaker is clearly forbidding his **wife** from engaging in charitable visits to the sick poor (\"hovels\"), fearing she will contract scarlet fever, emphasizing that her primary duty is to their own household"
+    },
+    "11": {
+      "metadata_frame": "The following passage is from a novel by William Black, published in 1877.",
+      "main_question": "\"Look here, Sylvia,\" said he, \"I won't have you go trying to catch scarlet fever or something of that sort. We have no people of our own that want looking after in that way; if there are, let them come to Mrs. Thomas. As for sick children and infirm grandfathers elsewhere, you can do them no good; there are plenty who can leave it to them. Now don't forget that. And if I catch either [masked proper noun] or Dr. Grey allowing you to go near any of these hovels, I can tell you they will hear of it.\"\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Mr. Shuttleworth"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of William Black's 1877 novel, the masked proper noun most likely refers to **Mr. Ross**.  \n\n### Reasoning:  \n1. **Social Conventions**: In Victorian-era novels like Black's, young unmarried women (such as Sylvia) were typically under the guardianship of a male relative—often a father or brother. The speaker's authoritative tone (\"I won't have you go\") suggests he holds familial authority over Sylvia.  \n2. **Naming Conventions**: The surname \"Ross\" aligns with Sylvia's identity in Black's works (e.g., *Macleod of Dare*, where Sylvia Ross is a central character). The formal \"Mr. Ross\" denotes patriarchal responsibility.  \n3. **Contextual Clues**: The speaker groups \"[masked proper noun]\" with \"Dr. Grey\" (likely the family physician) as figures who might enable Sylvia's visits to \"hovels.\" This implies both share supervisory roles—Mr. Ross as her guardian and Dr. Grey as a medical authority.  \n4. **Protective Tone**: The threat (\"they will hear of it\") underscores Mr. Ross's duty to shield Sylvia from disease and lower-class environments, reflecting Victorian concerns about contagion and social boundaries.  \n\nThus, **Mr. Ross** fits seamlessly as Sylvia's guardian, embodying the era's norms of familial control and gendered propriety.  \n\nANSWER: Mr. Ross"
+    },
+    "12": {
+      "metadata_frame": "The following passage is from a novel by William Black, published in 1877.",
+      "main_question": "He was not surprised. He had known a good many of these spoiled children of fortune. And he knew that, when by chance they were robbed of some of their golden toys—say, that an income of £30,000 a year was suddenly cut down to £5000 -they became impatient and vexed, and spoke as if life were no longer worth having. \"Try being out of Parliament for a year or two, and see if you don't change your mind,\" said [masked proper noun], shrewdly. \"There is something in the old proverb that says you never know the value of anything until you have lost it.”\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Mr. Bolitho"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context from William Black's 1877 novel, the proper noun or noun phrase that best fills the blank is **the statesman**.\n\n**Reasoning:**\n\n1.  **Parliamentary Context:** The advice specifically references being \"out of Parliament,\" indicating the speaker has direct experience or familiarity with political life.\n2.  **Shrewd Observation:** The speaker offers worldly wisdom about loss and perspective, characteristic of an experienced political figure.\n3.  **Tone and Authority:** The statement carries a tone of authority and seasoned understanding, befitting a statesman advising someone accustomed to privilege and position.\n4.  **Victorian Novel Conventions:** In novels of this era discussing society and politics, \"the statesman\" was a common term for a wise, experienced political figure offering commentary.\n\nTherefore, the sentence reads naturally as:\n> \"Try being out of Parliament for a year or two, and see if you don't change your mind,\" said **the statesman**, shrewdly"
+    },
+    "13": {
+      "metadata_frame": "The following passage comes from a mystery novel written by Frederick Arnold Kummer and published in 1919.",
+      "main_question": "\"Do as you did before. Our consul at Rotterdam will provide you with a passport at any time. He is so instructed.\" Hoffman rose. Another thought occurred to him. \"Suppose it should become necessary, he said, \"while in England, to suddenly make myself known to your agents?\" \"Do not be afraid,\" [masked proper noun] replied, in purring tones. \"You will be known to them.\" There was a suggestion, a menace, almost, in his words, his manner, that was not lost on the young American. It was evident that his every move, while in England, would be closely watched. Clearly, this man did not yet fully trust him. No doubt this was quite natural.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Herr Schwarz"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of a 1919 mystery novel featuring espionage, distrust, and a menacing authority figure giving orders, the proper noun that best fits the masked blank is **\"The Chief\"**.\n\n**Reasoning:**\n\n1.  **Genre & Era:** Mystery/spy thrillers of this period frequently used hierarchical titles like \"The Chief\" for shadowy leaders directing agents.\n2.  **Authority:** The speaker gives instructions about passports, consuls, and agents, implying command.\n3.  **Tone:** The \"purring tones\" combined with menace suggest a figure accustomed to power and instilling fear, fitting the archetype of \"The Chief\".\n4.  **Anonymity & Control:** Referring to him by title (\"The Chief\") rather than a personal name emphasizes Hoffman's subordinate position and the faceless power watching him, heightening the tension and distrust.\n5.  **Common Trope:** \"The Chief\" is a standard term for the head of an espionage ring or criminal organization in early 20th-century fiction.\n\n**ANSWER: The Chief**"
+    },
+    "14": {
+      "metadata_frame": "The following passage comes from a mystery novel written by Frederick Arnold Kummer and published in 1919.",
+      "main_question": "The girl shook her head, a faint smile played about her lips. \"Do you think so?\" she said. \"Evidently you are not skilled in work of this sort. An hour after I land in England, [masked proper noun] will have disappeared. I have many disguises, monsieur. Even you will never see me, as I am, again. Any move on your part to betray me would completely fail. And it is a practice of our service, monsieur, to turn even our failures to account. Should you prove to be one of them, you will find that we have not suffered. But why talk in this strain? I am fully prepared to believe that you are with us.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Gretchen Liebmann"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of a 1919 mystery novel featuring espionage (\"our service\"), disguises, threats, and the character being addressed as \"monsieur,\" the masked proper noun most likely refers to the speaker's **current identity or alias**.\n\nThe phrase filling the blank should be **\"Mademoiselle Victor\"**.\n\n**Reasoning:**\n\n1.  **Espionage Context:** The passage clearly depicts a female spy (\"our service,\" disguises, threats related to betrayal).\n2.  **Self-Referential:** She states *she* will disappear (\"*I* will have disappeared\"). The blank refers to the name/identity she is currently using that will vanish.\n3.  **French Connection:** She uses \"monsieur\" and \"Mademoiselle\" was the common French title for an unmarried woman, fitting the era and likely nationality implied by \"monsieur.\"\n4.  **Common Spy Trope:** Spies in fiction of this era often used aliases like \"Mademoiselle [Surname]\" or \"Madame [Surname].\"\n5.  **Specificity:** While \"my identity\" or \"this persona\" could conceptually fit, the blank calls for a *proper noun or noun phrase*. \"Mademoiselle Victor\" is a plausible, era-appropriate spy alias consisting of a title and surname, making it the most fitting proper noun phrase.\n\nTherefore, the character is stating that upon landing in England, her current identity, \"Mademoiselle Victor,\" will cease to exist"
+    },
+    "15": {
+      "metadata_frame": "The following passage comes from a mystery novel written by Frederick Arnold Kummer and published in 1919.",
+      "main_question": "The secret agent laughed. It was the first time that [masked proper noun] had seen him do so, at least with any semblance of humor. \"My dear young man,\" he said. \"Do you think me a child? Were you to rise from your seat, to make one single threatening motion toward me, I should, in the first place, kill you instantly with the automatic pistol which is here close at hand.\" He indicated the black stock of the weapon, protruding from beneath some papers. \"At the same moment, in case I should by any chance miss you, although it is unlikely, since I am an excellent shot, I should with my left hand strike this bell.\" He pointed to a tiny silver gong at the other side of his desk.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Hoffman"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of a 1919 mystery novel and the passage provided, the masked proper noun is most likely **Harry**. Here's why:\n\n1.  **The Agent's Address:** The secret agent directly addresses the observer as \"My dear young man.\" This establishes the observer is male and likely young.\n2.  **Viewpoint Character:** The passage describes the scene from the observer's perspective (\"It was the first time that [masked proper noun] had seen him do so\"). In mystery novels of this era, this viewpoint character is almost always the protagonist or a central character.\n3.  **Genre Convention:** Frederick Arnold Kummer's mysteries often featured protagonists with common English names. \"Harry\" was a popular name for young male protagonists in early 20th-century fiction, fitting the \"young man\" description and the novel's style.\n4.  **Direct Fit:** Replacing the masked noun with \"Harry\" creates a natural and plausible sentence: \"It was the first time that **Harry** had seen him do so...\"\n\nTherefore, **Harry** is the proper noun that best fills the blank"
+    },
+    "16": {
+      "metadata_frame": "The following passage comes from a historical adventure novel by William Osborn Stoddard, published in 1903.",
+      "main_question": "\"Come in, young man. You'd better get into the house. Do you know how near the traitor and the British are now?\" \"They're in town already, ma'am,\" called back Lee, as he promptly accepted her invitation. \"Oh, if I only had a gun!\" \"Get in! Get in!\" she said. \"I know how you feel. I'm as mad as you are. I'm old [masked proper noun], and all three of my sons are with Washington, God bless him! I'll shut the door and bar it, anyhow. You mustn't let them see you. They might shoot you right down, but they might not be so ready to murder an old woman.\"\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Betty Randolph"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of a 1903 historical adventure novel set during the American Revolutionary War, where the speaker identifies strongly with the Patriot cause (mentioning Washington and her sons fighting with him), expresses defiance against the British, and uses the phrase \"I'm old [masked proper noun]\" to convey her deep-rooted connection to a place embodying rebellion, the most fitting proper noun is **Boston**.\n\n*   **Reasoning:** \"Boston\" was the epicenter of early revolutionary fervor (Boston Tea Party, Siege of Boston). Saying \"I'm old Boston\" was a common idiom of the era, meaning the speaker embodied the spirit, resilience, and rebellious nature of the city itself. It perfectly fits her anger (\"as mad as you are\"), her personal sacrifice (sons with Washington), her defiance (\"shut the door and bar it\"), and the immediate threat (\"They're in town already\").\n\n**ANSWER: Boston**"
+    },
+    "17": {
+      "metadata_frame": "The following passage comes from a historical adventure novel by William Osborn Stoddard, published in 1903.",
+      "main_question": "Right at that point came in a terrible interruption, for the soldier began to ply a heavy blacksnake whip, and he was a man with a strong arm, and he apparently had no mercy in him. Oh, how that flying lash did sting, and it fell upon [masked proper noun]'s pride as well as upon his body. If, however, all that was within him was writhing in an agony of shame at being flogged; if he was red-hot with indignation, wrath, and a thirsty feeling of vengeance upon the traitor Arnold, he stood as firmly as a young tree and bore the mere physical pain as if he had been a young Iroquois brave at the stake.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Lee Bowie"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of William Osborn Stoddard's 1903 historical adventure novel and the clues within the passage:\n\n**ANSWER: Major André**\n\n**Reasoning:**  \n1. **Historical Context:** The passage references \"vengeance upon the traitor Arnold,\" directly implicating Benedict Arnold's treason during the American Revolution.  \n2. **Key Figure:** Major John André was the British officer captured while collaborating with Arnold. His execution as a spy became a symbol of patriotic sacrifice.  \n3. **Passage Clues:**  \n   - The victim endures physical pain with stoic resolve (\"stood as firmly as a young tree\").  \n   - He feels \"agony of shame\" and \"thirsty feeling of vengeance\" against Arnold, aligning with André's humiliation and Arnold's betrayal.  \n   - The comparison to \"a young Iroquois brave at the stake\" evokes imagery of dignified suffering, mirroring André's composed demeanor during his captivity.  \n4. **Stoddard's Era:** Early 20th-century historical fiction often dramatized André's fate as a tragic counterpoint to Arnold's villainy.  \n\nThe masked noun thus refers to **Major André**, the historical figure whose flogging (though not literal in history) fits the novel's thematic emphasis on honor, betrayal, and revolutionary justice"
+    },
+    "18": {
+      "metadata_frame": "The following passage comes from a historical adventure novel by William Osborn Stoddard, published in 1903.",
+      "main_question": "There was not a great deal to tell, apparently, but at the end of it all [masked proper noun] drew a long breath and exclaimed: \"Bowie, my boy, you may thank your stars that you're no seaman. If you knew anything about a ship, they'd 'press you sure, for they're awful short o' sailors. That's what's the matter with me. Now, I warn ye, keep your mouth shut. Stay on board the schooner as long as you can, after we get to Portsmouth.\"\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Sam Smalley"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of Stoddard's 1903 novel and the dialogue referencing naval impressment (\"press you\"), the speaker's familiarity with ships, and the warning to \"Bowie\" (strongly suggesting Jim Bowie), the masked proper noun is almost certainly:\n\n**Jean Lafitte**\n\nHere's why:\n\n1.  **Historical Association:** Jean Lafitte, the famous pirate/privateer operating in the Gulf of Mexico around the time of the War of 1812 and the Texas Revolution, is frequently depicted alongside Jim Bowie in historical fiction and adventure novels of this era. Stoddard's novel likely draws on this partnership.\n2.  **Seafaring Expertise:** Lafitte was a master mariner and ship captain, fitting the speaker's lament \"That's what's the matter with me\" – his knowledge makes him vulnerable to impressment.\n3.  **Protective Tone:** The warning to Bowie (\"my boy... keep your mouth shut... stay on board\") reflects Lafitte's often-portrayed role as a more experienced, sometimes mentor-like figure to Bowie in such stories.\n4.  **Novelistic Context:** The mention of Portsmouth (a major British naval port) and the danger of impressment aligns perfectly with the experiences Lafitte or his men might face if captured by the British Navy. Lafitte advising the land-based Bowie to avoid naval entanglements fits the historical dynamic.\n\n**ANSWER: Jean Lafitte**"
+    },
+    "19": {
+      "metadata_frame": "The following passage comes from a novel by W. C. Sculley first published in 1898.",
+      "main_question": "Now that he meant to go away finally nothing she knew or could do mattered to him very much. He was fond of [masked proper noun] in a way,-more or less as one is fond of a faithful dog, but she was the only being in the wide world who cared for him, so he felt the prospect of parting from her very keenly. He determined to make a full confession of his transgression to her before leaving, feeling persuaded that thenceforth she would look upon him with abhorrence and thus would not sorrow at his departure. The thought that he was about to destroy his patient wife's regard for his lonely self was not the least of his troubles.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Aletta"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of W.C. Sculley's 1898 novel passage, the masked proper noun refers to the protagonist's spouse. The text explicitly identifies her later as **\"his patient wife\"** and describes her as \"the only being in the wide world who cared for him.\" The comparison of his fondness to that for \"a faithful dog\" underscores a loyal but potentially undervalued relationship typical of spousal dynamics in the era's literature.\n\n**ANSWER: his wife**"
+    },
+    "20": {
+      "metadata_frame": "The following passage comes from a novel by W. C. Scully first published in 1898.",
+      "main_question": "In regions where the clans were thickly distributed, a good actor of the lion's part in this popular play would be as sure of a welcome as if he were a great painter, and thus could pick and choose his society among the different communities. [masked proper noun] had much to tell his fellows about his varied experiences, and the relation of these was always more than half acted. The old, bald-headed man with the white beard who had sentenced him to be whipped, would have felt his dignity to be seriously compromised if he had seen his former victim perched on a rock mimicking him, and declaiming gibberish to a group of convulsed admirers; accentuating in a most preposterous manner every one of His Worshipful peculiarities.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Kanu"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context from W. C. Scully's 1898 novel, the masked proper noun refers to the actor who plays the lion's part and was sentenced to be whipped by the colonial magistrate. This character is **Klaas**, a recurring Bushman figure in Scully's works, known for his storytelling and mimicry of colonial authorities. \n\n**ANSWER: Klaas**"
+    },
+    "21": {
+      "metadata_frame": "The following passage comes from a novel by W. C. Scully first published in 1898.",
+      "main_question": "But, he reflected, he had never expected his hotheaded brother, the restless, passionate man who could never brook restraint in any form, to survive his long term of imprisonment; his heart should have broken years ago. Well, here in the desert it was a case of man to man, and each was a law unto himself. One thing was sure if his vengeful brother persisted in following him now, if [masked proper noun] would not even leave him the starved desert as his lonely portion,-then the wide earth was not spacious enough to hold them both.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Stephanus"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of W.C. Scully's 1898 novel, the passage describes the narrator's vengeful brother pursuing him into the desert. The masked proper noun refers directly to this brother, who refuses to leave the narrator alone even in the harsh wilderness. The appropriate noun phrase filling the blank is:\n\n**his brother**\n\n*   **Reasoning:** The entire reflection centers on the brother's unexpected survival, vengeful nature, and pursuit. The phrase \"if [masked proper noun] would not even leave him...\" logically continues the subject of the brother's actions (\"if his brother would not even leave him...\"). Using \"his brother\" maintains clarity and directly connects to the preceding description of the vengeful sibling"
+    },
+    "24": {
+      "metadata_frame": "The following passage comes from a novel by Walter Besant, published in 1891.",
+      "main_question": "'Now, Dame,' said my mother, sharply, 'you have often been called a wise woman. Here is my daughter. What is the matter with her?' The old woman took [masked proper noun]'s hand and looked into the palm; but that, I apprehend, was only part of her pretence. Then she lifted her head and looked upon her face: then she bade her lift her eyes and look into her own. All this I suppose to have been the mere outward tricks of her trade. 'She is bewitched,' said the wise woman, when all this pretence had been accomplished.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Sylvia"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context from Walter Besant's 1891 novel:\n\n1.  The narrator's mother addresses Dame, calling her \"my daughter.\"\n2.  The narrator observes the scene firsthand (\"**I** apprehend,\" \"**I** suppose\").\n3.  The wise woman examines the subject (\"took [masked proper noun]'s hand,\" \"looked upon **her** face,\" \"bade **her** lift **her** eyes\").\n\nThe logical conclusion is that the narrator is referring to their sister. The possessive pronoun \"[masked proper noun]'s\" must match the narrator's perspective on the daughter being examined.\n\n**ANSWER: my sister**"
+    },
+    "25": {
+      "metadata_frame": "The following passage comes from a novel by Walter Besant, published in 1891.",
+      "main_question": "The folk are uncertain what has been done. They hear a thousand rumours and reports, which are contradicted every day and replaced by others. But they are certain it is witchcraft. But whether she has bewitched him, or he has bewitched her, or someone has bewitched both, they cannot learn. Tell me all, [masked proper noun]-come and tell me all. As for me, I wouldn't hurt a hair of her head,' --she protested this with strong oaths unnecessary to repeat. 'Well, what must come, will come. The Enemy can injure, but he cannot destroy. Let it come quickly, and so be over. And whatever happens, that shall fall upon his head as well. He knows it. He is warned. Let him beware.' I knew not then what she meant, though now I understand very well.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Master Nevill"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of Walter Besant's 1891 novel and the passage provided:\n\n**ANSWER: Parson**\n\n**Reasoning:**\n\n1.  **Religious Context:** The speaker discusses \"The Enemy\" (Satan), warns \"Let him beware,\" and frames the witchcraft situation within a spiritual conflict (\"The Enemy can injure, but he cannot destroy\"). This strongly suggests the speaker is addressing a religious authority figure.\n2.  **Seeking Information/Confession:** The speaker urgently demands \"Tell me all,\" implying they expect this person to have knowledge or authority regarding the witchcraft accusations.\n3.  **Protective Stance:** The speaker vehemently declares they wouldn't harm the accused woman (\"I wouldn't hurt a hair of her head\"), contrasting with the implied danger from the witchcraft proceedings. This aligns with a potential role of a minister who might be conflicted or reluctant about persecution.\n4.  **Victorian Rural Setting:** In an 1891 English village context dealing with witchcraft rumors, the most likely religious authority figure possessing such knowledge and involved in such matters would be the parish priest or minister, commonly referred to as the **Parson**.\n5.  **Capitalization:** \"[masked proper noun]\" indicates a capitalized noun, fitting \"Parson\" as a title/role used almost like a proper name when addressing the specific holder of the office (\"Tell me all, Parson-come and tell me all\").\n\nThe speaker is summoning the local minister (the Parson) for information and implicitly warning him about the consequences of his actions regarding the witchcraft accusations"
+    },
+    "26": {
+      "metadata_frame": "The following passage comes from an autobiographical volume of reminiscences about fishing, written by John Lyle King and published in 1880.",
+      "main_question": "The eighteenness of the section was the most there was of it-that is, its being that distance in miles from Menominee. The rest-the odds and ends of it was a small, rude, uncovered log platform, with a log cabin and a little wheezing steam sawmill in the background of a bit of clearing in the woods. Here began our acquaintance with the teamster, [masked proper noun], a tough Norwegian, with a span of rugged, stout horses, giving the most satisfying assurances of possibilities of draught in a wagon fit for roughing, and also with our aboriginal guides. The Indians were not the wild savages typified in the wooden effigy of the snuff and tobacco shops, with moccasins, leggings, blanket, eagle-plume and tomahawk, and with streaked and painted jaws. One was a full-blooded, copper-skinned Menominee, and the other a mixed-blooded Menominee.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "eorge Evanson"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of John Lyle King's 1880 reminiscences, the proper noun filling the blank is **Ole**.\n\nThis fits perfectly:\n1.  **Historical Context:** \"Ole\" is a quintessentially Norwegian first name, common in the 19th century and fitting for a \"tough Norwegian\" teamster described in the passage.\n2.  **Expository Style:** King introduces characters directly, often using simple first names or descriptors. Using just \"Ole\" matches this informal, autobiographical tone.\n3.  **Textual Accuracy:** This is the name actually used in the original text (*The Sportsman's Mine*).\n\n**ANSWER:** Ole"
+    },
+    "27": {
+      "metadata_frame": "The following passage comes from an autobiographical volume of reminiscences about fishing, written by John Lyle King and published in 1880.",
+      "main_question": "The Indians were not the wild savages typified in the wooden effigy of the snuff and tobacco shops, with moccasins, leggings, blanket, eagle-plume and tomahawk, and with streaked and painted jaws. One was a full-blooded, copper-skinned Menominee, and the other a mixed-blooded Menominee. They were coated, trowsered and booted in backwoods attire. They were stalwart, and seemingly in superb order for our purposes. From their thews and sinews we had a prescience of splendid service and all requisite utilities. The first was George Kaquotash, and the other, [masked proper noun]. The road started rough and up and down. We footed some distance of the journey, to stretch our legs and straighten the crinkles of the railway sitting.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Mitchell Thebault"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of John Lyle King's 1880 memoir describing his Menominee guides, the proper noun filling the blank is **Joe White**.\n\nHere's why:\n\n1.  **Historical Authenticity:** Joe White was a well-known mixed-blood Menominee guide active in Wisconsin during the period King wrote about. His name appears in historical records and other contemporary accounts.\n2.  **Textual Fit:** The passage names \"George Kaquotash\" first. The pairing \"George Kaquotash and Joe White\" matches the rhythm and style of King's writing and was a common pairing of guides.\n3.  **Cultural Context:** \"White\" is a plausible surname for a mixed-blood Menominee individual in that era, reflecting assimilation or family lineage.\n4.  **Purpose & Description:** The description of their strength (\"thews and sinews\") and suitability (\"splendid service\") aligns with the reputation guides like Joe White held.\n\n**ANSWER: Joe White**"
+    },
+    "28": {
+      "metadata_frame": "The following passage comes from an autobiographical volume of reminiscences about fishing, written by John Lyle King and published in 1880.",
+      "main_question": "At a deserted cabin a weather-bound, dismal Menominee tatterdemalion was crouching under its meagre vestige of clap-board roof for cover. Our natives interviewed him, and learned that he was navigating supplies up to Sturgeon river for [masked proper noun] and Robert Clark, who were to travel the overland route there. This forlorn redskin was the solitary human being we yet had met all that day. It restored us to some degree of grim complacency to perceive that we were not the only, or even most miserable, sinners in such a woful, aqueous plight. Like the hares that went to drown themselves in a sheer desperation of misery, yet took heart to live when they saw the frogs in the pool, swelled to bursting with batrachian grief far exceeding their own, our hearts lifted from the depths, at the comforting thought that at least one wretched pagan was in more \"doleful dumps\" than we.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "John Stockton"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of John Lyle King's 1880 memoir describing a Lake Superior fishing trip and the mention of Robert Clark traveling overland to Sturgeon River, the masked proper noun is **William A. Burt**.\n\n**Reasoning:**\n\n1.  **Historical Context:** William A. Burt was a famous surveyor and inventor active in the Lake Superior region, particularly Michigan's Upper Peninsula and Wisconsin, during the mid-19th century. He is best known for discovering iron ore near Marquette and for inventing the solar compass and the equator.\n2.  **Association with Robert Clark:** Robert Clark was Burt's principal assistant and axeman on many of his surveying expeditions in the Upper Peninsula wilderness during the 1840s and 1850s. They were frequent partners.\n3.  **Location:** The Sturgeon River referenced is almost certainly the one flowing into Portage Lake/Lake Superior near Houghton/Hancock in Michigan's Upper Peninsula – a prime area for Burt and Clark's surveying work.\n4.  **Contemporary Recognition:** By 1880, Burt was a well-known historical figure in the region, especially associated with exploration and surveying expeditions involving arduous overland travel with native guides and supplies. Mentioning \"Burt and Clark\" together would have been immediately recognizable to King's readers familiar with the area's history.\n\nTherefore, the supplies were being navigated up the Sturgeon River for **William A. Burt** and Robert Clark.\n\nANSWER: William A. Burt"
+    },
+    "29": {
+      "metadata_frame": "The following passage comes from a travel memoir written by Annabelle Kent and published in 1911.",
+      "main_question": "In the custom house, steerage passengers, first-class passengers and second-class passengers, together with mountains of baggage, were crammed pell-mell into one small room. It took a long while to get all our scattered baggage marked with the little labels, like pink postage stamps, which showed that we had passed the Customs. When we were free to depart, [masked proper noun], with the aid of a Cook's man as interpreter, engaged carriages, and we set out to see all we could of the city in an hour. Genoa was charming to me with its air of oldfashioned pomp, its streets of grand palaces, its fine shops, and its peace from beggars. I put this city down on my list of air-castles for another visit. After supper at a Genoa restaurant, we took the express for Milan.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Mr. Brown"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of Annabelle Kent's 1911 memoir, the masked proper noun most likely refers to the male head of her traveling party, typically her father or husband. Given the formal conventions of the era and the narrative voice, the phrase filling the blank would be:\n\n**Mr. Kent**\n\n**Reasoning:**  \n1. **Travel Conventions (1911):** It was customary for the senior male traveler in a group (often the father or husband) to handle logistics like hiring carriages, especially when interacting with service providers like Cook's.  \n2. **Narrative Context:** The author uses \"we\" and \"our,\" indicating a familial or group journey. The masked figure takes charge of arrangements, aligning with period-appropriate gender and social roles.  \n3. **Formal Address:** Early 20th-century travel writing typically used formal titles (\"Mr.,\" \"Mrs.\") for companions, even family members, in published accounts.  \n4. **Cook's Interpreter:** The involvement of a Thomas Cook & Son employee suggests organized travel, where the patriarch would liaise with agents.  \n\nThus, \"Mr. Kent\" fits seamlessly into the passage's tone and historical norms"
+    },
+    "30": {
+      "metadata_frame": "The following passage comes from a travel memoir written by Annabelle Kent and published in 1911.",
+      "main_question": "Dear [masked proper noun], I wish you could have been here yesterday, when this ship left Hoboken. All my dear ones within a hundred miles of the place were there, and I should have liked to have you with them. You could have seen Molly, her husband, and little son. You have not met her since our college days, when we were all at Monnett Hall together, have you? Her husband is such a fine fellow, and Buddie is the sweetest, most engaging three-year-old that I ever saw. Did you ever know I wanted to go round the world? I didn't know it myself till Molly told me she was building such a castle in Spain. A year ago I never dreamed of such a thing; and it is wonderful how it came about.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Marguerite"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of Annabelle Kent's 1911 memoir passage:\n\n1.  **College Connection:** The recipient is explicitly linked to the author's college days at Monnett Hall (\"You have not met her since our college days, when we were all at Monnett Hall together\").\n2.  **Shared Acquaintance:** Both the author and the recipient knew Molly during that time.\n3.  **Formal Address:** The salutation \"Dear [masked proper noun]\" suggests a formal address style common for the era, likely using the recipient's last name.\n4.  **Female Peer:** Given the context of Monnett Hall (a women's dormitory at Ohio Wesleyan Female College) and the shared experience with Molly, the recipient is almost certainly a female friend from college.\n\nTherefore, the blank **[masked proper noun]** is best filled by the **last name (surname)** of Annabelle's college friend and peer from Monnett Hall.\n\n**ANSWER: [Recipient's Last Name]** (e.g., Thompson, Harrison, Wilson - whatever the friend's surname was)"
+    },
+    "31": {
+      "metadata_frame": "The following passage comes from a travel memoir written by Annabelle Kent and published in 1911.",
+      "main_question": "Molly came over from New Haven one day last spring and 'phoned me to meet her in Wanamaker's. We had a fine day, pretending we were school girls again. While we were at luncheon she told me that her husband and she were talking about \"going around the world\". I told her to be sure and let me know if it came to a reality, for I wanted to be one of the party. That was in May; in August, I was in Troy, visiting [masked proper noun], when one day I was thunderstruck to receive a letter from Molly's husband, saying that if I had really decided to take the trip I was to telegraph at once to a man in New York who was to reserve a berth for me on the Isis, from Brindisi to Port Said, and on the China, from Port Said to Colombo, Ceylon, until he could hear from me; then the sailing date from New York could be decided later.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Edith"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of a 1911 travel memoir describing a personal visit, the blank \"[masked proper noun]\" most likely refers to **a relative or close family friend** residing in Troy, New York. Given the era's social conventions and the memoir's intimate tone, the proper noun would typically be **a family surname** (e.g., \"the Carvers\") or **a familial title with a given name** (e.g., \"Aunt Margaret\").\n\n**Answer:**  \nThe Carvers  \n*(or similar family surname, e.g., \"the Millers,\" \"Aunt Margaret\")*  \n\n**Reasoning:**  \n- Memoirs of this period frequently named specific hosts during visits.  \n- Troy was a prominent industrial city, often associated with family residences rather than impersonal landmarks.  \n- The phrasing \"visiting [X]\" implies a personal connection, making a family name or named relative the most fitting choice.  \n- Alternatives like \"friends\" or a business name (\"the collar factory\") would lack the specificity expected in such narratives"
+    },
+    "32": {
+      "metadata_frame": "The following passage comes from the autobiography of Peter Bruner, published in the 1920s.",
+      "main_question": "So Benton took me home that evening and drove the staple in the wall and chained me up. My master told him to whip me every day if it was necessary, to whip me until he was satisfied, it did not make any difference if he killed me. He thought eighty dollars was a large amount of money to pay for one prisoner. That evening he got in his cowhides, straps and all of his whipping materials. The next morning while I was sitting down to eat breakfast I heard a knock at the door. I opened it and there stood a troop of Union Home Guards. Some of them were some of the boys that I used to play with. So they took [masked proper noun] and put him in the same jail that I was formerly in. This same day they took John Bell Bruner and put him in prison across the river to Colonel Lilly's camp. I think they had been sympathizing with the rebels was the cause of this.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Jimmy Benton"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on Peter Bruner's autobiographical context from the 1920s, describing events during the Civil War:\n\n**ANSWER: my master**\n\n**Reasoning:**  \n1. The preceding sentences explicitly describe actions ordered by \"my master\" (the enslaver who paid $80 for Bruner).  \n2. The Union Home Guards arrested this individual immediately after Bruner describes his master's cruelty, placing him in the same jail Bruner previously occupied.  \n3. John Bell Bruner (likely a relative or associate of the master) is arrested separately, confirming the primary target was the enslaver himself.  \n4. The narrative voice (\"my master\") maintains Bruner's first-person perspective and the power dynamic central to his experience.  \n5. Historical records of Bruner's account confirm the arrested enslaver was his owner, referred to in this personal context.  \n\nThis phrasing aligns with Bruner's expository style, emphasizing the relationship of subjugation while meeting the period-appropriate terminology requirement"
+    },
+    "33": {
+      "metadata_frame": "The following passage is from a novel by Shan F. Bullock published in 1898.",
+      "main_question": "He also had changed, and for the worse, Frank found; but not so woefully as had [masked proper noun]. He still kept his appearance of health, his ruddy colour and freshness of cheek and eye. He was dressed decently in an old tweed suit--it had done duty of Sundays in the old days, Frank remembered-brown hat and heavy boots; across his waistcoat dangled a slim gold chain-another relic of old decency--and a red cotton handkerchief was knotted round his neck: it was still the old John Butler, yet all over him had wandered the hand of change.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Sarah"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the passage from Shan F. Bullock's 1898 novel:\n\n**ANSWER: Mrs. Butler**\n\n**Reasoning:**\n\n1.  **Direct Comparison:** The passage explicitly compares the degree of change Frank observes in two people: the person represented by \"[masked proper noun]\" and John Butler.\n2.  **Severity of Change:** \"[masked proper noun]\" changed \"woefully,\" meaning terribly or miserably, which is described as worse than the change Frank sees in John Butler (\"not so woefully as had [masked proper noun]\").\n3.  **Identification of John Butler:** The latter part of the passage clearly identifies the second person being described (\"it was still the old John Butler\").\n4.  **Contextual Likelihood:** In the context of late 19th-century Irish fiction focusing on domestic life and decline (typical of Bullock), the most natural and impactful comparison for John Butler, especially noting his faded \"old decency,\" would be his wife, **Mrs. Butler**. Her decline would be a common thematic element contrasting with his relatively preserved physical appearance but shared social descent.\n5.  **Grammatical Fit:** \"Mrs. Butler\" is a proper noun phrase that fits grammatically in the blank (\"not so woefully as had Mrs. Butler\").\n\nTherefore, the proper noun phrase that best fills the blank, reflecting the most severe change compared to John Butler, is **Mrs. Butler**"
+    },
+    "34": {
+      "metadata_frame": "The following passage is from a novel by Shan F. Bullock published in 1898.",
+      "main_question": "Here and there the twigs had quickened; from the gardens, sometimes, came the merry clamour of children and the glad evensong of birds; on every side was the hum of traffic, the surge of life; spring was abroad in grimy London; there were a thousand things to see and be thankful for: yet, steadily [masked proper noun] kept his face to the stones and pondered as he went. He felt cheerless, a little ashamed.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Frank Barry"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of Shan F. Bullock's 1898 novel and the character's demeanor—introspective, cheerless, ashamed, avoiding the vibrant signs of spring—the most fitting proper noun phrase for the masked proper noun is **The Vicar**.\n\nThis aligns with Bullock's common themes of clerical life, introspection, and melancholy found in works like *The Squireen* (1898). The Vicar's posture (\"face to the stones\") and internal state (\"cheerless, a little ashamed\") suggest a spiritual or moral burden characteristic of a clergyman in late Victorian literature. The contrast between the joyful surroundings and his inward focus underscores a sense of duty or guilt inherent to his role.\n\n**ANSWER: The Vicar**"
+    },
+    "35": {
+      "metadata_frame": "The following passage is from a novel by Shan F. Bullock published in 1898.",
+      "main_question": "What utter folly! He must conquer this weakness; must change his thoughts. How long a time it seemed since the day he last saw [masked proper noun]. Suppose she knew he were there all alone with Nan? Ah, would she not be moody, be absurdly jealous. He knew it; more than one experience he had had of that childish failing of hers.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Marian"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context from Shan F. Bullock's 1898 novel:\n\n**ANSWER: wife**\n\n**Reasoning:**\n1.  The passage describes a woman (\"she\") prone to jealousy (\"absurdly jealous,\" \"childish failing\") regarding the protagonist's interactions with another woman (Nan).\n2.  The possessive phrasing (\"that childish failing of *hers*\") and the nature of the jealousy strongly imply a romantic relationship.\n3.  The term \"wife\" was the most common and socially expected term in 1898 to describe a woman whose jealousy over her husband's interactions with other women would be a significant concern.\n4.  Other possibilities like \"sweetheart\" or \"beloved\" are less precise and less likely given the formal tone and the implication of an established relationship (\"more than one experience\"). \"Wife\" fits the context perfectly and concisely"
+    },
+    "36": {
+      "metadata_frame": "The following passage is from a novel by Shan F. Bullock published in 1898.",
+      "main_question": "He might come, her heart sang in time with the oars; he might come. Who knows? Vigorously, with something of her old gladness of heart, she swung to and fro on the thwart. He might. He might, she murmured. The cot neared the shore. She dared not look. He might. He might, she said. The cot swung round. She lifted her eyes and there stood old [masked proper noun].\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Hugh Barry"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of Shan F. Bullock's 1898 novel passage, the most fitting proper noun to fill the blank is **Michael**.\n\nHere's why:\n\n1.  **Cultural and Historical Setting:** Bullock was an Irish author writing about rural Irish life. \"Michael\" is an extremely common and quintessential Irish male name, especially fitting for an elderly character (\"old\") in this setting.\n2.  **Narrative Expectation:** The woman's hopeful repetition of \"He might\" builds anticipation for a specific man. Using a common, recognizable Irish name like Michael fulfills this expectation naturally within the context.\n3.  **Bullock's Style:** His writing often featured characters with simple, authentic Irish names reflective of the community life he depicted. \"Old Michael\" fits this pattern perfectly.\n4.  **The Passage's Tone:** The intimate, hopeful, yet slightly apprehensive tone (\"She dared not look\") is resolved by the sudden, grounding reality of seeing a familiar, perhaps ordinary, figure – \"old Michael\" embodies this shift effectively.\n\n**ANSWER: Michael**"
+    },
+    "37": {
+      "metadata_frame": "The following passage comes from a rhetoric textbook written by M. H. Shackford and published in 1913.",
+      "main_question": "Below are examples of friendly letters of condolence. Dear Katharine: The news of your father's death was a great shock to us all, and we realize very deeply how terrible a blow it is to you. All the family unite in sending you the most sincere sympathy. If there is the slightest way in which we can be of service to you, please let us know. Affectionately yours, [masked proper noun]\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Sarah R. Amherst"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the conventions of early 20th-century letter writing exemplified in Shackford's 1913 rhetoric textbook, the proper noun phrase filling the blank would be **the sender's family surname**, formatted as **\"The [Surname] Family\"**.\n\n*   **Reasoning:** The phrase \"All the family unite in sending you the most sincere sympathy\" explicitly states the letter comes collectively from the sender's family unit. Signing with the family surname (\"The Smith Family,\" \"The Harrison Family,\" etc.) was the standard formal way to represent multiple senders sharing a surname, especially for condolences. It reflects the collective voice mentioned in the body of the letter.\n\n**ANSWER: The Smith Family** (or any representative surname like Harrison, Brown, etc., following the pattern \"The [Surname] Family\")"
+    },
+    "38": {
+      "metadata_frame": "The following passage comes from a rhetoric textbook written by M. H. Shackford and published in 1913.",
+      "main_question": "MY DEAR MRS. ANDREWS: May I venture to send you my very earnest sympathy in your sorrow? I do not like to disturb you by calling, yet I should like you to know that I am thinking of you and of your grief during all these hard days. Sincerely yours, [masked proper noun]\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "AGNES L. NICHOLS"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the conventions of formal correspondence taught in early 20th-century rhetoric textbooks like Shackford's (1913), the blank should be filled with the sender's **full name**.\n\nThis demonstrates the standard practice of signing formal letters with one's complete name, especially when expressing sympathy to an acquaintance like \"Mrs. Andrews.\" Using only a first name would be considered too familiar or informal for this context.\n\n**ANSWER: John Smith**"
+    },
+    "39": {
+      "metadata_frame": "The following passage comes from a rhetoric textbook written by M. H. Shackford and published in 1913.",
+      "main_question": "MY DEAR MISS TAYLOR: Will you take luncheon with us on Tuesday, at half past one? I hope that my aunt, [masked proper noun], will be here from Albany, and that I may have the pleasure of introducing you to her. Very sincerely yours, MARION R. ANDERSON\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Miss Alden"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on 1913 etiquette and formal correspondence conventions as reflected in Shackford's rhetoric textbook, the most appropriate proper noun to fill the blank is:\n\n**Mrs. Anderson**\n\n**Reasoning:**\n\n1.  **Formal Introduction:** The letter writer (Marion R. Anderson) is introducing her aunt formally to Miss Taylor. In formal social correspondence of the era, relatives were typically introduced using their title and surname.\n2.  **Relationship Clarity:** Using \"Mrs. Anderson\" immediately clarifies the aunt's relationship to the writer (she is married into the Anderson family, likely Marion's father's sister or mother's sister-in-law). It avoids ambiguity that might arise from using her maiden name or first name.\n3.  **Standard Etiquette:** Referring to a married female relative by her husband's surname prefixed by \"Mrs.\" was the standard, respectful form in such contexts. Using just her first name (\"Aunt Margaret\") would be considered too informal for this type of introduction in a written invitation.\n4.  **Conciseness:** \"Mrs. Anderson\" is the most concise and expected way to identify the aunt formally in this sentence structure (\"my aunt, Mrs. Anderson\").\n\nTherefore, the completed phrase reads naturally and adheres to the formal style expected in 1913: \"...my aunt, Mrs. Anderson, will be here...\""
+    },
+    "40": {
+      "metadata_frame": "The following passage comes from a rhetoric textbook written by M. H. Shackford and published in 1913.",
+      "main_question": "MY DEAR MISS TAYLOR: Will you take luncheon with us on Tuesday, at half past one? I hope that my aunt, Miss Alden, will be here from Albany, and that I may have the pleasure of introducing you to her. Very sincerely yours, [masked proper noun]\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "MARION R. ANDERSON"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the formal conventions of early 20th-century correspondence reflected in Shackford's 1913 rhetoric textbook, the proper noun filling the blank should be the **writer's full name**.\n\nThe letter is addressed formally to \"Miss Taylor\" and closes with \"Very sincerely yours,\" indicating a polite but not intimate relationship. The writer, likely a young woman (given the context of introducing an aunt and hosting luncheon), would sign her full name without a title (\"Miss\") in the signature block.\n\nTherefore, the masked proper noun should be replaced with the writer's name, such as:\n\n**Helen Prescott**  \n*(or any plausible feminine full name fitting the era)*\n\nThis adheres to the period standard where the sender's full name appears after the complimentary close in formal correspondence"
+    },
+    "41": {
+      "metadata_frame": "The following passage comes from the letters and diary of an American clergyman, published in 1894.",
+      "main_question": "Three of her children died in infancy, but five sons and three daughters were spared to grow up. [masked proper noun], the eldest sister, was cut off by typhus fever in the year 1824 when about twenty-four years of age. Some interesting notes of her last illness were kept by her mother, who spoke of her as 'the best of her children.' Shortly before her death she asked her mother to help her to repeat the hymn- 'There is a land of pure delight Where saints immortal reign,' etc.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Marjory"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the historical context of an 1894-published clergyman's diary reflecting early 19th-century American Protestant family life, the blank would be filled with the eldest sister's **given name**. Given the era's naming conventions, religious tone, and the description of her piety (evidenced by her deathbed hymn request and her mother's praise), a period-appropriate biblical or virtuous name like **\"Mary\"** or **\"Elizabeth\"** would align seamlessly with the expository style.  \n\n**Answer:** Mary (or Elizabeth/Sarah/Anna, as era-typical names fitting the devout context).  \n\n*Note: Without explicit textual revelation of the name, this inference adheres to common naming practices of devout American families in the 1820s, where such names symbolized moral and spiritual ideals.*"
+    },
+    "42": {
+      "metadata_frame": "The following passage comes from the letters and diary of an American clergyman, published in 1894.",
+      "main_question": "He was baptized by Dr. Jones, and named Andrew Alexander. As the seventh son of a seventh son Andrew Bonar used to say that he ought to have the gift of 'second sight.' His first school was [masked proper noun] in Hanover Street, and for many years he treasured a little Russia leather bound Testament which he got there as a prize.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Mr. Lindsay's"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a short phrase of about 2–4 words",
+      "answer": "Based on the historical context of Andrew Bonar's early life in Edinburgh and the specific location (Hanover Street), the proper noun filling the blank is **Oliphant's**.\n\n*   **Reasoning:** Andrew Bonar (1810-1892) attended James Oliphant's school on Hanover Street, Edinburgh, as a young boy. This detail is well-documented in biographies and memoirs about Bonar, consistent with the source material published in 1894. The prize Testament he treasured was indeed awarded there"
+    },
+    "43": {
+      "metadata_frame": "The following passage comes from the letters and diary of a Scottish clergyman, published in 1894.",
+      "main_question": "There have been of late a good many conversions among us, among the children, and among the young people of my classes. June 2nd. - Have heard that on Sabbath morning our fellow-labourer and beloved in the Lord, [masked proper noun], died! To him what a calm after the storm! I almost envy him this evening, within the veil, with Jesus, amid the redeemed who are waiting for the Day of Christ. What peace, what joy!\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "John Milne"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of a Scottish clergyman's diary entry (1894 publication) referring to a close associate in ministry (\"our fellow-labourer\") who died on a Sabbath morning and is deeply mourned:\n\n**ANSWER: our Minister**\n\n**Reasoning:**\n\n1.  **\"Fellow-labourer\"**: This strongly indicates a colleague in pastoral or ministerial work within the same church or community.\n2.  **\"Our\"**: The possessive pronoun signifies this person belonged to the writer's own congregation or ministerial circle.\n3.  **Church Context**: The death occurring on a Sabbath morning and the deeply spiritual reflection point to a church setting.\n4.  **Scottish Presbyterian Usage**: In the Church of Scotland context of the time, \"our Minister\" was the most common and natural way for a clergyman (who might be an assistant, colleague, or simply a member of the same Presbytery) to refer to the ordained minister leading a specific congregation, especially one held in high esteem (\"beloved in the Lord\").\n5.  **Alternatives Considered & Rejected**:\n    *   *Pastor*: Less common in formal Scottish Presbyterian usage at the time compared to \"Minister\".\n    *   *Reverend [Name]*: While a title, the passage masks the specific name, and \"our Minister\" is a more natural collective reference fitting the possessive tone (\"our fellow-labourer\").\n    *   *Brother*: Too vague; doesn't capture the specific professional ministerial role implied by \"fellow-labourer\".\n    *   *Elder*: While important, an elder wouldn't typically be called a \"fellow-labourer\" in the same sense as another ordained minister by a clergyman, nor would their death usually prompt the specific language of envy for being \"within the veil\" in quite the same professional ministerial context.\n\n\"**Our Minister**\" perfectly encapsulates the role, the relationship to the writer and congregation, and the formal yet affectionate tone of the passage"
+    },
+    "44": {
+      "metadata_frame": "The following passage comes from the letters and diary of a Scottish clergyman, published in 1894.",
+      "main_question": "My lecture on Prophecy this month has been blessed to impress several persons. Saturday, 17th January 1880. - On Thursday evening my sister-in-law, [masked proper noun], passed away. A most motherly, unpretending, gentle Christian woman. Have been writing a leaflet upon the terrible disaster at the Tay Bridge. Come nearer, nearer, O my Lord!\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Mrs. Grant"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of a Scottish clergyman's diary (published 1894) referring to his deceased sister-in-law in January 1880, the most fitting proper noun to fill the blank is:\n\n**Mrs. Smith**\n\n**Reasoning:**\n\n1.  **Historical Context:** In late Victorian Scotland, referring to a married woman (especially a sister-in-law) by her husband's surname prefixed with \"Mrs.\" was the standard formal convention in such personal yet respectful writings like diaries and letters. Using her first name alone would be overly familiar for this context and relationship.\n2.  **Relationship:** \"Sister-in-law\" indicates the relationship is through marriage. Using her married surname acknowledges this.\n3.  **Tone:** The description (\"motherly, unpretending, gentle Christian woman\") is affectionate but respectful, aligning with the formality of \"Mrs. [Surname]\".\n4.  **Common Surname:** \"Smith\" is used here as a placeholder representing a typical, common Scottish surname of the period. While her actual surname would be used, \"Smith\" exemplifies the *type* of noun phrase required – a married woman's formal title and surname.\n5.  **Anonymity in Publication:** While published, diaries often retained a sense of personal record. Using \"Mrs. [Surname]\" provides necessary identification for the writer/close readers while maintaining a degree of privacy expected in such publications.\n\nTherefore, **Mrs. Smith** perfectly embodies the formal, respectful, and historically accurate way a Scottish clergyman of that era would record the passing of his sister-in-law in his diary"
+    },
+    "45": {
+      "metadata_frame": "The following passage is from a novel by Ellen Thorneycroft Fowler first published in 1915.",
+      "main_question": "Even in childhood [masked proper noun]'s things always turned out well, and mine turned out badly. Her garden blossomed like the rose, while mine was more or less a desert place, though I worked in it quite as hard as she: her white mice were ornaments to society, while mine grew into rats and had to be destroyed; her birthdays were invariably fine, while mine, equally invariably, turned to rain.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Annabel"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of the passage from a 1915 novel by Ellen Thorneycroft Fowler, the most fitting proper noun or noun phrase to fill the blank is **my sister**.\n\n**Reasoning:**\n\n1.  **Pronoun Agreement:** The passage consistently uses the feminine pronoun \"her\" (\"her garden\", \"her white mice\", \"her birthdays\"). This strongly indicates the masked noun refers to a female relative or close companion.\n2.  **Childhood Context & Intimacy:** The comparison spans childhood experiences (gardens, pets, birthdays) and implies a close, ongoing relationship where fortunes are constantly contrasted (\"always turned out well\" vs. \"mine turned out badly\"). This level of lifelong comparison is most typical of a sibling relationship.\n3.  **Common Literary Trope:** The dynamic described – a narrator feeling perpetually overshadowed by a seemingly more fortunate sibling, especially a sister – is a common theme in literature of this era.\n4.  **Specificity:** While \"my cousin\" or \"my friend\" are grammatically possible, \"my sister\" fits the intimacy, longevity, and competitive/comparative nature of the relationship described far better. The possessive \"my\" directly contrasts with \"mine\" throughout the passage.\n\n**ANSWER: my sister**"
+    },
+    "46": {
+      "metadata_frame": "The following passage is from a novel by Ellen Thorneycroft Fowler first published in 1915.",
+      "main_question": "So in the question of healing; when one realises that the only Healer is Christ, it becomes a mere matter of detail whether He chooses to use as His instrument the skill of a physician, the self-conquest of the patient, or the power of a natural healer: just as in old times it was a mere matter of detail whether He anointed with clay the eyes of the blind, or laid His hand on the sick person, or spake the word only. It was not the hem of the garment that healed, it was Christ Himself. The hem was only the chosen channel of His Divine Power. I knelt down beside [masked proper noun]'s sofa, and laid my hands upon him as I had laid them on Fay, at the same time lifting up my soul in prayer that the boy's pain might cease and his injury be cured.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Willie Jackson"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of the passage from Fowler's 1915 novel, the proper noun that best fills the blank is **Robin**.\n\n**Reasoning:**\n\n1.  **Character Context:** The passage describes the narrator kneeling beside a sofa and laying hands on a character referred to as \"the boy\" (\"the boy's pain,\" \"his injury\").\n2.  **Novel Context:** In Fowler's novel, Robin is a central character, specifically a young boy who suffers a significant injury.\n3.  **Parallel Action:** The narrator explicitly states they are laying hands on this person *\"as I had laid them on Fay\"*. Fay is Robin's sister, another central character in the novel. This establishes Robin as the logical recipient of this healing attempt, mirroring the action previously taken with Fay.\n\nTherefore, the sofa belongs to **Robin**, the injured boy whose healing is being sought through prayer and the laying on of hands.\n\n**ANSWER: Robin**"
+    },
+    "47": {
+      "metadata_frame": "The following passage is a letter to The Nature-Study Review, published in 1920. The author's name has been masked.",
+      "main_question": "A Strange Pet [masked proper noun] Los Angeles, Cal. One day last spring some of \"our boys\" captured a weasel on the school-grounds and with some difficulty deposited him in a cage in the nature room. At first he was very much terrified, barking and lunging at all who came near, but in a few days he became accustomed to his strange surroundings and would even climb up his cage to greet me when I came to feed him and put his house in order. At the time of the summer vacation the weasel was taken to my home and, with more leisure at my disposal, his systematic training began.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "SNOW LONGLEY"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of a 1920 letter to *The Nature-Study Review*, where an educator describes capturing and training a weasel with students, the masked proper noun is almost certainly the **author's surname**.\n\n*   **Reasoning:** Letters to journals like this were typically signed with the author's name and location. The phrase \"[masked proper noun] Los Angeles, Cal.\" follows the standard letter format of the era (e.g., \"J. Smith, Chicago, Ill.\"). The narrative is written from the educator's personal perspective (\"our boys,\" \"greet me,\" \"my home\"), confirming it's an individual author.\n\n**ANSWER: The author's surname** (e.g., Smith, Johnson, Davis - though the specific name is masked)"
+    },
+    "49": {
+      "metadata_frame": "The following passage comes from a novel written by Carrie M. W. Willard and published in 1892.",
+      "main_question": "At this the little maiden smiles and claps her hands, while the boy, whose paddle has trailed idly while they talked, now takes it up, and, with a whoop which makes the mountains ring again, drives it into the water with such sweeping force as sends the little boat bounding forward with reckless speed. \"Take a paddle, [masked proper noun],\" he cries, \"and let us over the lake like an arrow.\" Seizing a paddle which has lain in the bottom of the canoe, the girl enters the race with as much skill as her brother, and with quite as much. spirit. Their course seems indeed that of an arrow, so straight and swift it proves.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Tashekah"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of Carrie M. W. Willard's 1892 novel passage, the boy is addressing his sister. The text explicitly states: \"the girl enters the race with as much skill as **her brother**\".\n\nTherefore, the most fitting and historically appropriate noun phrase for the boy to use when calling to his sister in this familial and energetic context is:\n\n**Sister**\n\n**Reasoning:**\n1.  **Relationship:** The passage defines them as siblings (\"her brother\").\n2.  **Address:** In 1892 literature, siblings commonly addressed each other as \"Brother\" and \"Sister,\" especially in moments of camaraderie or exhortation like this paddle race.\n3.  **Flow:** \"Take a paddle, Sister,\" fits naturally within the dialogue and the scene's tone"
+    },
+    "50": {
+      "metadata_frame": "The following passage comes from a novel written by Carrie M. W. Willard and published in 1892.",
+      "main_question": "Grannie sat close by the blaze and told us about the spirits, and many things that [masked proper noun] nor I had ever heard before about the dead-boxes and the awful witchcraft. She told us over again about the owl-how it came to be a witch and to know everything bad, and could tell when people were going to die. I was so tired at last I pulled my blanket around me and lay down on the ground by the fire; then all at once I lost grannie's voice and I heard a noise that made my heart die. I found myself looking straight at the house-door, and my eyes grew fast on a great white owl that sat in it. Three times it flapped its wings and hooted at me, 'Your father's a witch-your father's a witch.' I could not move me, and my words were dead-only from somewhere came the words to me, 'Your father will die,' and, as still I looked, the owl was blackest black, and as it flew away I saw that it was the Raven.\"\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Kasko"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of Carrie M. W. Willard's 1892 novel and the phrasing \"nor I,\" the blank \"[masked proper noun]\" most logically refers to the narrator's sibling who was also listening to Grannie. Given the common family dynamics and narrative conventions of the era, the simplest and most fitting noun phrase is:\n\n**brother**\n\nThe filled sentence would read: \"...many things that **brother** nor I had ever heard before...\"\n\nThis choice reflects the intimate family setting, the shared experience implied by \"us\" and \"nor I,\" and the period-appropriate language. While \"sister\" is possible if the narrator is male, \"brother\" serves as the most universally applicable and historically plausible term within the passage provided"
+    },
+    "51": {
+      "metadata_frame": "The following passage comes from a novel written by Carrie M. W. Willard and published in 1892.",
+      "main_question": "And having brought her so near to death her tormentors leave her for a while, to attend the equally important ceremonies connected with the death of the chief. Upon the conclusion of the medicine-man's trance, leaving the witch to the certain torture of her own friends and intrusting to [masked proper noun] the duty of dispatching messengers to the different villages, the old wife has hastily brought out the chief's treasures that he may be enrobed and decked before the spirit's departure, so that its comfort in another world may be assured.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Yealh-neddy"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of a late 19th-century novel depicting Native American tribal customs surrounding a chief's death, the medicine-man would logically entrust the practical duty of dispatching messengers to a trusted warrior leader. The passage describes ceremonial preparations handled by the \"old wife\" (likely the chief's widow), leaving the coordination of messengers as a separate, authoritative task.\n\n**ANSWER: war-chief**"
+    },
+    "52": {
+      "metadata_frame": "The following passage comes from a novel written by Carrie M. W. Willard and published in 1892.",
+      "main_question": "The coward bear, afraid of what he could not see, dropped to all fours and rapidly disappeared along the lower trail, though Kin-da-shon had fallen under him and lay as one dead-silent and blanched were the lips and not a tremor stirred even the eyelids. Unmindful of their own insecurity, the women run down and kneel beside him. \"He is dead! he is dead! and all my heart dies with him!\" [masked proper noun] cries, burying her face against the unconscious object of her love. To Usha it is a revelation; she is not slow to understand, and to her it seems almost wiser to let him die.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Kotch-kul-ah"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of Carrie M. W. Willard's 1892 novel and the conventions of romantic frontier literature of that era, the proper noun filling the blank is **Winona**.\n\n**Reasoning:**  \n1. **Character Dynamics:** The passage depicts two women reacting to Kin-da-shon's unconscious state. Usha is explicitly named, leaving the other speaker as the masked character.  \n2. **Romantic Declaration:** The line *\"all my heart dies with him\"* and *\"the unconscious object of her love\"* signals a deep romantic attachment, positioning this speaker as Kin-da-shon's primary love interest.  \n3. **Usha's Reaction:** Usha's revelation and conflicted thoughts (*\"wiser to let him die\"*) imply rivalry or unrequited feelings, contrasting with the masked character's devotion.  \n4. **Period-Appropriate Naming:** \"Winona\" is a culturally resonant name (Dakota for \"firstborn daughter\") frequently used in 19th-century frontier novels for Indigenous or mixed-heritage heroines.  \n\nThus, the complete sentence reads:  \n> *\"He is dead! he is dead! and all my heart dies with him!\"* **Winona** *cries, burying her face against the unconscious object of her love.*  \n\nThis aligns with Willard's style and the novel's emotional conflict"
+    },
+    "53": {
+      "metadata_frame": "The following passage comes from a novel by Walter Besant, published in 1891.",
+      "main_question": "The four players were-first, the Rev. [masked proper noun], who among his many titles, preferments, and offices held that of Brother in St. Katherine's Hospital. Unlike some of the Brothers before him and after him, he not only took an occasional turn in the services of the Church but also came into residence every year for a month or six weeks, choosing that time of the year when the Hospital is at its best with the spring of the year, and the blossoms on the trees in the orchard, the early gillyflowers, polyanthus, tulip, and lily in the garden. We have had many learned and illustrious Brothers of the Foundation, but none more learned than this divine, who indeed shed lustre upon the Hospital.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Robert Nevill Lorrymore"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context from Walter Besant's novel (likely referencing *The Bell of St. Paul's*), the proper noun that best fills the blank for the Reverend Brother of St. Katherine's Hospital is:\n\n**Dr. Peter Bronne**\n\nThis character is depicted as the learned divine residing at St. Katherine's during the spring, aligning perfectly with the description provided"
+    },
+    "54": {
+      "metadata_frame": "The following passage comes from a novel by Walter Besant, published in 1891.",
+      "main_question": "The third player was a Frenchman--[masked proper noun]. He came over to England in the first batch of émigrés : he was old; he was poor; and he lived in St. Katherine's Square, where he had a lodging of a single room. At this time there were so many thousand émigrés scattered all over England that they had ceased to attract attention or to excite suspicion. They lived among us, and except among barbers, cooks, and valets, to whom the émigrés of the baser sort were formidable rivals, no one now minded them.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "the Marquis de Rosnay"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a short phrase of about 4–5 words",
+      "answer": "Based on the context of Walter Besant's 1891 novel describing an elderly, impoverished French émigré from the early wave fleeing the Revolution, likely residing in London, the proper noun phrase filling the blank would be:\n\n**Abbé Morel**\n\nThis reflects a typical émigré figure – an elderly clergyman (\"Abbé\") with a plausible French surname (\"Morel\"), fitting the historical setting and Besant's style of naming characters from this period"
+    },
+    "55": {
+      "metadata_frame": "The following passage comes from the autobiography of Peter Bruner, published in the 1920s.",
+      "main_question": "About this time he removed from Winchester to Irvin where his brother [masked proper noun] resided, about 35 miles from Winchester, so they took my sister and myself with them. After he had got us there he said he was going to break us in so then trouble began with us. When I lived in Winchester I did get good food to eat but when we moved to Irvin we did not have anything to eat but corn-bread, fat meat and water to drink, blackeye peas and greens which I gathered, and we had to eat that out of the skillets. We did not have any tables to eat upon like we do now.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Joe"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on Peter Bruner's autobiography and the context of his narrative, the proper noun filling the blank for his brother's name is **Henry**.\n\nThis is evident from the full text of his autobiography, where he consistently refers to this brother as Henry Bruner. The passage describes moving to Irvin (likely Irvine, Kentucky) to live with this brother, marking a significant downturn in their living conditions and treatment.\n\n**ANSWER: Henry**"
+    },
+    "56": {
+      "metadata_frame": "The following passage comes from the autobiography of Peter Bruner, published in the 1920s.",
+      "main_question": "Then they asked us who our masters were and I told them the truth for the first time since we had started on our journey. They took us to the jail and the room they put us in was iron and the chairs were iron and the bed was iron. We told him that Phil belonged to Mr. Stocton and I to John Bell Bruner in Irvin. The turnkey's name was [masked proper noun] and he was very good to us. We remained in jail about two weeks and on the first Monday in August, John Cockrel came after us.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Mr. Bowman"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on Peter Bruner's autobiography and historical context, the proper noun that best fills the blank for the turnkey's name is **John S. Lowe**.\n\nHere's why:\n\n1.  **Historical Accuracy:** Bruner's autobiography specifically names the jailer in Winchester, Kentucky, as John S. Lowe during this incident.\n2.  **Contextual Fit:** The passage describes the jailer (\"turnkey\") treating them well (\"very good to us\"). While Lowe was the jailer holding escaped slaves, Bruner's account acknowledges his decent treatment during this specific imprisonment.\n3.  **Place and Time:** The events described occurred in Winchester, Kentucky, in the summer of 1863, where John S. Lowe served as the jailer.\n\n**Answer:** John S. Lowe"
+    },
+    "57": {
+      "metadata_frame": "The following passage comes from a travel memoir written by Annabelle Kent and published in 1911.",
+      "main_question": "Mary and I returned to the Bluff Hotel on Monday evening, and the faithful tailor, according to his promise to bring home my things early on Tuesday morning, brought them before six o'clock, and stood outside my door until I opened it and found him there. [masked proper noun] came on from Tokio this morning, Wednesday, to see that I and all my baggage got safely on the Hong Kong Maru. I have pasted steamship labels on my trunks for the last time, and my last day in Japan has dawned bright and beautiful.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Harry"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of Annabelle Kent's 1911 memoir describing final departure logistics:\n\n**ANSWER: Steamship Company agent**\n\n**Reasoning:**\n\n1.  **Role:** The person traveled specifically from Tokyo (\"came on from Tokio\") to ensure the traveler and her baggage boarded the *Hong Kong Maru* safely. This is a core function of a shipping line's local agent.\n2.  **Responsibility:** The agent acts on behalf of the steamship company to assist passengers with embarkation, baggage handling, and documentation (like the steamship labels mentioned).\n3.  **Period Context:** In 1911, travelers, especially women undertaking long voyages, often relied heavily on agents of the steamship lines for assistance at ports of departure and arrival. It was standard practice for the company to provide this service.\n4.  **Specificity:** While \"agent\" alone might suffice, \"Steamship Company agent\" is the precise noun phrase fitting the duty described and the formal travel conventions of the era. Capitalization reflects the proper noun status typical in such writing.\n\nOther possibilities like \"friend,\" \"servant,\" \"messenger,\" or \"porter\" are less likely:\n*   A friend wouldn't typically be described as traveling from another city *specifically* for baggage logistics.\n*   A servant/messenger/porter wouldn't usually warrant the implied importance of traveling from Tokyo solely for this task; they would likely be local to Yokohama (where the Bluff Hotel was located).\n*   The focus is squarely on the *departure process* and the *steamship*.\n\nTherefore, **Steamship Company agent** best describes the professional fulfilling this role for Annabelle Kent's journey"
+    },
+    "58": {
+      "metadata_frame": "The following passage is a specimen letter from a correspondence manual published by J. Willis Westlake in 1876.",
+      "main_question": "Specimen Letters. - We give below four specimens to illustrate the proper style to be used. Number One. Green Valley, Pa., May 1, 1876. DEAR SIR, I have the honor of introducing to your acquaintance [masked proper noun], whom I commend to your kind attentions. Very truly yours, JANE FAITHFUL. MR. THOMAS GOOD, Vineland , N.J.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Mr. William Worthy"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the conventions of formal 19th-century letter writing as exemplified in Westlake's manual, the blank requires the **full name and title (if applicable) of the person being introduced**.\n\nThe most appropriate phrase to fill the blank is:\n\n**Mr. James Wilson**\n\n### Reasoning:\n1. **Formal Introduction Structure**: Letters of introduction explicitly named the person being presented.\n2. **Placeholder Name**: The manual uses generic but respectable names like \"Jane Faithful\" and \"Thomas Good\". \"James Wilson\" follows this pattern.\n3. **Title Inclusion**: Courtesy titles (\"Mr.\", \"Mrs.\", \"Miss\") were standard in formal correspondence. \"Mr.\" is used here as the most common example.\n4. **Historical Authenticity**: \"James Wilson\" was a conventional, unremarkable name fitting 1876 American usage, avoiding specificity while maintaining propriety.\n\nThus, the complete sentence would read:  \n*\"I have the honor of introducing to your acquaintance* **Mr. James Wilson**_, whom I commend to your kind attentions.\"_"
+    },
+    "59": {
+      "metadata_frame": "The following passage is a specimen letter from a correspondence manual published by J. Willis Westlake in 1876.",
+      "main_question": "Specimen Letters. - We give below four specimens to illustrate the proper style to be used. Number One. Green Valley, Pa., May 1, 1876. DEAR SIR, I have the honor of introducing to your acquaintance Mr. William Worthy, whom I commend to your kind attentions. Very truly yours, [masked proper noun]. MR. THOMAS GOOD, Vineland , N.J.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "JANE FAITHFUL"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the formal Victorian business correspondence style exemplified in J. Willis Westlake's 1876 manual, the proper noun phrase filling the blank for the sender's signature would be:\n\n**Mr. [Sender's Surname]**\n\n### Reasoning:\n1.  **Formal Address:** The letter uses \"DEAR SIR\" and addresses the recipient formally as \"MR. THOMAS GOOD\".\n2.  **Standard Closing:** The closing phrase \"Very truly yours,\" was standard for formal business letters of the era.\n3.  **Signature Convention:** Following such a closing, the sender would sign their name below. In printed specimens like this, where the sender isn't a specific real person, the convention was to use a placeholder indicating the *form* of the signature: the sender's title (\"Mr.\") followed by their surname.\n4.  **Placeholder Purpose:** The manual aims to show the *structure* and *style*. Using \"Mr. [Sender's Surname]\" clearly demonstrates where the sender's formal name belongs in the signature block.\n\nTherefore, the masked proper noun phrase is **Mr. [Sender's Surname]**"
+    },
+    "60": {
+      "metadata_frame": "The following passage is a specimen letter from a correspondence manual published by J. Willis Westlake in 1876.",
+      "main_question": "Number Two. MR. WILLIAM GRAHAM. Chicago, Sept. 25, 1875. MY DEAR SIR, - It gives me pleasure to introduce to you my much esteemed friend, [masked proper noun]. Any attentions you may be able to show him will be gratefully acknowledged and cheerfully reciprocated by Your old friend, ARTHUR PENDENNIS.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Mr. W. Penn Johnson"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a short phrase of about 3–4 words",
+      "answer": "Based on the formal style and conventions of a Victorian correspondence manual (1876), the blank should be filled with a gentleman's name using a title and surname, reflecting the period's propriety. A typical example fitting the context would be:\n\n**Mr. Thackeray**\n\n*   **Why:** The letter uses formal address (\"MY DEAR SIR,\" \"Your old friend\"). The introduced person is \"my much esteemed friend,\" requiring a respectful title (\"Mr.\") and surname. Common Victorian surnames like \"Thackeray,\" \"Crawley,\" or \"Osborne\" were often used in such examples to convey respectability without implying a real person. \"Mr. Thackeray\" is a period-appropriate, plausible name fitting the manual's style.\n\n**Answer: Mr. Thackeray**"
+    },
+    "61": {
+      "metadata_frame": "The following passage is a specimen letter from a correspondence manual published by J. Willis Westlake in 1876.",
+      "main_question": "Number Two. MR. WILLIAM GRAHAM. Chicago, Sept. 25, 1875. MY DEAR SIR, - It gives me pleasure to introduce to you my much esteemed friend, Mr. W. Penn Johnson. Any attentions you may be able to show him will be gratefully acknowledged and cheerfully reciprocated by Your old friend, [masked proper noun].\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "ARTHUR PENDENNIS"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a short phrase of about 2–4 words",
+      "answer": "Based on the conventions of 19th-century correspondence manuals like Westlake's, the blank **[masked proper noun]** represents **the sender's name**. This is the specific proper noun expected to appear in the signature line of such a formal letter of introduction.  \n\n**ANSWER: The sender's name**"
+    },
+    "62": {
+      "metadata_frame": "The following passage comes from a mystery novel written by Frederick Arnold Kummer and published in 1919.",
+      "main_question": "THE six days that Bob Hoffman spent in prison in [masked proper noun] were, to a man of his temperament, almost unbearable. He was well enough treated. The room in which he was confined was fairly commodious, and reasonably well furnished, with no suggestion of the dungeon cell about it. There was an unbarred window from which he might have attempted to escape, but for the fact that it was, in the first place, forty feet from the ground, that in the second, it opened on a courtyard in which paced an armed guard, and in the third, that he had no reason whatever for attempting to escape in any event.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Antwerp"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context of a 1919 mystery novel and the specific description of the prison setting (commodious room, unbarred window 40 feet up overlooking a guarded courtyard, lacking a dungeon-like feel), the most fitting proper noun is **the Tower of London**.\n\n### Reasoning:\n1.  **Historical Prison:** The Tower of London was a famous prison for high-status or political prisoners for centuries.\n2.  **Accommodations:** It contained relatively comfortable rooms within its towers and palaces, distinct from dungeon cells.\n3.  **High Windows:** Prisoners were often held in upper rooms of towers like the Beauchamp Tower or the Bloody Tower, with windows high above ground level.\n4.  **Guarded Courtyard:** The Tower complex featured inner courtyards constantly patrolled by guards (the Yeoman Warders/Beefeaters).\n5.  **Unbarred Windows:** While secure due to height and guards, windows in these historic buildings weren't always heavily barred like a typical dungeon cell.\n6.  **1919 Context:** The Tower was still a potent symbol of imprisonment in popular fiction of the early 20th century.\n\nANSWER: **Tower of London**"
+    },
+    "63": {
+      "metadata_frame": "The following passage comes from a novel by W. C. Scully first published in 1898.",
+      "main_question": "[masked proper noun] allowed herself to be persuaded, leaving her lover under the impression that she was conferring a great favour upon him. But the shadow of an abiding sadness was upon her visage, as though she saw the hand of Fate uplifted to strike her. She told her lover that he was not to hope too muchthat she felt as though something were sure to intervene at the last moment. This made Adrian feverishly anxious that the ceremony should take place and, had it been possible, he would have marched down to the church and had the knot tied at once.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Jacomina"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Based on the context from W. C. Scully's 1898 novel, the masked proper noun is **Una**.\n\n**Reasoning:**\n\n1.  **Character Identification:** The passage describes a woman leaving her lover (Adrian) under specific emotional circumstances related to their impending marriage.\n2.  **Novel Context:** In Scully's novel (commonly identified as *Between Sun and Sand*), the central romantic relationship involves Adrian Vanderkloof and Una Torrington.\n3.  **Narrative Fit:** The description of Una's sadness, her premonition of fate intervening, and Adrian's resulting anxiety perfectly align with the dynamics and plot points involving Una and Adrian in Scully's story.\n\n**ANSWER: Una**"
+    }
+  }
+}

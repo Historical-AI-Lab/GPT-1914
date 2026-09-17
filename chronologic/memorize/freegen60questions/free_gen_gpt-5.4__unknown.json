@@ -1,0 +1,610 @@
+{
+  "model": "gpt-5.4",
+  "candidate_label": "gpt-5.4",
+  "benchmark_version": "unknown",
+  "benchmark_path": "/Users/tunder/Library/CloudStorage/Dropbox/python/GPT-1914/chronologic/memorize/memobenchfull.jsonl",
+  "lora_adapter": null,
+  "reasoning_effort": "medium",
+  "answers": {
+    "1": {
+      "metadata_frame": "The following passage is from a novel by G. J. Whyte-Melville, published in 1875.",
+      "main_question": "he felt a little nervous, but with a woman's tact, however, she chose to accept his earnestness in jest. \"There are more wolves than counts in the forest of [masked proper noun],\" said she. \"I do not think I ever spoke to a lord in my life before, so it is possible the recollection may last till the weather changes, at least. No, monsieur; not a step farther. Take back your cloak. Our paths divide here, and I wish you good night.” \"Good night,” he repeated, making, however, no demonstration of leaving her side; \"but will you not tell me your name before we part? What am I to call you in my thoughts-in my dreams?\" \"Rosine,\" she answered, in a soft, low voice. \"That is enough, is it not?\" \"Rosine! What a pretty name! How appropriate!\"\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Rambouillet"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Fontainebleau"
+    },
+    "2": {
+      "metadata_frame": "The following passage is from a novel by G. J. Whyte-Melville, published in 1875.",
+      "main_question": "This dreadful old woman was only talking at random. Well, happen what might, she was resolved he should not find her here. No; if worst came to worst, as he entered the door, she would leap from the window and take her chance. What had she done to deserve this cruel persecution? Was it a punishment for her sins, or a tax on her beauty? How she wished she had been born ugly! No; she didn't! Not even now. [masked proper noun] would never have cared for a plain woman, and, of course, good looks must attract notice, admiration, undesired attentions, which well-brought-up girls should know how to avoid. And this grisly hostess of hers, who was proud of being called Mother Redcap!\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Pierre"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Jack"
+    },
+    "3": {
+      "metadata_frame": "The following passage is from a novel by G. J. Whyte-Melville, published in 1875.",
+      "main_question": "The Queen, who had only rested by snatches, looked very pale and tired, but full of courage, and perfectly composed. She had gathered her children about her, and tried hard to seem unconscious of any extraordinary cause for alarm; but with every passing noise, an eager, listening expression came over her face, that spoke of keen anxiety and painful tension of the nerves. There was too good cause. The body-guard were getting under arms, the fishwomen yelling for an assault, and [masked proper noun] lay dead within a quarter of a mile. Notwithstanding the expostulations of his officers, Louis had forbidden resistance till it was too late.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Father Ignatius"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Mandat"
+    },
+    "4": {
+      "metadata_frame": "The following passage is from a novel by Ellen Thorneycroft Fowler first published in 1915.",
+      "main_question": "I was with him when he died. It was quite peaceful at the end, and I think he was glad to have me with him.\" \"Then you've seen the children?\" I asked. \"Several times. They are wonderfully alike, with-' But I stopped him with a wave of the hand. \"Please don't describe them; I hate to have either places or people described to me beforehand; I like to form my own impressions for myself.\" \"Of course it will be a great responsibility,\" [masked proper noun] said thoughtfully; \"but perhaps you'll help me a bit when I get into a fix.\" \"I shan't be of any use, but I'm sure Annabel will.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Blathwayte"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Father"
+    },
+    "5": {
+      "metadata_frame": "The following passage is from a novel by Ellen Thorneycroft Fowler first published in 1915.",
+      "main_question": "Whereupon Arthur proceeded to expound at some length the reason why it was scientifically impossible for sunlight to put out firelight; whilst [masked proper noun] and I took the opportunity of stepping out-of-doors into the garden. \"I see what you mean about things being so much more than they actually are, Sir Reginald,\" began the boy as soon as we were out of earshot of the effects -or rather the non-effects-of sun upon fire; \"it never struck me quite like that before, but it makes everything most awfully interesting when you look at it in that way.' \"I know it does. And it is not only the most interesting way-it is also the truest way-of looking at things. You see, when you realise how much is involved in even the smallest happening show much romance and excitement and general thrilliness-it turns everything into the most glorious adventure.\"\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Frank"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "the boy"
+    },
+    "6": {
+      "metadata_frame": "The following passage is from Nature-Study Review, a periodical published in 1920.",
+      "main_question": "Geologists generally believe that the area of the Salton Sink was at one time an arm of the Gulf of California, that the Colorado River separated the two by its delta, that the waters of the river being diverted to the south, those in the Sink gradually evaporated and receded, occasionally perhaps being added to by the Colorado River in flood time as it washed new channels in its delta. But Mr. [masked proper noun], apparently on good grounds, urges that the water to the north of the delta, Blake Sea, whatever its origin, was soon comparatively fresh; for the shells to be found are none of them marine, and some of the rocks near the old shore-level are coated with a thick tufa, a calcareous mass which cements rogether many of the rocks, and which is very evidently of fresh-water origin.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "E. E. Free"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Mr. C. R. Orcutt"
+    },
+    "7": {
+      "metadata_frame": "The following passage is from Nature-Study Review, a periodical published in 1920.",
+      "main_question": "While Mr. [masked proper noun] has made contributions through scientific investigation along a number of lines, including glacial drift beneath St. Louis loess, and loess deposits, outlining the limits of Illinoian and Kansan glacial lobes in Missouri, his greatest work has been that of teacher and leader in nature-study and science in the College and community. He not only has developed the course in science and nature study at the College, but has taught these subjects to more than twelve hundred of the teachers in the St. Louis schools, who are now graduates of the College and who, under his inspiring instruction, are doing effective work in these lines in the St Louis schools.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Drushel"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "John L. Tilton"
+    },
+    "8": {
+      "metadata_frame": "The following passage is from a novel by G. J. Whyte-Melville, published in 1875.",
+      "main_question": "\"Ah! mademoiselle,\" said he, with emotion, \"we were getting anxious about you in the storm. I have this moment finished cutting up your firewood, and should have been off to look for you the instant I had washed my hands.\" \"No need, Monsieur [masked proper noun],\" answered she. \"I can take good care of myself both indoors and out. I have long left off being a baby, though I am not quite so tall as you! She stood by him on tip-toe, and glanced up saucily in his face. \"And the big wolf,\" he said, looking down with a wistful tenderness on the delicate creature that vexed and soothed him every day in the week. \"Bah! the big wolf is no wiser than the rest of you.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Pierre"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Wolff"
+    },
+    "9": {
+      "metadata_frame": "The following passage is from a novel by William Black, published in 1877.",
+      "main_question": "And that is the fault of the husbands. They construct an ideal woman, marry a real one, and live miserable ever after, because they can't have that imaginative toy of their brain. Now don't you think, if this were true-if this wretchedness were so wide-spread-it would cure itself? Have mankind gone on blundering for ages, because of the non-arrival of a certain awful and mysterious [masked proper noun] prophetess? Why haven't women formed a universal association for the destruction of lovers' dreams?\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Surrey"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Delphic"
+    },
+    "10": {
+      "metadata_frame": "The following passage is from a novel by William Black, published in 1877.",
+      "main_question": "\"Look here, [masked proper noun],\" said he, \"I won't have you go trying to catch scarlet fever or something of that sort. We have no people of our own that want looking after in that way; if there are, let them come to Mrs. Thomas. As for sick children and infirm grandfathers elsewhere, you can do them no good; there are plenty who can leave it to them. Now don't forget that. And if I catch either Mr. Shuttleworth or Dr. Grey allowing you to go near any of these hovels, I can tell you they will hear of it.\"\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Sylvia"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Mab"
+    },
+    "11": {
+      "metadata_frame": "The following passage is from a novel by William Black, published in 1877.",
+      "main_question": "\"Look here, Sylvia,\" said he, \"I won't have you go trying to catch scarlet fever or something of that sort. We have no people of our own that want looking after in that way; if there are, let them come to Mrs. Thomas. As for sick children and infirm grandfathers elsewhere, you can do them no good; there are plenty who can leave it to them. Now don't forget that. And if I catch either [masked proper noun] or Dr. Grey allowing you to go near any of these hovels, I can tell you they will hear of it.\"\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Mr. Shuttleworth"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "the curate"
+    },
+    "12": {
+      "metadata_frame": "The following passage is from a novel by William Black, published in 1877.",
+      "main_question": "He was not surprised. He had known a good many of these spoiled children of fortune. And he knew that, when by chance they were robbed of some of their golden toys—say, that an income of £30,000 a year was suddenly cut down to £5000 -they became impatient and vexed, and spoke as if life were no longer worth having. \"Try being out of Parliament for a year or two, and see if you don't change your mind,\" said [masked proper noun], shrewdly. \"There is something in the old proverb that says you never know the value of anything until you have lost it.”\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Mr. Bolitho"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Mr. White"
+    },
+    "13": {
+      "metadata_frame": "The following passage comes from a mystery novel written by Frederick Arnold Kummer and published in 1919.",
+      "main_question": "\"Do as you did before. Our consul at Rotterdam will provide you with a passport at any time. He is so instructed.\" Hoffman rose. Another thought occurred to him. \"Suppose it should become necessary, he said, \"while in England, to suddenly make myself known to your agents?\" \"Do not be afraid,\" [masked proper noun] replied, in purring tones. \"You will be known to them.\" There was a suggestion, a menace, almost, in his words, his manner, that was not lost on the young American. It was evident that his every move, while in England, would be closely watched. Clearly, this man did not yet fully trust him. No doubt this was quite natural.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Herr Schwarz"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "the other"
+    },
+    "14": {
+      "metadata_frame": "The following passage comes from a mystery novel written by Frederick Arnold Kummer and published in 1919.",
+      "main_question": "The girl shook her head, a faint smile played about her lips. \"Do you think so?\" she said. \"Evidently you are not skilled in work of this sort. An hour after I land in England, [masked proper noun] will have disappeared. I have many disguises, monsieur. Even you will never see me, as I am, again. Any move on your part to betray me would completely fail. And it is a practice of our service, monsieur, to turn even our failures to account. Should you prove to be one of them, you will find that we have not suffered. But why talk in this strain? I am fully prepared to believe that you are with us.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Gretchen Liebmann"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Mademoiselle de Grissac"
+    },
+    "15": {
+      "metadata_frame": "The following passage comes from a mystery novel written by Frederick Arnold Kummer and published in 1919.",
+      "main_question": "The secret agent laughed. It was the first time that [masked proper noun] had seen him do so, at least with any semblance of humor. \"My dear young man,\" he said. \"Do you think me a child? Were you to rise from your seat, to make one single threatening motion toward me, I should, in the first place, kill you instantly with the automatic pistol which is here close at hand.\" He indicated the black stock of the weapon, protruding from beneath some papers. \"At the same moment, in case I should by any chance miss you, although it is unlikely, since I am an excellent shot, I should with my left hand strike this bell.\" He pointed to a tiny silver gong at the other side of his desk.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Hoffman"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "the young American"
+    },
+    "16": {
+      "metadata_frame": "The following passage comes from a historical adventure novel by William Osborn Stoddard, published in 1903.",
+      "main_question": "\"Come in, young man. You'd better get into the house. Do you know how near the traitor and the British are now?\" \"They're in town already, ma'am,\" called back Lee, as he promptly accepted her invitation. \"Oh, if I only had a gun!\" \"Get in! Get in!\" she said. \"I know how you feel. I'm as mad as you are. I'm old [masked proper noun], and all three of my sons are with Washington, God bless him! I'll shut the door and bar it, anyhow. You mustn't let them see you. They might shoot you right down, but they might not be so ready to murder an old woman.\"\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Betty Randolph"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Mother Bailey"
+    },
+    "17": {
+      "metadata_frame": "The following passage comes from a historical adventure novel by William Osborn Stoddard, published in 1903.",
+      "main_question": "Right at that point came in a terrible interruption, for the soldier began to ply a heavy blacksnake whip, and he was a man with a strong arm, and he apparently had no mercy in him. Oh, how that flying lash did sting, and it fell upon [masked proper noun]'s pride as well as upon his body. If, however, all that was within him was writhing in an agony of shame at being flogged; if he was red-hot with indignation, wrath, and a thirsty feeling of vengeance upon the traitor Arnold, he stood as firmly as a young tree and bore the mere physical pain as if he had been a young Iroquois brave at the stake.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Lee Bowie"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Guert Ten Eyck"
+    },
+    "18": {
+      "metadata_frame": "The following passage comes from a historical adventure novel by William Osborn Stoddard, published in 1903.",
+      "main_question": "There was not a great deal to tell, apparently, but at the end of it all [masked proper noun] drew a long breath and exclaimed: \"Bowie, my boy, you may thank your stars that you're no seaman. If you knew anything about a ship, they'd 'press you sure, for they're awful short o' sailors. That's what's the matter with me. Now, I warn ye, keep your mouth shut. Stay on board the schooner as long as you can, after we get to Portsmouth.\"\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Sam Smalley"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "the old sailor"
+    },
+    "19": {
+      "metadata_frame": "The following passage comes from a novel by W. C. Sculley first published in 1898.",
+      "main_question": "Now that he meant to go away finally nothing she knew or could do mattered to him very much. He was fond of [masked proper noun] in a way,-more or less as one is fond of a faithful dog, but she was the only being in the wide world who cared for him, so he felt the prospect of parting from her very keenly. He determined to make a full confession of his transgression to her before leaving, feeling persuaded that thenceforth she would look upon him with abhorrence and thus would not sorrow at his departure. The thought that he was about to destroy his patient wife's regard for his lonely self was not the least of his troubles.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Aletta"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "his wife"
+    },
+    "20": {
+      "metadata_frame": "The following passage comes from a novel by W. C. Scully first published in 1898.",
+      "main_question": "In regions where the clans were thickly distributed, a good actor of the lion's part in this popular play would be as sure of a welcome as if he were a great painter, and thus could pick and choose his society among the different communities. [masked proper noun] had much to tell his fellows about his varied experiences, and the relation of these was always more than half acted. The old, bald-headed man with the white beard who had sentenced him to be whipped, would have felt his dignity to be seriously compromised if he had seen his former victim perched on a rock mimicking him, and declaiming gibberish to a group of convulsed admirers; accentuating in a most preposterous manner every one of His Worshipful peculiarities.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Kanu"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Kees the Bushman"
+    },
+    "21": {
+      "metadata_frame": "The following passage comes from a novel by W. C. Scully first published in 1898.",
+      "main_question": "But, he reflected, he had never expected his hotheaded brother, the restless, passionate man who could never brook restraint in any form, to survive his long term of imprisonment; his heart should have broken years ago. Well, here in the desert it was a case of man to man, and each was a law unto himself. One thing was sure if his vengeful brother persisted in following him now, if [masked proper noun] would not even leave him the starved desert as his lonely portion,-then the wide earth was not spacious enough to hold them both.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Stephanus"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Frank"
+    },
+    "24": {
+      "metadata_frame": "The following passage comes from a novel by Walter Besant, published in 1891.",
+      "main_question": "'Now, Dame,' said my mother, sharply, 'you have often been called a wise woman. Here is my daughter. What is the matter with her?' The old woman took [masked proper noun]'s hand and looked into the palm; but that, I apprehend, was only part of her pretence. Then she lifted her head and looked upon her face: then she bade her lift her eyes and look into her own. All this I suppose to have been the mere outward tricks of her trade. 'She is bewitched,' said the wise woman, when all this pretence had been accomplished.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Sylvia"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Rose"
+    },
+    "25": {
+      "metadata_frame": "The following passage comes from a novel by Walter Besant, published in 1891.",
+      "main_question": "The folk are uncertain what has been done. They hear a thousand rumours and reports, which are contradicted every day and replaced by others. But they are certain it is witchcraft. But whether she has bewitched him, or he has bewitched her, or someone has bewitched both, they cannot learn. Tell me all, [masked proper noun]-come and tell me all. As for me, I wouldn't hurt a hair of her head,' --she protested this with strong oaths unnecessary to repeat. 'Well, what must come, will come. The Enemy can injure, but he cannot destroy. Let it come quickly, and so be over. And whatever happens, that shall fall upon his head as well. He knows it. He is warned. Let him beware.' I knew not then what she meant, though now I understand very well.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Master Nevill"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Matthew"
+    },
+    "26": {
+      "metadata_frame": "The following passage comes from an autobiographical volume of reminiscences about fishing, written by John Lyle King and published in 1880.",
+      "main_question": "The eighteenness of the section was the most there was of it-that is, its being that distance in miles from Menominee. The rest-the odds and ends of it was a small, rude, uncovered log platform, with a log cabin and a little wheezing steam sawmill in the background of a bit of clearing in the woods. Here began our acquaintance with the teamster, [masked proper noun], a tough Norwegian, with a span of rugged, stout horses, giving the most satisfying assurances of possibilities of draught in a wagon fit for roughing, and also with our aboriginal guides. The Indians were not the wild savages typified in the wooden effigy of the snuff and tobacco shops, with moccasins, leggings, blanket, eagle-plume and tomahawk, and with streaked and painted jaws. One was a full-blooded, copper-skinned Menominee, and the other a mixed-blooded Menominee.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "eorge Evanson"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Ole"
+    },
+    "27": {
+      "metadata_frame": "The following passage comes from an autobiographical volume of reminiscences about fishing, written by John Lyle King and published in 1880.",
+      "main_question": "The Indians were not the wild savages typified in the wooden effigy of the snuff and tobacco shops, with moccasins, leggings, blanket, eagle-plume and tomahawk, and with streaked and painted jaws. One was a full-blooded, copper-skinned Menominee, and the other a mixed-blooded Menominee. They were coated, trowsered and booted in backwoods attire. They were stalwart, and seemingly in superb order for our purposes. From their thews and sinews we had a prescience of splendid service and all requisite utilities. The first was George Kaquotash, and the other, [masked proper noun]. The road started rough and up and down. We footed some distance of the journey, to stretch our legs and straighten the crinkles of the railway sitting.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Mitchell Thebault"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Louis Grignon"
+    },
+    "28": {
+      "metadata_frame": "The following passage comes from an autobiographical volume of reminiscences about fishing, written by John Lyle King and published in 1880.",
+      "main_question": "At a deserted cabin a weather-bound, dismal Menominee tatterdemalion was crouching under its meagre vestige of clap-board roof for cover. Our natives interviewed him, and learned that he was navigating supplies up to Sturgeon river for [masked proper noun] and Robert Clark, who were to travel the overland route there. This forlorn redskin was the solitary human being we yet had met all that day. It restored us to some degree of grim complacency to perceive that we were not the only, or even most miserable, sinners in such a woful, aqueous plight. Like the hares that went to drown themselves in a sheer desperation of misery, yet took heart to live when they saw the frogs in the pool, swelled to bursting with batrachian grief far exceeding their own, our hearts lifted from the depths, at the comforting thought that at least one wretched pagan was in more \"doleful dumps\" than we.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "John Stockton"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Judge Ryan"
+    },
+    "29": {
+      "metadata_frame": "The following passage comes from a travel memoir written by Annabelle Kent and published in 1911.",
+      "main_question": "In the custom house, steerage passengers, first-class passengers and second-class passengers, together with mountains of baggage, were crammed pell-mell into one small room. It took a long while to get all our scattered baggage marked with the little labels, like pink postage stamps, which showed that we had passed the Customs. When we were free to depart, [masked proper noun], with the aid of a Cook's man as interpreter, engaged carriages, and we set out to see all we could of the city in an hour. Genoa was charming to me with its air of oldfashioned pomp, its streets of grand palaces, its fine shops, and its peace from beggars. I put this city down on my list of air-castles for another visit. After supper at a Genoa restaurant, we took the express for Milan.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Mr. Brown"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "my father"
+    },
+    "30": {
+      "metadata_frame": "The following passage comes from a travel memoir written by Annabelle Kent and published in 1911.",
+      "main_question": "Dear [masked proper noun], I wish you could have been here yesterday, when this ship left Hoboken. All my dear ones within a hundred miles of the place were there, and I should have liked to have you with them. You could have seen Molly, her husband, and little son. You have not met her since our college days, when we were all at Monnett Hall together, have you? Her husband is such a fine fellow, and Buddie is the sweetest, most engaging three-year-old that I ever saw. Did you ever know I wanted to go round the world? I didn't know it myself till Molly told me she was building such a castle in Spain. A year ago I never dreamed of such a thing; and it is wonderful how it came about.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Marguerite"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Helen"
+    },
+    "31": {
+      "metadata_frame": "The following passage comes from a travel memoir written by Annabelle Kent and published in 1911.",
+      "main_question": "Molly came over from New Haven one day last spring and 'phoned me to meet her in Wanamaker's. We had a fine day, pretending we were school girls again. While we were at luncheon she told me that her husband and she were talking about \"going around the world\". I told her to be sure and let me know if it came to a reality, for I wanted to be one of the party. That was in May; in August, I was in Troy, visiting [masked proper noun], when one day I was thunderstruck to receive a letter from Molly's husband, saying that if I had really decided to take the trip I was to telegraph at once to a man in New York who was to reserve a berth for me on the Isis, from Brindisi to Port Said, and on the China, from Port Said to Colombo, Ceylon, until he could hear from me; then the sailing date from New York could be decided later.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Edith"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Emma Willard School"
+    },
+    "32": {
+      "metadata_frame": "The following passage comes from the autobiography of Peter Bruner, published in the 1920s.",
+      "main_question": "So Benton took me home that evening and drove the staple in the wall and chained me up. My master told him to whip me every day if it was necessary, to whip me until he was satisfied, it did not make any difference if he killed me. He thought eighty dollars was a large amount of money to pay for one prisoner. That evening he got in his cowhides, straps and all of his whipping materials. The next morning while I was sitting down to eat breakfast I heard a knock at the door. I opened it and there stood a troop of Union Home Guards. Some of them were some of the boys that I used to play with. So they took [masked proper noun] and put him in the same jail that I was formerly in. This same day they took John Bell Bruner and put him in prison across the river to Colonel Lilly's camp. I think they had been sympathizing with the rebels was the cause of this.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Jimmy Benton"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Benton"
+    },
+    "33": {
+      "metadata_frame": "The following passage is from a novel by Shan F. Bullock published in 1898.",
+      "main_question": "He also had changed, and for the worse, Frank found; but not so woefully as had [masked proper noun]. He still kept his appearance of health, his ruddy colour and freshness of cheek and eye. He was dressed decently in an old tweed suit--it had done duty of Sundays in the old days, Frank remembered-brown hat and heavy boots; across his waistcoat dangled a slim gold chain-another relic of old decency--and a red cotton handkerchief was knotted round his neck: it was still the old John Butler, yet all over him had wandered the hand of change.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Sarah"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "his wife"
+    },
+    "34": {
+      "metadata_frame": "The following passage is from a novel by Shan F. Bullock published in 1898.",
+      "main_question": "Here and there the twigs had quickened; from the gardens, sometimes, came the merry clamour of children and the glad evensong of birds; on every side was the hum of traffic, the surge of life; spring was abroad in grimy London; there were a thousand things to see and be thankful for: yet, steadily [masked proper noun] kept his face to the stones and pondered as he went. He felt cheerless, a little ashamed.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Frank Barry"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Thorne"
+    },
+    "35": {
+      "metadata_frame": "The following passage is from a novel by Shan F. Bullock published in 1898.",
+      "main_question": "What utter folly! He must conquer this weakness; must change his thoughts. How long a time it seemed since the day he last saw [masked proper noun]. Suppose she knew he were there all alone with Nan? Ah, would she not be moody, be absurdly jealous. He knew it; more than one experience he had had of that childish failing of hers.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Marian"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Norah"
+    },
+    "36": {
+      "metadata_frame": "The following passage is from a novel by Shan F. Bullock published in 1898.",
+      "main_question": "He might come, her heart sang in time with the oars; he might come. Who knows? Vigorously, with something of her old gladness of heart, she swung to and fro on the thwart. He might. He might, she murmured. The cot neared the shore. She dared not look. He might. He might, she said. The cot swung round. She lifted her eyes and there stood old [masked proper noun].\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Hugh Barry"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Barney"
+    },
+    "37": {
+      "metadata_frame": "The following passage comes from a rhetoric textbook written by M. H. Shackford and published in 1913.",
+      "main_question": "Below are examples of friendly letters of condolence. Dear Katharine: The news of your father's death was a great shock to us all, and we realize very deeply how terrible a blow it is to you. All the family unite in sending you the most sincere sympathy. If there is the slightest way in which we can be of service to you, please let us know. Affectionately yours, [masked proper noun]\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Sarah R. Amherst"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Mary"
+    },
+    "38": {
+      "metadata_frame": "The following passage comes from a rhetoric textbook written by M. H. Shackford and published in 1913.",
+      "main_question": "MY DEAR MRS. ANDREWS: May I venture to send you my very earnest sympathy in your sorrow? I do not like to disturb you by calling, yet I should like you to know that I am thinking of you and of your grief during all these hard days. Sincerely yours, [masked proper noun]\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "AGNES L. NICHOLS"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Grace Preston"
+    },
+    "39": {
+      "metadata_frame": "The following passage comes from a rhetoric textbook written by M. H. Shackford and published in 1913.",
+      "main_question": "MY DEAR MISS TAYLOR: Will you take luncheon with us on Tuesday, at half past one? I hope that my aunt, [masked proper noun], will be here from Albany, and that I may have the pleasure of introducing you to her. Very sincerely yours, MARION R. ANDERSON\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Miss Alden"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Mrs. Graham"
+    },
+    "40": {
+      "metadata_frame": "The following passage comes from a rhetoric textbook written by M. H. Shackford and published in 1913.",
+      "main_question": "MY DEAR MISS TAYLOR: Will you take luncheon with us on Tuesday, at half past one? I hope that my aunt, Miss Alden, will be here from Albany, and that I may have the pleasure of introducing you to her. Very sincerely yours, [masked proper noun]\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "MARION R. ANDERSON"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Mary Alden"
+    },
+    "41": {
+      "metadata_frame": "The following passage comes from the letters and diary of an American clergyman, published in 1894.",
+      "main_question": "Three of her children died in infancy, but five sons and three daughters were spared to grow up. [masked proper noun], the eldest sister, was cut off by typhus fever in the year 1824 when about twenty-four years of age. Some interesting notes of her last illness were kept by her mother, who spoke of her as 'the best of her children.' Shortly before her death she asked her mother to help her to repeat the hymn- 'There is a land of pure delight Where saints immortal reign,' etc.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Marjory"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Mary"
+    },
+    "42": {
+      "metadata_frame": "The following passage comes from the letters and diary of an American clergyman, published in 1894.",
+      "main_question": "He was baptized by Dr. Jones, and named Andrew Alexander. As the seventh son of a seventh son Andrew Bonar used to say that he ought to have the gift of 'second sight.' His first school was [masked proper noun] in Hanover Street, and for many years he treasured a little Russia leather bound Testament which he got there as a prize.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Mr. Lindsay's"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a short phrase of about 2–4 words",
+      "answer": "Mr. Fraser’s school"
+    },
+    "43": {
+      "metadata_frame": "The following passage comes from the letters and diary of a Scottish clergyman, published in 1894.",
+      "main_question": "There have been of late a good many conversions among us, among the children, and among the young people of my classes. June 2nd. - Have heard that on Sabbath morning our fellow-labourer and beloved in the Lord, [masked proper noun], died! To him what a calm after the storm! I almost envy him this evening, within the veil, with Jesus, amid the redeemed who are waiting for the Day of Christ. What peace, what joy!\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "John Milne"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "William C. Burns"
+    },
+    "44": {
+      "metadata_frame": "The following passage comes from the letters and diary of a Scottish clergyman, published in 1894.",
+      "main_question": "My lecture on Prophecy this month has been blessed to impress several persons. Saturday, 17th January 1880. - On Thursday evening my sister-in-law, [masked proper noun], passed away. A most motherly, unpretending, gentle Christian woman. Have been writing a leaflet upon the terrible disaster at the Tay Bridge. Come nearer, nearer, O my Lord!\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Mrs. Grant"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Mrs. John Bonar"
+    },
+    "45": {
+      "metadata_frame": "The following passage is from a novel by Ellen Thorneycroft Fowler first published in 1915.",
+      "main_question": "Even in childhood [masked proper noun]'s things always turned out well, and mine turned out badly. Her garden blossomed like the rose, while mine was more or less a desert place, though I worked in it quite as hard as she: her white mice were ornaments to society, while mine grew into rats and had to be destroyed; her birthdays were invariably fine, while mine, equally invariably, turned to rain.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Annabel"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Barbara"
+    },
+    "46": {
+      "metadata_frame": "The following passage is from a novel by Ellen Thorneycroft Fowler first published in 1915.",
+      "main_question": "So in the question of healing; when one realises that the only Healer is Christ, it becomes a mere matter of detail whether He chooses to use as His instrument the skill of a physician, the self-conquest of the patient, or the power of a natural healer: just as in old times it was a mere matter of detail whether He anointed with clay the eyes of the blind, or laid His hand on the sick person, or spake the word only. It was not the hem of the garment that healed, it was Christ Himself. The hem was only the chosen channel of His Divine Power. I knelt down beside [masked proper noun]'s sofa, and laid my hands upon him as I had laid them on Fay, at the same time lifting up my soul in prayer that the boy's pain might cease and his injury be cured.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Willie Jackson"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Robin"
+    },
+    "47": {
+      "metadata_frame": "The following passage is a letter to The Nature-Study Review, published in 1920. The author's name has been masked.",
+      "main_question": "A Strange Pet [masked proper noun] Los Angeles, Cal. One day last spring some of \"our boys\" captured a weasel on the school-grounds and with some difficulty deposited him in a cage in the nature room. At first he was very much terrified, barking and lunging at all who came near, but in a few days he became accustomed to his strange surroundings and would even climb up his cage to greet me when I came to feed him and put his house in order. At the time of the summer vacation the weasel was taken to my home and, with more leisure at my disposal, his systematic training began.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "SNOW LONGLEY"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Probably **Mabel Brown Ellis**"
+    },
+    "49": {
+      "metadata_frame": "The following passage comes from a novel written by Carrie M. W. Willard and published in 1892.",
+      "main_question": "At this the little maiden smiles and claps her hands, while the boy, whose paddle has trailed idly while they talked, now takes it up, and, with a whoop which makes the mountains ring again, drives it into the water with such sweeping force as sends the little boat bounding forward with reckless speed. \"Take a paddle, [masked proper noun],\" he cries, \"and let us over the lake like an arrow.\" Seizing a paddle which has lain in the bottom of the canoe, the girl enters the race with as much skill as her brother, and with quite as much. spirit. Their course seems indeed that of an arrow, so straight and swift it proves.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Tashekah"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "sister"
+    },
+    "50": {
+      "metadata_frame": "The following passage comes from a novel written by Carrie M. W. Willard and published in 1892.",
+      "main_question": "Grannie sat close by the blaze and told us about the spirits, and many things that [masked proper noun] nor I had ever heard before about the dead-boxes and the awful witchcraft. She told us over again about the owl-how it came to be a witch and to know everything bad, and could tell when people were going to die. I was so tired at last I pulled my blanket around me and lay down on the ground by the fire; then all at once I lost grannie's voice and I heard a noise that made my heart die. I found myself looking straight at the house-door, and my eyes grew fast on a great white owl that sat in it. Three times it flapped its wings and hooted at me, 'Your father's a witch-your father's a witch.' I could not move me, and my words were dead-only from somewhere came the words to me, 'Your father will die,' and, as still I looked, the owl was blackest black, and as it flew away I saw that it was the Raven.\"\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Kasko"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "my cousin"
+    },
+    "51": {
+      "metadata_frame": "The following passage comes from a novel written by Carrie M. W. Willard and published in 1892.",
+      "main_question": "And having brought her so near to death her tormentors leave her for a while, to attend the equally important ceremonies connected with the death of the chief. Upon the conclusion of the medicine-man's trance, leaving the witch to the certain torture of her own friends and intrusting to [masked proper noun] the duty of dispatching messengers to the different villages, the old wife has hastily brought out the chief's treasures that he may be enrobed and decked before the spirit's departure, so that its comfort in another world may be assured.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Yealh-neddy"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "the herald"
+    },
+    "52": {
+      "metadata_frame": "The following passage comes from a novel written by Carrie M. W. Willard and published in 1892.",
+      "main_question": "The coward bear, afraid of what he could not see, dropped to all fours and rapidly disappeared along the lower trail, though Kin-da-shon had fallen under him and lay as one dead-silent and blanched were the lips and not a tremor stirred even the eyelids. Unmindful of their own insecurity, the women run down and kneel beside him. \"He is dead! he is dead! and all my heart dies with him!\" [masked proper noun] cries, burying her face against the unconscious object of her love. To Usha it is a revelation; she is not slow to understand, and to her it seems almost wiser to let him die.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Kotch-kul-ah"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "the girl"
+    },
+    "53": {
+      "metadata_frame": "The following passage comes from a novel by Walter Besant, published in 1891.",
+      "main_question": "The four players were-first, the Rev. [masked proper noun], who among his many titles, preferments, and offices held that of Brother in St. Katherine's Hospital. Unlike some of the Brothers before him and after him, he not only took an occasional turn in the services of the Church but also came into residence every year for a month or six weeks, choosing that time of the year when the Hospital is at its best with the spring of the year, and the blossoms on the trees in the orchard, the early gillyflowers, polyanthus, tulip, and lily in the garden. We have had many learned and illustrious Brothers of the Foundation, but none more learned than this divine, who indeed shed lustre upon the Hospital.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Robert Nevill Lorrymore"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Henry Alford, D.D"
+    },
+    "54": {
+      "metadata_frame": "The following passage comes from a novel by Walter Besant, published in 1891.",
+      "main_question": "The third player was a Frenchman--[masked proper noun]. He came over to England in the first batch of émigrés : he was old; he was poor; and he lived in St. Katherine's Square, where he had a lodging of a single room. At this time there were so many thousand émigrés scattered all over England that they had ceased to attract attention or to excite suspicion. They lived among us, and except among barbers, cooks, and valets, to whom the émigrés of the baser sort were formidable rivals, no one now minded them.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "the Marquis de Rosnay"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a short phrase of about 4–5 words",
+      "answer": "a ci-devant Marquis"
+    },
+    "55": {
+      "metadata_frame": "The following passage comes from the autobiography of Peter Bruner, published in the 1920s.",
+      "main_question": "About this time he removed from Winchester to Irvin where his brother [masked proper noun] resided, about 35 miles from Winchester, so they took my sister and myself with them. After he had got us there he said he was going to break us in so then trouble began with us. When I lived in Winchester I did get good food to eat but when we moved to Irvin we did not have anything to eat but corn-bread, fat meat and water to drink, blackeye peas and greens which I gathered, and we had to eat that out of the skillets. We did not have any tables to eat upon like we do now.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Joe"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "John Bruner"
+    },
+    "56": {
+      "metadata_frame": "The following passage comes from the autobiography of Peter Bruner, published in the 1920s.",
+      "main_question": "Then they asked us who our masters were and I told them the truth for the first time since we had started on our journey. They took us to the jail and the room they put us in was iron and the chairs were iron and the bed was iron. We told him that Phil belonged to Mr. Stocton and I to John Bell Bruner in Irvin. The turnkey's name was [masked proper noun] and he was very good to us. We remained in jail about two weeks and on the first Monday in August, John Cockrel came after us.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Mr. Bowman"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Mr. Murphy"
+    },
+    "57": {
+      "metadata_frame": "The following passage comes from a travel memoir written by Annabelle Kent and published in 1911.",
+      "main_question": "Mary and I returned to the Bluff Hotel on Monday evening, and the faithful tailor, according to his promise to bring home my things early on Tuesday morning, brought them before six o'clock, and stood outside my door until I opened it and found him there. [masked proper noun] came on from Tokio this morning, Wednesday, to see that I and all my baggage got safely on the Hong Kong Maru. I have pasted steamship labels on my trunks for the last time, and my last day in Japan has dawned bright and beautiful.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Harry"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Ito, my courier"
+    },
+    "58": {
+      "metadata_frame": "The following passage is a specimen letter from a correspondence manual published by J. Willis Westlake in 1876.",
+      "main_question": "Specimen Letters. - We give below four specimens to illustrate the proper style to be used. Number One. Green Valley, Pa., May 1, 1876. DEAR SIR, I have the honor of introducing to your acquaintance [masked proper noun], whom I commend to your kind attentions. Very truly yours, JANE FAITHFUL. MR. THOMAS GOOD, Vineland , N.J.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Mr. William Worthy"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "the bearer"
+    },
+    "59": {
+      "metadata_frame": "The following passage is a specimen letter from a correspondence manual published by J. Willis Westlake in 1876.",
+      "main_question": "Specimen Letters. - We give below four specimens to illustrate the proper style to be used. Number One. Green Valley, Pa., May 1, 1876. DEAR SIR, I have the honor of introducing to your acquaintance Mr. William Worthy, whom I commend to your kind attentions. Very truly yours, [masked proper noun]. MR. THOMAS GOOD, Vineland , N.J.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "JANE FAITHFUL"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "John Smith"
+    },
+    "60": {
+      "metadata_frame": "The following passage is a specimen letter from a correspondence manual published by J. Willis Westlake in 1876.",
+      "main_question": "Number Two. MR. WILLIAM GRAHAM. Chicago, Sept. 25, 1875. MY DEAR SIR, - It gives me pleasure to introduce to you my much esteemed friend, [masked proper noun]. Any attentions you may be able to show him will be gratefully acknowledged and cheerfully reciprocated by Your old friend, ARTHUR PENDENNIS.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Mr. W. Penn Johnson"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a short phrase of about 3–4 words",
+      "answer": "Mr. George Warrington"
+    },
+    "61": {
+      "metadata_frame": "The following passage is a specimen letter from a correspondence manual published by J. Willis Westlake in 1876.",
+      "main_question": "Number Two. MR. WILLIAM GRAHAM. Chicago, Sept. 25, 1875. MY DEAR SIR, - It gives me pleasure to introduce to you my much esteemed friend, Mr. W. Penn Johnson. Any attentions you may be able to show him will be gratefully acknowledged and cheerfully reciprocated by Your old friend, [masked proper noun].\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "ARTHUR PENDENNIS"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a short phrase of about 2–4 words",
+      "answer": "J. Willis Westlake"
+    },
+    "62": {
+      "metadata_frame": "The following passage comes from a mystery novel written by Frederick Arnold Kummer and published in 1919.",
+      "main_question": "THE six days that Bob Hoffman spent in prison in [masked proper noun] were, to a man of his temperament, almost unbearable. He was well enough treated. The room in which he was confined was fairly commodious, and reasonably well furnished, with no suggestion of the dungeon cell about it. There was an unbarred window from which he might have attempted to escape, but for the fact that it was, in the first place, forty feet from the ground, that in the second, it opened on a courtyard in which paced an armed guard, and in the third, that he had no reason whatever for attempting to escape in any event.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Antwerp"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Peking"
+    },
+    "63": {
+      "metadata_frame": "The following passage comes from a novel by W. C. Scully first published in 1898.",
+      "main_question": "[masked proper noun] allowed herself to be persuaded, leaving her lover under the impression that she was conferring a great favour upon him. But the shadow of an abiding sadness was upon her visage, as though she saw the hand of Fate uplifted to strike her. She told her lover that he was not to hope too muchthat she felt as though something were sure to intervene at the last moment. This made Adrian feverishly anxious that the ceremony should take place and, had it been possible, he would have marched down to the church and had the knot tied at once.\n\nWhat proper noun or noun phrase would best fill in the blank occupied above by [masked proper noun]?",
+      "ground_truths": [
+        "Jacomina"
+      ],
+      "reasoning_type": "phrase_cloze",
+      "length_spec": "a few words",
+      "answer": "Inez"
+    }
+  }
+}
