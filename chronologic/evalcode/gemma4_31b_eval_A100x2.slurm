@@ -48,19 +48,30 @@
 #     activations. If the smoke test OOMs on GPU, go to --gpus-per-node=4.
 #   - Gemma 4 needs a recent transformers. The preflight check below fails
 #     fast if the active env can't import it.
+#
+# ENV SETUP (once, on a login node, from evalcode/):
+#   module avail python                # pick a Python >= 3.10 module
+#   module load <that python module>
+#   python -m venv gemma4-env
+#   source gemma4-env/bin/activate
+#   pip install --upgrade pip
+#   pip install torch transformers accelerate numpy scipy tqdm httpx openai requests
+#   python -c "import transformers.models.gemma4, torch; print(transformers.__version__, torch.__version__)"
 
 SMOKE=1
 SMOKE_N=40
 
 MODEL_DIR=/projects/bdfx/models/gemma-4-31B
 BENCHMARK=../booksample/chronologic_en_0.8.jsonl
-ENV_ACTIVATE=../qwentuning/qlora-env/bin/activate
+ENV_ACTIVATE=gemma4-env/bin/activate   # see setup note above
 
 echo "Job starting on $(hostname)"
 date
 
 module reset
-module load cudatoolkit/25.3_12.8
+# Unversioned: Delta's OS upgrade removed cudatoolkit/25.3_12.8. pip torch
+# wheels bundle their own CUDA runtime, so this is mostly for nvidia-smi.
+module load cudatoolkit
 module list
 
 source "$ENV_ACTIVATE"
@@ -76,6 +87,9 @@ python - <<'EOF' || { echo "Preflight failed; see above."; exit 1; }
 import sys, transformers
 print("python", sys.version.split()[0], "| transformers", transformers.__version__)
 import transformers.models.gemma4  # ImportError here => transformers too old for Gemma 4
+import torch, accelerate, scipy.optimize  # scipy is imported lazily for Platt scaling at the very end
+import benchmark_evaluation           # pulls in modelasjudge/ helpers and their deps
+print("torch", torch.__version__, "| CUDA available:", torch.cuda.is_available())
 EOF
 if [ ! -f "$MODEL_DIR/config.json" ]; then
     echo "No config.json in $MODEL_DIR -- download the model on a login node first."
