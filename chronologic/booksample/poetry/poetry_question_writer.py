@@ -8,6 +8,10 @@ them to JSONL files in poetry/process_files/.
 Supports multi-line input for questions and answers, preserving line
 breaks and leading spaces as needed for verse.
 
+Every non-ground_truth answer carries a rejection rationale in the
+parallel "reject_reasons" array, and records are written with
+"context_judged": 1.
+
 Usage:
     python poetry_question_writer.py [--metadata PATH]
 
@@ -191,19 +195,21 @@ def prompt_for_category(source_htid: str, current_category: str = "poetry_genera
         return current_category
 
 
-def prompt_for_answers() -> Tuple[List[str], List[str], List[float]]:
+def prompt_for_answers() -> Tuple[List[str], List[str], List[float], List[str]]:
     """
     Collect answers interactively, with multi-line support for answer text.
 
     First answer is always ground_truth with probability 1.0.
     Subsequent answers can be ground_truth, manual, or anachronistic_manual.
+    Every non-ground_truth answer also gets a reject_reason.
 
     Returns:
-        Tuple of (answer_strings, answer_types, answer_probabilities)
+        Tuple of (answer_strings, answer_types, answer_probabilities, reject_reasons)
     """
     answer_strings = []
     answer_types = []
     answer_probabilities = []
+    reject_reasons = []
 
     print("\n--- Answers ---")
 
@@ -214,6 +220,7 @@ def prompt_for_answers() -> Tuple[List[str], List[str], List[float]]:
             answer_strings.append(first_answer)
             answer_types.append("ground_truth")
             answer_probabilities.append(1.0)
+            reject_reasons.append("")
             break
         print("  First answer is required")
 
@@ -227,6 +234,9 @@ def prompt_for_answers() -> Tuple[List[str], List[str], List[float]]:
             answer_type, prob = prompt_for_answer_type_and_prob()
             answer_types.append(answer_type)
             answer_probabilities.append(prob)
+            reject_reasons.append(
+                "" if answer_type == "ground_truth" else prompt_for_reject_reason()
+            )
             break
         print("  Second answer is required (minimum 2 answers)")
 
@@ -246,9 +256,29 @@ def prompt_for_answers() -> Tuple[List[str], List[str], List[float]]:
         answer_type, prob = prompt_for_answer_type_and_prob()
         answer_types.append(answer_type)
         answer_probabilities.append(prob)
+        reject_reasons.append(
+            "" if answer_type == "ground_truth" else prompt_for_reject_reason()
+        )
         answer_num += 1
 
-    return answer_strings, answer_types, answer_probabilities
+    return answer_strings, answer_types, answer_probabilities, reject_reasons
+
+
+def prompt_for_reject_reason() -> str:
+    """
+    Prompt user for the reason a non-ground_truth answer should be rejected.
+
+    Required, non-blank: the ideal phrasing begins with a verb, completing
+    "Reason for rejection is that the answer ...".
+
+    Returns:
+        The reason string (non-blank)
+    """
+    while True:
+        reason = input("Reason for rejection is that the answer ...: ").strip()
+        if reason:
+            return reason
+        print("  Reason cannot be blank")
 
 
 def prompt_for_period_words(main_question: str) -> int:
@@ -380,7 +410,7 @@ def create_question(metadata: Dict) -> Dict:
     manual_comment = prompt_for_manual_comment()
 
     # F. Answers
-    answer_strings, answer_types, answer_probabilities = prompt_for_answers()
+    answer_strings, answer_types, answer_probabilities, reject_reasons = prompt_for_answers()
 
     # Build output record
     record = {
@@ -389,6 +419,8 @@ def create_question(metadata: Dict) -> Dict:
         "answer_strings": answer_strings,
         "answer_types": answer_types,
         "answer_probabilities": answer_probabilities,
+        "reject_reasons": reject_reasons,
+        "context_judged": 1,
         "question_category": question_category,
         "period_words_in_main_question": period_words,
         "manual_comment": manual_comment,

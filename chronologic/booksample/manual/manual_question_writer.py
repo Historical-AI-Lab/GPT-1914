@@ -5,6 +5,11 @@ Manual Question Writer
 Interactive CLI for creating manual benchmark questions and writing
 them to JSONL files in manual/process_files/.
 
+Parallax questions are the ones open to judgment about fit with the
+target historical context: they carry a "reject_reasons" array parallel
+to the answers, and "context_judged": 1. Every other category is written
+with "context_judged": 0 and no "reject_reasons".
+
 Usage:
     python manual_question_writer.py [--metadata PATH]
 
@@ -119,16 +124,17 @@ def prompt_for_question() -> str:
         print("  Question cannot be blank")
 
 
-def prompt_for_category(source_htid: str, current_category: str = "textbook") -> str:
+def prompt_for_category(source_htid: str, current_category: str = "parallax") -> str:
     """
     Prompt user for question category.
 
     For special htids (attribution, handcrafted, refusal), the category
-    matches the htid.
+    matches the htid. Otherwise, the numbered category options are shown
+    directly; pressing enter selects current_category as a default.
 
     Args:
         source_htid: The source htid
-        current_category: Current/default category
+        current_category: Category selected by a bare enter (default)
 
     Returns:
         The selected category
@@ -137,50 +143,61 @@ def prompt_for_category(source_htid: str, current_category: str = "textbook") ->
     if source_htid in SPECIAL_HTIDS:
         return source_htid
 
-    print(f"\nQuestion category: {current_category}")
-    choice = input("(a)pprove this category or (c)hange it? (enter for approve): ").strip().lower()
+    print("\nCategory options:")
+    default_idx = CATEGORY_OPTIONS.index(current_category) + 1 if current_category in CATEGORY_OPTIONS else None
+    for i, cat in enumerate(CATEGORY_OPTIONS, 1):
+        marker = " (default)" if i == default_idx else ""
+        print(f"  {i}. {cat}{marker}")
+    print(f"  {len(CATEGORY_OPTIONS) + 1}. [enter manually]")
 
-    if choice in ['a', 'approve', '']:
-        return current_category
-    elif choice in ['c', 'change']:
-        print("\nCategory options:")
-        for i, cat in enumerate(CATEGORY_OPTIONS, 1):
-            print(f"  {i}. {cat}")
-        print(f"  {len(CATEGORY_OPTIONS) + 1}. [enter manually]")
+    while True:
+        prompt_label = f"Select category (1-{len(CATEGORY_OPTIONS) + 1})"
+        if default_idx is not None:
+            prompt_label += f" [{default_idx}={current_category}]"
+        cat_choice = input(f"{prompt_label}: ").strip()
 
-        while True:
-            cat_choice = input(f"Select category (1-{len(CATEGORY_OPTIONS) + 1}): ").strip()
-            try:
-                idx = int(cat_choice) - 1
-                if 0 <= idx < len(CATEGORY_OPTIONS):
-                    return CATEGORY_OPTIONS[idx]
-                elif idx == len(CATEGORY_OPTIONS):
-                    # Manual entry option
-                    manual_cat = input("Enter category: ").strip()
-                    if manual_cat:
-                        return manual_cat
-                    print("  Category cannot be blank")
-                    continue
-            except ValueError:
-                pass
-            print(f"  Please enter a number 1-{len(CATEGORY_OPTIONS) + 1}")
-    else:
-        return current_category
+        if cat_choice == '' and default_idx is not None:
+            return current_category
+
+        try:
+            idx = int(cat_choice) - 1
+            if 0 <= idx < len(CATEGORY_OPTIONS):
+                return CATEGORY_OPTIONS[idx]
+            elif idx == len(CATEGORY_OPTIONS):
+                # Manual entry option
+                manual_cat = input("Enter category: ").strip()
+                if manual_cat:
+                    return manual_cat
+                print("  Category cannot be blank")
+                continue
+        except ValueError:
+            pass
+        print(f"  Please enter a number 1-{len(CATEGORY_OPTIONS) + 1}")
 
 
-def prompt_for_answers() -> Tuple[List[str], List[str], List[float]]:
+def prompt_for_answers(collect_reasons: bool) -> Tuple[List[str], List[str], List[float], Optional[List[str]]]:
     """
     Collect answers interactively.
 
     First answer is always ground_truth with probability 1.0.
     Subsequent answers can be ground_truth, manual, or anachronistic_manual.
 
+    Rejection rationales are only meaningful for parallax questions, where
+    fit with the target context is what's being judged. When collect_reasons
+    is False the user is never asked for one and None is returned in place
+    of the array.
+
+    Args:
+        collect_reasons: Whether to require a reject_reason per distractor
+
     Returns:
-        Tuple of (answer_strings, answer_types, answer_probabilities)
+        Tuple of (answer_strings, answer_types, answer_probabilities,
+        reject_reasons or None)
     """
     answer_strings = []
     answer_types = []
     answer_probabilities = []
+    reject_reasons = [] if collect_reasons else None
 
     print("\n--- Answers ---")
 
@@ -191,6 +208,8 @@ def prompt_for_answers() -> Tuple[List[str], List[str], List[float]]:
             answer_strings.append(first_answer)
             answer_types.append("ground_truth")
             answer_probabilities.append(1.0)
+            if collect_reasons:
+                reject_reasons.append("")
             break
         print("  First answer is required")
 
@@ -204,6 +223,10 @@ def prompt_for_answers() -> Tuple[List[str], List[str], List[float]]:
             answer_type, prob = prompt_for_answer_type_and_prob()
             answer_types.append(answer_type)
             answer_probabilities.append(prob)
+            if collect_reasons:
+                reject_reasons.append(
+                    "" if answer_type == "ground_truth" else prompt_for_reject_reason()
+                )
             break
         print("  Second answer is required (minimum 2 answers)")
 
@@ -223,9 +246,30 @@ def prompt_for_answers() -> Tuple[List[str], List[str], List[float]]:
         answer_type, prob = prompt_for_answer_type_and_prob()
         answer_types.append(answer_type)
         answer_probabilities.append(prob)
+        if collect_reasons:
+            reject_reasons.append(
+                "" if answer_type == "ground_truth" else prompt_for_reject_reason()
+            )
         answer_num += 1
 
-    return answer_strings, answer_types, answer_probabilities
+    return answer_strings, answer_types, answer_probabilities, reject_reasons
+
+
+def prompt_for_reject_reason() -> str:
+    """
+    Prompt user for the reason a non-ground_truth answer should be rejected.
+
+    Required, non-blank: the ideal phrasing begins with a verb, completing
+    "Reason for rejection is that the answer ...".
+
+    Returns:
+        The reason string (non-blank)
+    """
+    while True:
+        reason = input("Reason for rejection is that the answer ...: ").strip()
+        if reason:
+            return reason
+        print("  Reason cannot be blank")
 
 
 def prompt_for_period_words(main_question: str) -> int:
@@ -351,6 +395,10 @@ def create_question(metadata: Dict, current_frame: Optional[str] = None) -> Tupl
     # C. Question category
     question_category = prompt_for_category(metadata['source_htid'])
 
+    # Only parallax questions are judged on fit with the target context,
+    # so only they collect rejection rationales.
+    is_parallax = question_category == "parallax"
+
     # D. Period words in main question
     period_words = prompt_for_period_words(main_question)
 
@@ -358,7 +406,9 @@ def create_question(metadata: Dict, current_frame: Optional[str] = None) -> Tupl
     manual_comment = prompt_for_manual_comment()
 
     # F. Answers
-    answer_strings, answer_types, answer_probabilities = prompt_for_answers()
+    answer_strings, answer_types, answer_probabilities, reject_reasons = prompt_for_answers(
+        collect_reasons=is_parallax
+    )
 
     # Build output record
     record = {
@@ -367,6 +417,8 @@ def create_question(metadata: Dict, current_frame: Optional[str] = None) -> Tupl
         "answer_strings": answer_strings,
         "answer_types": answer_types,
         "answer_probabilities": answer_probabilities,
+        "reject_reasons": reject_reasons,
+        "context_judged": 1 if is_parallax else 0,
         "question_category": question_category,
         "period_words_in_main_question": period_words,
         "manual_comment": manual_comment,
@@ -380,6 +432,9 @@ def create_question(metadata: Dict, current_frame: Optional[str] = None) -> Tupl
         "author_profession": metadata.get('author_profession', ''),
         "source_htid": metadata['source_htid']
     }
+
+    if reject_reasons is None:
+        del record["reject_reasons"]
 
     return record, metadata_frame
 

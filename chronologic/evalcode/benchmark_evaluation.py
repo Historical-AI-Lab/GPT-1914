@@ -42,6 +42,11 @@ _MODELASJUDGE_DIR = Path(__file__).resolve().parent.parent / "modelasjudge"
 if str(_MODELASJUDGE_DIR) not in sys.path:
     sys.path.insert(0, str(_MODELASJUDGE_DIR))
 from substantive import groups as group_defs
+# Shared reasoning-effort extra_body builder (handles "max" and the
+# Anthropic-vs-other-provider split) -- reused here so the MCQ retest can be
+# sent at the same reasoning strength as free_generation.py's original run,
+# instead of duplicating that request-shaping logic.
+from openrouter_client import _build_extra_body as _openrouter_extra_body
 
 # HF path (primary)
 HF_DEFAULT_DEVICE = None  # None → auto-detect at runtime
@@ -62,14 +67,24 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 OPENAI_MODEL_PREFIXES = (
     "gpt-4.1-",
     "gpt-4.1",   # exact match covered by startswith too
+    "gpt-4o-",
+    "gpt-4o",    # covers "gpt-4o" exactly and gpt-4o-mini, gpt-4o-2024-*, etc.
     "gpt-5.",
     "gpt-5-",
     "gpt-5",     # covers "gpt-5" exactly and any gpt-5* without a separator
+    "gpt-6.",
+    "gpt-6-",
+    "gpt-6",     # covers "gpt-6" exactly and named variants (e.g. gpt-6-astra)
     "ft:gpt-4.1-",
     "ft:gpt-4.1",
+    "ft:gpt-4o-",
+    "ft:gpt-4o",
     "ft:gpt-5.",
     "ft:gpt-5-",
     "ft:gpt-5",
+    "ft:gpt-6.",
+    "ft:gpt-6-",
+    "ft:gpt-6",
 )
 
 
@@ -2180,7 +2195,8 @@ def load_openrouter_credentials(cred_path=None):
     raise ValueError(f"No 'password:' line found in {cred_path}")
 
 
-def _generate_openrouter(prompt, model_id, api_key, max_tokens=4096, max_retries=5):
+def _generate_openrouter(prompt, model_id, api_key, max_tokens=4096, max_retries=5,
+                          reasoning_effort="none"):
     """Generate text from a prompt via OpenRouter chat completions.
 
     Designed for reasoning models (QwQ-32b, DeepSeek-R1, etc.) that emit
@@ -2189,11 +2205,17 @@ def _generate_openrouter(prompt, model_id, api_key, max_tokens=4096, max_retries
     rate-limit errors with exponential back-off.
 
     Args:
-        prompt:      the input prompt string (MCQ format).
-        model_id:    OpenRouter model identifier (e.g. ``qwen/qwen3-8b``).
-        api_key:     OpenRouter API key string.
-        max_tokens:  maximum tokens to generate.
-        max_retries: number of attempts before re-raising.
+        prompt:           the input prompt string (MCQ format).
+        model_id:         OpenRouter model identifier (e.g. ``qwen/qwen3-8b``).
+        api_key:          OpenRouter API key string.
+        max_tokens:       maximum tokens to generate.
+        max_retries:      number of attempts before re-raising.
+        reasoning_effort: one of "none", "minimal", "low", "medium", "high", "max".
+                          Shapes the request the same way free_generation.py's
+                          OpenRouter path does (via openrouter_client._build_extra_body),
+                          so a retest can reproduce the original run's reasoning strength.
+                          "none" (the default) reproduces this function's prior
+                          behavior exactly (no extra_body sent).
 
     Returns:
         str: the generated text (empty string if content is None/empty).
@@ -2212,12 +2234,21 @@ def _generate_openrouter(prompt, model_id, api_key, max_tokens=4096, max_retries
     client = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=api_key)
     messages = [{"role": "user", "content": prompt}]
 
+    extra_kwargs = {}
+    if reasoning_effort != "none":
+        # _build_extra_body wants the PRE-bump max_tokens (it computes its own
+        # thinking-budget hint as (max_tokens+2048)-1024); the wire call gets
+        # the bumped value. Mirrors call_openrouter_chat's effective_max/max_tokens split.
+        extra_kwargs["extra_body"] = _openrouter_extra_body(model_id, reasoning_effort, max_tokens)
+        max_tokens = max_tokens + 2048
+
     for attempt in range(max_retries):
         try:
             response = client.chat.completions.create(
                 model=model_id,
                 messages=messages,
                 max_tokens=max_tokens,
+                **extra_kwargs,
             )
             if not response.choices:
                 print(f"  WARNING: OpenRouter returned no choices — {response}")
@@ -2250,13 +2281,12 @@ def _generate_openrouter(prompt, model_id, api_key, max_tokens=4096, max_retries
 
 def mcq_eval_openrouter(model_id, path_to_jsonl, cred_path=None,
                         include_negation=False, verbose_report=False,
-                        n_bootstrap=1000, output_dir=None):
+                        n_bootstrap=1000, output_dir=None, reasoning_effort="none"):
     """Evaluate an OpenRouter model on multiple-choice questions.
 
-    Uses OpenRouter's chat completions endpoint for generation with reasoning
-    suppressed. Runs bootstrap evaluation for confidence intervals. Always
-    writes a JSON report; writes a verbose markdown report only if
-    verbose_report is True.
+    Uses OpenRouter's chat completions endpoint for generation. Runs bootstrap
+    evaluation for confidence intervals. Always writes a JSON report; writes a
+    verbose markdown report only if verbose_report is True.
 
     Args:
         model_id:          OpenRouter model identifier (e.g. ``qwen/qwen3-8b``).
@@ -2267,6 +2297,9 @@ def mcq_eval_openrouter(model_id, path_to_jsonl, cred_path=None,
         verbose_report:    if True, also write the detailed markdown report.
         n_bootstrap:       number of bootstrap iterations for confidence intervals.
         output_dir:        directory for report files; default is next to the JSONL.
+        reasoning_effort:  one of "none", "minimal", "low", "medium", "high", "max".
+                           "none" (the default) reproduces this function's prior
+                           behavior exactly (no reasoning control sent to the API).
 
     Returns:
         str: absolute path to the written JSON report.
@@ -2314,11 +2347,16 @@ def mcq_eval_openrouter(model_id, path_to_jsonl, cred_path=None,
             question, use_metadata=True, include_negation=include_negation
         )
         # deepseek-r1 (and distills) emit chain-of-thought as ordinary visible
-        # content unconditionally; the 4096-token default isn't always enough
-        # headroom for a 70B distill's full reasoning trace before its letter pick.
-        mcq_max_tokens = 25000 if model_id.startswith("deepseek/deepseek-r1") else 4096
+        # content unconditionally; reasoning_effort="max" candidates need the
+        # same headroom for the same reason -- the 4096-token default isn't
+        # enough for a full reasoning trace before the letter pick.
+        mcq_max_tokens = (
+            25000 if model_id.startswith("deepseek/deepseek-r1") or reasoning_effort == "max"
+            else 4096
+        )
         response_text = _generate_openrouter(prompt_text, model_id, api_key,
-                                              max_tokens=mcq_max_tokens)
+                                              max_tokens=mcq_max_tokens,
+                                              reasoning_effort=reasoning_effort)
         chosen_letter = _parse_mcq_response(response_text)
 
         if chosen_letter is None:
@@ -2901,8 +2939,9 @@ if __name__ == "__main__":
             "Evaluate a model on benchmark questions (Brier score or MCQ accuracy).\n\n"
             "Together AI: use --api together for probabilistic (--full-eval) or MCQ.\n"
             "OpenRouter: use --api openrouter for MCQ via OpenRouter's chat API.\n"
-            "OpenAI models (gpt-4.1-*, gpt-5*, ft:gpt-4.1-*, ft:gpt-5*) are detected\n"
-            "automatically when --mcq is set and routed to the Responses API.\n"
+            "OpenAI models (gpt-4.1-*, gpt-5*, gpt-6*, and their ft:* fine-tunes)\n"
+            "are detected automatically when --mcq is set and routed to the\n"
+            "Responses API.\n"
             "OpenAI (forced): use --api openai --mcq to route any model name to the\n"
             "OpenAI Responses API (e.g. gpt-oss-20b).\n"
             "Credentials are read from evalcode/credentials.txt (or --credentials)."
@@ -2966,9 +3005,13 @@ if __name__ == "__main__":
                         help="Number of bootstrap iterations for confidence intervals "
                              "(default: 1000)")
     parser.add_argument("--reasoning-effort", default="none",
-                        choices=["none", "minimal", "low", "medium", "high"],
-                        help="Reasoning effort for OpenAI models via Responses API "
-                             "(default: medium)")
+                        choices=["none", "minimal", "low", "medium", "high", "max"],
+                        help="Reasoning effort. For OpenAI models (Responses API): "
+                             "none/minimal/low/medium/high. For OpenRouter (--api "
+                             "openrouter): none/low/medium/high/max, matching "
+                             "free_generation.py's OpenRouter reasoning_effort scale "
+                             "-- 'max' is OpenRouter-only and will be rejected by the "
+                             "OpenAI Responses API. No effect on Together/HF backends.")
     parser.add_argument("--no-json-schema", action="store_true",
                         help="Skip JSON schema constraint; rely on instructions for "
                              "output format (OpenAI --mcq only)")
@@ -3011,6 +3054,7 @@ if __name__ == "__main__":
             verbose_report=args.verbose_report,
             n_bootstrap=args.n_bootstrap,
             output_dir=args.output_dir,
+            reasoning_effort=args.reasoning_effort,
         )
     elif args.api == "openai":
         if not args.mcq:

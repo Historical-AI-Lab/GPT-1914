@@ -212,6 +212,20 @@ def normalize_nationality(nationality: str) -> str:
     return nationality
 
 
+def parse_year(year_str: str) -> Optional[int]:
+    """
+    Parse a year string to int, tolerating float-formatted CSV values
+    like "1841.0" (pandas writes int columns with NaNs as floats).
+    """
+    year_str = (year_str or '').strip()
+    if not year_str:
+        return None
+    try:
+        return int(float(year_str))
+    except ValueError:
+        return None
+
+
 def parse_birth_year(authordates: str) -> Optional[int]:
     """
     Parse author birth year from authordates field.
@@ -391,7 +405,7 @@ def elicit_metadata(metadata_file: str = "../primary_metadata.csv",
         # Extract and normalize defaults from CSV
         default_title = clean_title(row.get('title_src', ''))
         default_author = reformat_author_name(row.get('author_src', ''))
-        default_date = row.get('firstpub') or row.get('date1_src', '')
+        default_date = parse_year(row.get('firstpub') or row.get('date1_src', ''))
         default_nationality = normalize_nationality(row.get('authnationality', ''))
         default_genre = 'novel'  # Default fallback
 
@@ -428,11 +442,11 @@ def elicit_metadata(metadata_file: str = "../primary_metadata.csv",
     while True:
         date_str = prompt_with_default("Publication year", str(default_date) if default_date else "")
         if date_str:
-            try:
-                metadata['source_date'] = int(date_str)
+            year = parse_year(date_str)
+            if year is not None:
+                metadata['source_date'] = year
                 break
-            except ValueError:
-                print("  Please enter a valid year (integer)")
+            print("  Please enter a valid year (integer)")
         else:
             print("  Publication year is required")
 

@@ -49,6 +49,14 @@ COLUMNS = [
     "style_w1", "style_w1_null_mean", "style_drift_years", "style_dispersion_mae",
     "style_T_drift", "style_T_disp", "style_T_E2",
     "style_T_KS",   # Spec B §16 compatibility diagnostic, not a headline
+    # E3 (DeBERTa date predictor) parallel family -- phase-e4-plan.md. The
+    # unsuffixed style_* date columns above freeze on the rows the lexical
+    # judge scored; future rows populate these instead. E2/authenticity
+    # columns have no _e3 twin (the E2 detector is unchanged).
+    "style_period_fidelity_e3", "style_period_fidelity_e3_lo", "style_period_fidelity_e3_hi",
+    "style_w1_e3", "style_w1_null_mean_e3", "style_drift_years_e3", "style_dispersion_mae_e3",
+    "style_T_drift_e3", "style_T_disp_e3", "style_T_KS_e3",
+    "style_date_run_id_e3", "style_n_e1_abstained_e3",
     "n_boot", "seed", "inputs_sha", "report_path", "notes",
 ]
 

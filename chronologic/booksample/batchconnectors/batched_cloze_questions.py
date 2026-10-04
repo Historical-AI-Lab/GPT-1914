@@ -13,7 +13,7 @@ Usage:
         --primary-metadata FILE      Path to primary_metadata.csv
                                      (default: ../primary_metadata.csv)
         --text-dir DIR               Directory containing text files
-                                     (default: ../edgebooks)
+                                     (default: ../benchmarkbooks)
         --candidates-per-category N  Max candidate passages per category (default: 7)
         --verbose-bert               Print BERT ranking details
         --debug                      Enable debug output
@@ -27,6 +27,9 @@ import sys
 import traceback
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from text_file_lookup import find_text_file
 
 # Add connectors directory to path for shared imports (make_cloze_questions, etc.)
 CONNECTORS_DIR = str(Path(__file__).parent.parent / "connectors")
@@ -58,7 +61,7 @@ from distractor_generator_wcats import generate_distractors
 
 # Default paths
 DEFAULT_PRIMARY_METADATA = Path(__file__).parent.parent / "primary_metadata.csv"
-DEFAULT_TEXT_DIR = Path(__file__).parent.parent / "edgebooks"
+DEFAULT_TEXT_DIR = Path(__file__).parent.parent / "benchmarkbooks"
 DEFAULT_CANDIDATES_PER_CATEGORY = 7
 
 
@@ -122,9 +125,9 @@ def build_provisional_metadata(barcode: str, csv_metadata: Dict) -> Dict:
         except ValueError:
             birth = 0
 
-    # Parse date
+    # Parse date (tolerate float-formatted CSV values like "1841.0")
     try:
-        date_val = int(date_str) if date_str else 0
+        date_val = int(float(date_str)) if date_str else 0
     except ValueError:
         date_val = 0
 
@@ -155,7 +158,7 @@ def generate_candidates_for_category(tagged: List[Dict], category: str,
 
     Args:
         tagged: List of tagged sentence dicts
-        category: The connector category (e.g., 'causalclause')
+        category: The connector category (e.g., 'causalsentence')
         max_candidates: Maximum number of candidate passages to return
 
     Returns:
@@ -210,8 +213,7 @@ def generate_distractors_for_candidate(passage_data: Dict, tagged: List[Dict],
     )
 
     # Build prompt
-    answer_type = "clause" if passage_data['is_clause'] else "sentence"
-    prompt = (f"Write a {answer_type} appropriate for this book that could "
+    prompt = (f"Write a sentence appropriate for this book that could "
               f"stand in the position marked by {passage_data['mask_string']}:")
 
     # Generate distractors
@@ -223,7 +225,6 @@ def generate_distractors_for_candidate(passage_data: Dict, tagged: List[Dict],
         distractor_candidates=candidates,
         mask_string=passage_data['mask_string'],
         distractor_types=DEFAULT_DISTRACTOR_TYPES,
-        is_clause=passage_data['is_clause'],
         category=passage_data['category'],
         verbose_bert=verbose_bert,
         debug=debug
@@ -272,11 +273,8 @@ def process_single_book(barcode: str, text_dir: Path, process_dir: Path,
         print(f"{'=' * 60}")
 
         # Find text file
-        text_path = text_dir / f"{barcode}.txt"
-        if not text_path.exists():
-            # Try lowercase
-            text_path = text_dir / f"{barcode.lower()}.txt"
-        if not text_path.exists():
+        text_path = find_text_file(barcode, [text_dir])
+        if text_path is None:
             print(f"  Error: Text file not found for {barcode}")
             return False
 

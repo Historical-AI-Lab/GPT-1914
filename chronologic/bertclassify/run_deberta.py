@@ -13,7 +13,7 @@ Positional:
     INPUT_FILE              TSV (text\\tlabel header) or plain text (one per line)
 
 Options:
-    --model-dir PATH        Saved model directory (default: model_output/baseline/)
+    --model-dir PATH        Saved model directory (default: model_output/e2_v1/)
     --output PATH           Output TSV path (default: {input_stem}_predictions.tsv)
     --batch-size INT        Inference batch size (default: 64)
     --max-length INT        Token sequence length (default: 128)
@@ -23,7 +23,7 @@ Options:
 Examples:
     # Labeled input — prints metrics + writes predictions
     python bertclassify/run_deberta.py bertclassify/val.tsv \\
-        --model-dir bertclassify/model_output/baseline/
+        --model-dir bertclassify/model_output/e2_v1/
 
     # Custom output path
     python bertclassify/run_deberta.py bertclassify/val.tsv \\
@@ -32,7 +32,7 @@ Examples:
 
     # Unlabeled plain text — predictions only, no metrics
     python bertclassify/run_deberta.py some_texts.txt \\
-        --model-dir bertclassify/model_output/baseline/
+        --model-dir bertclassify/model_output/e2_v1/
 """
 
 import argparse
@@ -69,8 +69,8 @@ def parse_args(argv=None):
     )
     parser.add_argument("input_file", metavar="INPUT_FILE",
                         help="TSV (text\\tlabel header) or plain text (one per line)")
-    parser.add_argument("--model-dir", default="model_output/baseline/", dest="model_dir",
-                        help="Saved model directory (default: model_output/baseline/)")
+    parser.add_argument("--model-dir", default="model_output/e2_v1/", dest="model_dir",
+                        help="Saved model directory (default: model_output/e2_v1/)")
     parser.add_argument("--output", default=None,
                         help="Output TSV path (default: {input_stem}_predictions.tsv)")
     parser.add_argument("--batch-size", type=int, default=64, dest="batch_size",

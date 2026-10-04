@@ -3,7 +3,7 @@
 QuestionCategorizer.py
 
 Aggregates benchmark questions from pipeline subfolders into a single
-chronologic_en_1875.jsonl file, adding reasoning_type, frame_type, and
+chronologic_en_0.7.jsonl file, adding reasoning_type, frame_type, and
 answer_length fields while normalizing irregular answer_types.
 
 Usage:
@@ -27,7 +27,7 @@ import pandas as pd
 # ---------------------------------------------------------------------------
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_FILE = os.path.join(SCRIPT_DIR, 'chronologic_en_1875.jsonl')
+OUTPUT_FILE = os.path.join(SCRIPT_DIR, 'chronologic_en_0.7.jsonl')
 
 ALLOWABLE_ANSWER_TYPES = {
     'ground_truth', 'same_book', 'manual', 'negation',
@@ -44,9 +44,23 @@ ALLOWABLE_ANSWER_TYPES = {
     'manual_anachronistic_metadataless_gpt-oss:20b',
 }
 
+# Model slugs recognized in any of the anachronistic_/anachronistic_metadataless_/
+# anachronistic_distort[12]_/manual_anachronistic_ prefix combinations. Add new
+# models here rather than enumerating each prefix variant in ALLOWABLE_ANSWER_TYPES.
+KNOWN_MODEL_SLUGS = {
+    'gpt-oss:20b', 'mistral-small:24b', 'gpt-5.2', 'sonnet-4.6',
+    'qwen2.5:7b-instruct',
+    'qwen3-30b-a3b-instruct-2507', 'gemini-3.6-flash', 'gemma-4-31b-it',
+    'claude-opus-5', 'gpt-5.6-sol', 'claude-opus-4-8', 'gpt-5.5',
+}
+MODEL_ANSWER_TYPE_RE = re.compile(
+    r'^(manual_)?anachronistic_(metadataless_)?(distort[12]_)?(' +
+    '|'.join(re.escape(s) for s in KNOWN_MODEL_SLUGS) + r')$'
+)
+
 REASONING_TO_FRAME = {
     'knowledge': 'world_context',
-    'refusal': 'world_context',
+    'abstention': 'world_context',
     'inference': 'world_context',
     'character_modeling': 'book_context',
     'constrained_generation': 'book_context',
@@ -81,7 +95,8 @@ KNOWN_ANSWER_TYPE_DATES = {
 # For the manual subfolder: categories that map automatically to reasoning_type
 MANUAL_AUTO_MAP = {
     'attribution': 'knowledge',
-    'refusal': 'refusal',
+    'refusal': 'abstention',
+    'abstention': 'abstention',
     'inference': 'inference',
     'parallax': 'constrained_generation',
     'constrained_generation': 'constrained_generation',
@@ -98,6 +113,20 @@ REQUIRED_FIELDS = [
     'source_genre', 'author_nationality', 'author_profession',
     'answer_strings', 'answer_types', 'answer_probabilities',
 ]
+
+# Fields allowed to reach the benchmark file. Anything else on an incoming
+# question dict (e.g. 'passage', 'masked_passage', 'full_sentence' — internal
+# scratch fields some upstream pipelines still emit) is dropped in
+# write_question() rather than silently carried through to OUTPUT_FILE.
+ALLOWED_OUTPUT_FIELDS = set(REQUIRED_FIELDS) | {
+    'author_birth',
+    # added by this script
+    'reasoning_type', 'frame_type', 'answer_length', 'question_number',
+    # legitimate extras carried through from upstream pipelines
+    'context_judged', 'reject_reasons', 'manual_comment',
+    'period_words_in_main_question', 'added_answers',
+    'substantive_metadata_frame', 'partial_credit',
+}
 
 COLUMBIAN_FRAME = ("The following question asks for information from an "
                    "American encyclopedia published in 1897; your answer "
@@ -262,6 +291,10 @@ def check_answer_types(question):
         if at in ALLOWABLE_ANSWER_TYPES:
             continue
 
+        # Step 3b: known model slug in any registered prefix combination
+        if MODEL_ANSWER_TYPE_RE.match(at):
+            continue
+
         # Step 4: check anachronistic_YYYY or other_book_YYYY patterns
         m = re.match(r'^(anachronistic|other_book)_(\d{4})s?$', at)
         if m:
@@ -339,8 +372,45 @@ def collect_questions(subfolder):
     return results
 
 
+_next_question_number = None
+
+
+def init_question_number_counter(output_file):
+    """Set the counter used by write_question() to (max existing question_number
+    in output_file) + 1, so newly written questions get fresh, non-colliding
+    numbers regardless of gaps left by earlier pruning."""
+    global _next_question_number
+    max_qn = 0
+    if os.path.exists(output_file):
+        with open(output_file, encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rec = json.loads(line, strict=False)
+                except json.JSONDecodeError:
+                    continue
+                qn = rec.get('question_number')
+                if isinstance(qn, int) and qn > max_qn:
+                    max_qn = qn
+    _next_question_number = max_qn + 1
+
+
 def write_question(outfile, question):
-    """Write one JSON line and flush."""
+    """Assign question_number if missing, drop any non-benchmark fields,
+    write one JSON line, and flush."""
+    global _next_question_number
+    if question.get('question_number') is None:
+        question['question_number'] = _next_question_number
+        _next_question_number += 1
+
+    extra = set(question) - ALLOWED_OUTPUT_FIELDS
+    if extra:
+        print(f"  Warning: dropping non-benchmark field(s) {sorted(extra)} "
+              f"from question_number {question['question_number']}")
+        question = {k: v for k, v in question.items() if k in ALLOWED_OUTPUT_FIELDS}
+
     outfile.write(json.dumps(question, ensure_ascii=False) + '\n')
     outfile.flush()
 
@@ -441,6 +511,7 @@ def _process_cloze(subfolder, start_line=0):
     questions = collect_questions(subfolder)
     print(f"Found {len(questions)} questions in {subfolder}/")
 
+    init_question_number_counter(OUTPUT_FILE)
     count = 0
     with open(OUTPUT_FILE, 'a', encoding='utf-8') as outfile:
         for idx, (fpath, q) in enumerate(questions):
@@ -484,6 +555,7 @@ def process_character(start_line=0):
     questions = collect_questions('character')
     print(f"Found {len(questions)} questions in character/")
 
+    init_question_number_counter(OUTPUT_FILE)
     count = 0
     with open(OUTPUT_FILE, 'a', encoding='utf-8') as outfile:
         for idx, (fpath, q) in enumerate(questions):
@@ -512,6 +584,7 @@ def process_knowledge(start_line=0):
     questions = collect_questions('knowledge')
     print(f"Found {len(questions)} questions in knowledge/")
 
+    init_question_number_counter(OUTPUT_FILE)
     count = 0
     try:
         with open(OUTPUT_FILE, 'a', encoding='utf-8') as outfile:
@@ -535,10 +608,10 @@ def process_knowledge(start_line=0):
 
                 # Display and ask for reasoning_type
                 display_question_info(q)
-                print("Reasoning type?  (k)nowledge  (i)nference  (r)efusal")
-                choice = prompt_with_quit("Choice [k/i/r]: ", {'k', 'i', 'r'})
+                print("Reasoning type?  (k)nowledge  (i)nference  (a)bstention")
+                choice = prompt_with_quit("Choice [k/i/a]: ", {'k', 'i', 'a'})
                 q['reasoning_type'] = {
-                    'k': 'knowledge', 'i': 'inference', 'r': 'refusal'
+                    'k': 'knowledge', 'i': 'inference', 'a': 'abstention'
                 }[choice]
 
                 write_question(outfile, q)
@@ -557,6 +630,7 @@ def process_poetry(start_line=0):
     questions = collect_questions('poetry')
     print(f"Found {len(questions)} questions in poetry/")
 
+    init_question_number_counter(OUTPUT_FILE)
     count = 0
     with open(OUTPUT_FILE, 'a', encoding='utf-8') as outfile:
         for idx, (fpath, q) in enumerate(questions):
@@ -592,6 +666,7 @@ def process_summary(start_line=0):
     questions = collect_questions('summary')
     print(f"Found {len(questions)} questions in summary/")
 
+    init_question_number_counter(OUTPUT_FILE)
     count = 0
     with open(OUTPUT_FILE, 'a', encoding='utf-8') as outfile:
         for idx, (fpath, q) in enumerate(questions):
@@ -619,6 +694,7 @@ def process_manual(start_line=0):
     questions = collect_questions('manual')
     print(f"Found {len(questions)} questions in manual/")
 
+    init_question_number_counter(OUTPUT_FILE)
     count = 0
     try:
         with open(OUTPUT_FILE, 'a', encoding='utf-8') as outfile:
@@ -649,13 +725,13 @@ def process_manual(start_line=0):
                     display_question_info(q)
 
                     print("Reasoning type?  (k)nowledge  (i)nference  "
-                          "(r)efusal  (c)onstrained_generation  "
+                          "(a)bstention  (c)onstrained_generation  "
                           "(t)opic_sentence  (p)hrase_cloze  (s)entence_cloze")
-                    choice = prompt_with_quit("Choice [k/i/r/c/t/p/s]: ",
-                                             {'k', 'i', 'r', 'c', 't', 'p', 's'})
+                    choice = prompt_with_quit("Choice [k/i/a/c/t/p/s]: ",
+                                             {'k', 'i', 'a', 'c', 't', 'p', 's'})
                     q['reasoning_type'] = {
                         'k': 'knowledge', 'i': 'inference',
-                        'r': 'refusal', 'c': 'constrained_generation',
+                        'a': 'abstention', 'c': 'constrained_generation',
                         't': 'topic_sentence', 'p': 'phrase_cloze',
                         's': 'sentence_cloze'
                     }[choice]
@@ -684,13 +760,13 @@ def process_manual(start_line=0):
                     display_question_info(q)
 
                     print("Reasoning type?  (k)nowledge  (i)nference  "
-                          "(r)efusal  (c)onstrained_generation  "
+                          "(a)bstention  (c)onstrained_generation  "
                           "(t)opic_sentence  (p)hrase_cloze  (s)entence_cloze")
-                    choice = prompt_with_quit("Choice [k/i/r/c/t/p/s]: ",
-                                             {'k', 'i', 'r', 'c', 't', 'p', 's'})
+                    choice = prompt_with_quit("Choice [k/i/a/c/t/p/s]: ",
+                                             {'k', 'i', 'a', 'c', 't', 'p', 's'})
                     q['reasoning_type'] = {
                         'k': 'knowledge', 'i': 'inference',
-                        'r': 'refusal', 'c': 'constrained_generation',
+                        'a': 'abstention', 'c': 'constrained_generation',
                         't': 'topic_sentence', 'p': 'phrase_cloze',
                         's': 'sentence_cloze'
                     }[choice]
@@ -723,13 +799,19 @@ SUBFOLDER_DISPATCH = {
 
 
 def main():
+    global OUTPUT_FILE
+
     parser = argparse.ArgumentParser(
         description='Categorize and aggregate benchmark questions.')
     parser.add_argument('subfolder', choices=SUBFOLDER_DISPATCH.keys(),
                         help='Which pipeline subfolder to process')
     parser.add_argument('--start-line', type=int, default=0,
                         help='Skip first N questions (for resuming)')
+    parser.add_argument('--output', default=OUTPUT_FILE,
+                        help='Benchmark file to append to (default: %(default)s)')
     args = parser.parse_args()
+
+    OUTPUT_FILE = args.output
 
     load_metadata()
     print(f"Processing {args.subfolder}/ (start-line={args.start_line})")

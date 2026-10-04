@@ -5,7 +5,8 @@ Topic Distractor Generator Module
 Generates distractors for topic-sentence benchmark questions.
 Supports three distractor types:
 - same_book: Jaccard-ranked sentences from same text
-- anachronistic: LLM-generated topic sentences (stylistically dissonant)
+- anachronistic: LLM-generated topic sentences (stylistically dissonant),
+  produced via OpenRouter using the shared modelasjudge client
 - manual: User-supplied distractors
 
 This module is independent of distractor_generator_wcats.py by design.
@@ -23,7 +24,8 @@ import json
 import random
 import re
 import string
-import requests
+import sys
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
@@ -33,61 +35,63 @@ except ImportError:
     nltk.download('punkt', quiet=True)
     from nltk import sent_tokenize
 
+# Reuse the OpenRouter client shared by the modelasjudge pipeline
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(REPO_ROOT / "modelasjudge"))
+from openrouter_client import make_openrouter_client, call_openrouter_chat
+
 # Constants
-OLLAMA_URL = "http://localhost:11434/api/generate"
-MISTRAL_MODEL = "mistral-small:24b"
-GPTOSS_MODEL = "gpt-oss:20b"
+PRIMARY_MODEL = "qwen/qwen3-30b-a3b-instruct-2507"
+SECONDARY_MODEL = "google/gemma-4-31b-it"
+
+# The placeholder left where the topic sentence was removed. Shared with
+# topic_question_writer.py, which imports it — the two must agree exactly.
+MASK_MARKER = "[masked introductory sentence]"
 
 ANACHRONISTIC_PROMPT = """{metadata_frame}
 
 {trimmed_paragraph}
 
-Write a topic sentence of roughly {rounded_length} words that would make a suitable introduction for this whole paragraph. Return only the topic sentence, without quotation marks:"""
+Write an introductory sentence of roughly {rounded_length} words that would make a suitable introduction for this whole paragraph. Return only the introductory sentence, without quotation marks:"""
 
 
-def call_ollama_model(prompt: str, model: str = GPTOSS_MODEL,
-                      temperature: float = 0.7,
-                      num_predict: int = 1200,
-                      timeout: int = 120) -> Dict[str, Any]:
+def model_slug(model_id: str) -> str:
     """
-    Call Ollama API to generate text.
+    Strip the OpenRouter provider prefix for use in answer_type strings.
+
+    "qwen/qwen3-30b-a3b-instruct-2507" -> "qwen3-30b-a3b-instruct-2507"
+    """
+    return model_id.split('/')[-1]
+
+
+_CLIENT = None
+
+
+def get_client():
+    """Return a cached OpenRouter client, creating it on first use."""
+    global _CLIENT
+    if _CLIENT is None:
+        _CLIENT = make_openrouter_client()
+    return _CLIENT
+
+
+def call_openrouter_model(prompt: str, model: str = PRIMARY_MODEL,
+                          max_tokens: int = 400) -> Dict[str, Any]:
+    """
+    Generate text via OpenRouter.
+
+    Wraps call_openrouter_chat, which raises after exhausting its own retries,
+    in the status-dict contract the rest of this module expects.
 
     Returns dict with 'status' and either 'response' or 'reason'.
     """
     try:
-        payload = {
-            "model": model,
-            "prompt": prompt,
-            "stream": False,
-            "options": {
-                "temperature": temperature,
-                "num_predict": num_predict
-            }
-        }
-
-        response = requests.post(OLLAMA_URL, json=payload, timeout=timeout)
-        response.raise_for_status()
-
-        result = response.json()
-        generated_text = result.get("response", "").strip()
-
-        if not generated_text and "thinking" in result:
-            thinking_text = result.get("thinking", "").strip()
-            if thinking_text:
-                generated_text = thinking_text
-
-        return {"status": "success", "response": generated_text}
-
-    except requests.exceptions.ConnectionError:
-        return {"status": "error", "reason": "Connection refused - is Ollama running?"}
-    except requests.exceptions.Timeout:
-        return {"status": "error", "reason": f"Request timeout after {timeout}s"}
-    except requests.exceptions.RequestException as e:
-        return {"status": "error", "reason": f"Request failed: {str(e)}"}
-    except json.JSONDecodeError:
-        return {"status": "error", "reason": "Invalid JSON response from Ollama"}
+        text = call_openrouter_chat(
+            get_client(), model, prompt, max_tokens=max_tokens
+        )
+        return {"status": "success", "response": (text or "").strip()}
     except Exception as e:
-        return {"status": "error", "reason": f"Unexpected error: {str(e)}"}
+        return {"status": "error", "reason": f"{type(e).__name__}: {str(e)}"}
 
 
 def jaccard_character_metric(sentence_a: str, sentence_b: str) -> float:
@@ -229,7 +233,7 @@ def distort_paragraph(trimmed_paragraph: str, similar_sentences: List[str],
     """
     Distort a paragraph by replacing n random sentences with similar ones.
 
-    Separates the [masked topic sentence] marker before tokenizing so that
+    Separates the mask marker before tokenizing so that
     sent_tokenize doesn't merge it with the following sentence. Randomly
     replaces n real sentences with choices from similar_sentences, then
     reconstructs the paragraph with the marker in its original position.
@@ -239,7 +243,7 @@ def distort_paragraph(trimmed_paragraph: str, similar_sentences: List[str],
     if not similar_sentences:
         return trimmed_paragraph
 
-    marker = "[masked topic sentence]"
+    marker = MASK_MARKER
 
     # Split the marker out before tokenizing to prevent sent_tokenize
     # from merging it with the next sentence (the marker has no terminal
@@ -287,7 +291,7 @@ def generate_topic_sentence(metadata_frame: str, trimmed_paragraph: str,
     """
     Generate a topic sentence using an LLM.
 
-    Calls call_ollama_model with ANACHRONISTIC_PROMPT.
+    Calls call_openrouter_model with ANACHRONISTIC_PROMPT.
     Strips quotation marks, takes first line if multi-line.
     Length validation: accept if > 5 words AND < 3x ground truth length;
     otherwise retry once.
@@ -305,7 +309,7 @@ def generate_topic_sentence(metadata_frame: str, trimmed_paragraph: str,
     print("  --- END PROMPT ---\n")
 
     for attempt in range(2):
-        result = call_ollama_model(prompt, model=model)
+        result = call_openrouter_model(prompt, model=model)
 
         if result['status'] != 'success':
             if attempt < 1:
@@ -378,50 +382,65 @@ def make_anachronistic_distractors(
     similar_sentences: List[str],
     metadata_frame: str,
     trimmed_paragraph: str,
-    gt_word_count: int
+    gt_word_count: int,
+    primary_model: str = PRIMARY_MODEL,
+    secondary_model: str = SECONDARY_MODEL
 ) -> Tuple[List[str], List[str]]:
     """
     Generate anachronistic distractors for a topic sentence question.
 
     Generates 3 distractors:
-    1. Mistral on original trimmed_paragraph
-    2. GPT-oss on distorted paragraph (1 sentence swapped)
-    3. Mistral on distorted paragraph (2 sentences swapped)
+    1. Primary model on original trimmed_paragraph
+    2. Secondary model on distorted paragraph (1 sentence swapped)
+    3. Primary model on distorted paragraph (2 sentences swapped)
+
+    Passes 2 and 3 are skipped when similar_sentences is empty: distortion
+    would be a no-op, so all three prompts would be identical.
+
+    Answer types carry the bare model slug, without the provider prefix.
 
     Returns (distractor_strings, distractor_types) for whatever was
     successfully generated (may be fewer than 3).
     """
     rounded = round_length(gt_word_count)
+    primary_slug = model_slug(primary_model)
+    secondary_slug = model_slug(secondary_model)
     distractor_strings = []
     distractor_types = []
 
-    # 1. Mistral on original trimmed paragraph
-    print("  Generating anachronistic distractor 1/3 (mistral, original)...")
+    # 1. Primary model on original trimmed paragraph
+    print(f"  Generating anachronistic distractor 1/3 ({primary_slug}, original)...")
     result1 = generate_topic_sentence(metadata_frame, trimmed_paragraph,
-                                       rounded, MISTRAL_MODEL)
+                                       rounded, primary_model)
     if result1:
         result1 = normalize_distractor_format(result1, "")  # capitalize first letter
         distractor_strings.append(result1)
-        distractor_types.append(f"anachronistic_{MISTRAL_MODEL}")
+        distractor_types.append(f"anachronistic_{primary_slug}")
 
-    # 2. GPT-oss on distorted paragraph (1 swap)
-    print("  Generating anachronistic distractor 2/3 (gpt-oss, distort1)...")
+    # Without same-book sentences there is nothing to swap in, so the distorted
+    # passes would send prompts identical to pass 1.
+    if not similar_sentences:
+        print("  No same-book sentences available; skipping the two distorted passes.")
+        return distractor_strings, distractor_types
+
+    # 2. Secondary model on distorted paragraph (1 swap)
+    print(f"  Generating anachronistic distractor 2/3 ({secondary_slug}, distort1)...")
     distorted1 = distort_paragraph(trimmed_paragraph, similar_sentences, 1)
     result2 = generate_topic_sentence(metadata_frame, distorted1,
-                                       rounded, GPTOSS_MODEL)
+                                       rounded, secondary_model)
     if result2:
         result2 = normalize_distractor_format(result2, "")
         distractor_strings.append(result2)
-        distractor_types.append(f"anachronistic_distort1_{GPTOSS_MODEL}")
+        distractor_types.append(f"anachronistic_distort1_{secondary_slug}")
 
-    # 3. Mistral on distorted paragraph (2 swaps)
-    print("  Generating anachronistic distractor 3/3 (mistral, distort2)...")
+    # 3. Primary model on distorted paragraph (2 swaps)
+    print(f"  Generating anachronistic distractor 3/3 ({primary_slug}, distort2)...")
     distorted2 = distort_paragraph(trimmed_paragraph, similar_sentences, 2)
     result3 = generate_topic_sentence(metadata_frame, distorted2,
-                                       rounded, MISTRAL_MODEL)
+                                       rounded, primary_model)
     if result3:
         result3 = normalize_distractor_format(result3, "")
         distractor_strings.append(result3)
-        distractor_types.append(f"anachronistic_distort2_{MISTRAL_MODEL}")
+        distractor_types.append(f"anachronistic_distort2_{primary_slug}")
 
     return distractor_strings, distractor_types

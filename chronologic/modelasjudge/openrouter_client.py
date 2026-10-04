@@ -4,9 +4,53 @@ openrouter_client.py — OpenRouter API helpers for the modelasjudge pipeline.
 Shared by free_generation.py, judge_scoring.py, and judge_reliability.py.
 """
 
+import json
 import os
 import time
 from pathlib import Path
+
+import httpx
+
+# Transient failures worth retrying beyond rate limits: a truncated/malformed
+# response body (JSONDecodeError -- seen from OpenRouter on long-running max-
+# effort calls) and network-level errors (httpx.TransportError covers
+# connect/read/write timeouts and dropped connections).
+_TRANSIENT_EXCEPTIONS = (json.JSONDecodeError, httpx.TransportError)
+
+# Extra wire max_tokens headroom granted to a same-effort retry when a
+# provider rejects the disable-thinking downgrade with "Reasoning is
+# mandatory for this endpoint and cannot be disabled" (seen live on
+# google/gemini-3.7-flash; also documented for openai/gpt-oss-120b and
+# google/gemini-3.1-pro-preview in stylejudge/model_stable.py). Bigger than
+# the existing +2048 base bump because the model already exhausted that
+# budget once while thinking.
+_MANDATORY_REASONING_RETRY_BUMP = 4096
+
+
+def _is_mandatory_reasoning_error(exc):
+    """Return True if exc is OpenRouter's 400 refusing to disable reasoning.
+
+    Matches loosely (case-insensitive "mandatory" + a "disab*" fragment)
+    rather than pinning the exact observed sentence, to tolerate minor
+    wording drift across providers.
+
+    `openai` is imported lazily, function-local: call_openrouter_chat only
+    ever runs with an already-constructed `client`, and any real client
+    required `openai` to already be importable to build it in the first
+    place (make_openrouter_client does `from openai import OpenAI`), so this
+    import is a cache hit in practice. The ImportError guard is defensive
+    only, preserving today's behavior in the practically-impossible case
+    where it isn't.
+    """
+    try:
+        import openai
+    except ImportError:
+        return False
+    if not isinstance(exc, openai.BadRequestError):
+        return False
+    msg = str(exc).lower()
+    return "mandatory" in msg and "disab" in msg
+
 
 # ---------------------------------------------------------------------------
 # Detection
@@ -14,7 +58,7 @@ from pathlib import Path
 
 OPENROUTER_PREFIXES = (
     "qwen/", "meta-llama/", "anthropic/", "google/",
-    "mistralai/", "deepseek/", "nvidia/", "openai/",
+    "mistralai/", "deepseek/", "nvidia/", "openai/", "moonshotai/",
 )
 
 _SCRIPT_DIR = Path(__file__).parent
@@ -171,7 +215,7 @@ def _build_extra_body(model_id, reasoning_effort, max_tokens):
 def call_openrouter_chat(
     client, model_id, user_content, system_content="",
     max_tokens=400, max_retries=3, debug=False, reasoning_effort="none",
-    response_format=None,
+    response_format=None, return_meta=False,
 ):
     """Call the OpenRouter chat completions endpoint with retry on rate limits.
 
@@ -182,6 +226,13 @@ def call_openrouter_chat(
     If the model returns finish_reason=="length" while thinking was enabled,
     the call is retried once with thinking disabled — the assumption being that
     thinking consumed the budget and a direct answer is preferable to an empty one.
+    Some endpoints (e.g. google/gemini-3.7-flash) reject that retry with a 400
+    ("Reasoning is mandatory for this endpoint and cannot be disabled") since
+    they don't allow disabling reasoning at all; in that case the call is
+    retried once more at the ORIGINAL reasoning_effort with extra max_tokens
+    headroom (_MANDATORY_REASONING_RETRY_BUMP) instead. If that also fails,
+    the original (possibly length-truncated) content is kept rather than
+    raising.
 
     Args:
         client:           openai.OpenAI client pointed at OpenRouter base URL.
@@ -205,17 +256,29 @@ def call_openrouter_chat(
                           provider.require_parameters is also sent, so routing skips
                           providers of this model that lack structured-output support.
                           None (the default) leaves every existing caller unaffected.
+        return_meta:      if True, return (content, meta) instead of a bare string,
+                          where meta = {"downgraded": bool, "finish_reason": str,
+                          "mandatory_reasoning_retry": bool}. "downgraded" is True
+                          iff the length-triggered retry-without-thinking actually
+                          succeeded (False if the endpoint refuses to disable
+                          reasoning at all, even if a same-effort bumped retry
+                          then recovered an answer). "mandatory_reasoning_retry"
+                          is True iff that bumped-retry fallback path fired.
+                          Default False leaves every existing caller unaffected.
 
     Returns:
-        str: the assistant message content, or "" if content is None/empty.
+        str, or (str, dict) if return_meta: the assistant message content (or ""
+        if content is None/empty), optionally paired with retry metadata.
     """
     messages = []
     if system_content:
         messages.append({"role": "system", "content": system_content})
     messages.append({"role": "user", "content": user_content})
 
-    def _do_request(effort):
-        effective_max = max_tokens + 2048 if effort != "none" else max_tokens
+    def _do_request(effort, extra_bump=0):
+        effective_max = (max_tokens + 2048 if effort != "none" else max_tokens) + extra_bump
+        # extra_body is always built from the pre-bump max_tokens, matching
+        # _build_extra_body's documented contract regardless of extra_bump.
         extra_body = _build_extra_body(model_id, effort, max_tokens)
         if debug:
             thinking_budget = extra_body.get("reasoning", {}).get("max_tokens", "n/a")
@@ -268,21 +331,74 @@ def call_openrouter_chat(
         try:
             response = _do_request(reasoning_effort)
             content, finish_reason = _extract(response)
+            original_content, original_finish_reason = content, finish_reason
 
             # If thinking ran the model out of tokens, retry once without thinking.
-            if finish_reason == "length" and reasoning_effort != "none":
+            downgraded = finish_reason == "length" and reasoning_effort != "none"
+            mandatory_reasoning_retry = False
+            if downgraded:
                 if debug:
                     print(
                         f"  [debug] finish_reason=length with thinking enabled — "
                         f"retrying once with reasoning_effort='none'"
                     )
-                response = _do_request("none")
-                content, finish_reason = _extract(response)
+                try:
+                    response = _do_request("none")
+                    content, finish_reason = _extract(response)
+                except Exception as disable_exc:
+                    if not _is_mandatory_reasoning_error(disable_exc):
+                        raise
+                    # This endpoint won't allow disabling reasoning at all --
+                    # retry once more at the ORIGINAL effort with extra
+                    # headroom instead.
+                    downgraded = False  # thinking was never actually disabled
+                    mandatory_reasoning_retry = True
+                    if debug:
+                        print(
+                            f"  [debug] disable-thinking retry rejected "
+                            f"({disable_exc!r}) — retrying at "
+                            f"effort={reasoning_effort!r} with "
+                            f"+{_MANDATORY_REASONING_RETRY_BUMP} max_tokens"
+                        )
+                    try:
+                        response = _do_request(
+                            reasoning_effort, extra_bump=_MANDATORY_REASONING_RETRY_BUMP
+                        )
+                        bumped_content, bumped_finish_reason = _extract(response)
+                    except Exception:
+                        # Bumped retry also failed -- keep the original
+                        # truncated content rather than crash. Deliberate:
+                        # this is a one-shot inline decision and does not
+                        # re-enter or consume the outer `for attempt` budget.
+                        if debug:
+                            print(
+                                "  [debug] bumped same-effort retry also "
+                                "failed — keeping original truncated content"
+                            )
+                        content, finish_reason = original_content, original_finish_reason
+                    else:
+                        if not bumped_content and original_content:
+                            # Bumped retry ran but produced nothing usable --
+                            # prefer the original partial content over empty.
+                            content, finish_reason = original_content, original_finish_reason
+                        else:
+                            content, finish_reason = bumped_content, bumped_finish_reason
 
+            if return_meta:
+                return content, {
+                    "downgraded": downgraded,
+                    "finish_reason": finish_reason,
+                    "mandatory_reasoning_retry": mandatory_reasoning_retry,
+                }
             return content
         except Exception as exc:
-            if attempt < max_retries - 1 and "rate" in str(exc).lower():
+            is_transient = "rate" in str(exc).lower() or isinstance(exc, _TRANSIENT_EXCEPTIONS)
+            if attempt < max_retries - 1 and is_transient:
+                if debug:
+                    print(f"  [debug] transient error ({exc!r}) — retrying")
                 time.sleep(2 ** attempt)
                 continue
             raise
+    if return_meta:
+        return "", {"downgraded": False, "finish_reason": None, "mandatory_reasoning_retry": False}
     return ""

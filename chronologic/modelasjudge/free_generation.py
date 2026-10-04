@@ -310,7 +310,7 @@ def build_prompts(question):
     )
     system_str = template.format(length_spec=length_spec)
     user_str = (
-        "CONTEXT: " + question.get('metadata_frame', '')
+        "CONTEXT: " + (question.get('candidate_metadata_frame') or question.get('metadata_frame', ''))
         + "\nQUESTION: " + question.get('main_question', '')
         + "\nANSWER: "
     )
@@ -377,22 +377,25 @@ def generate_answer_openrouter(question, model_id, client, reasoning_effort="non
         reasoning_effort: one of "none", "minimal", "low", "medium", "high", "max".
 
     Returns:
-        tuple: (answer_str, length_spec_str)
+        tuple: (answer_str, length_spec_str, downgraded_bool)
+            downgraded_bool — True if the model hit the length cap while thinking
+            and the call was silently retried with reasoning disabled.
     """
     system_str, user_str, max_tokens, length_spec = build_prompts(question)
     # Some OpenRouter models (e.g. deepseek-r1-distill) always emit visible
     # chain-of-thought regardless of the reasoning_effort flag; the answer-sized
     # cap from build_prompts is nowhere near enough budget for those.
-    if always_reasons(model_id):
+    if always_reasons(model_id) or reasoning_effort == "max":
         max_tokens = max(max_tokens, 25000)
-    answer = call_openrouter_chat(
+    answer, meta = call_openrouter_chat(
         client, model_id,
         user_content=user_str,
         system_content=system_str,
         max_tokens=max_tokens,
         reasoning_effort=reasoning_effort,
+        return_meta=True,
     )
-    return answer.strip(), length_spec
+    return answer.strip(), length_spec, meta["downgraded"]
 
 
 # ---------------------------------------------------------------------------
@@ -630,6 +633,12 @@ def run_free_generation(
         )
         client = None
 
+    n_overridden = sum(1 for q in questions if q.get('candidate_metadata_frame'))
+    if n_overridden:
+        print(f"\n*** {n_overridden}/{len(questions)} questions use candidate_metadata_frame "
+              f"-- the candidate is being shown a DIFFERENT context than the judge will "
+              f"grade against. ***\n")
+
     # Generate answers
     total = len(questions)
     for idx, q in enumerate(questions):
@@ -643,10 +652,14 @@ def run_free_generation(
             answer, length_spec = generate_answer_openai(
                 q, model_id, client, reasoning_effort=reasoning_effort
             )
+            downgraded = False
         elif use_openrouter:
-            answer, length_spec = generate_answer_openrouter(q, model_id, client, reasoning_effort=reasoning_effort)
+            answer, length_spec, downgraded = generate_answer_openrouter(
+                q, model_id, client, reasoning_effort=reasoning_effort
+            )
         else:
             answer, length_spec = generate_answer_hf(q, hf_model, hf_tokenizer)
+            downgraded = False
 
         answer = normalize_answer(answer, q.get('answer_strings', []))
         print(f"→ {answer[:60]!r}{'...' if len(answer) > 60 else ''}")
@@ -658,17 +671,26 @@ def run_free_generation(
         ground_truths = [q['answer_strings'][i] for i in gt_indices] if gt_indices else [q.get('answer_strings', [''])[0]]
         answers[qnum] = {
             "metadata_frame": q.get('metadata_frame', ''),
+            "candidate_metadata_frame_used": q.get('candidate_metadata_frame')
+                                              or q.get('metadata_frame', ''),
             "main_question": q.get('main_question', ''),
             "ground_truths": ground_truths,
             "reasoning_type": q.get('reasoning_type', ''),
             "length_spec": length_spec,
             "answer": answer,
+            "reasoning_downgraded": downgraded,
         }
 
         # Write after every answer (crash-safe)
         with open(output_path, 'w', encoding='utf-8') as fh:
             json.dump(output_data, fh, indent=2, ensure_ascii=False)
 
+    n_downgraded = sum(1 for a in answers.values() if a.get('reasoning_downgraded'))
+    if n_downgraded:
+        print(
+            f"\n{n_downgraded}/{len(answers)} answers had reasoning disabled after "
+            f"hitting the length cap at reasoning_effort={reasoning_effort!r}."
+        )
     print(f"\nDone. Results written to: {output_path.resolve()}")
     return str(output_path.resolve())
 

@@ -6,11 +6,24 @@ This guide explains how to generate character-modeling benchmark questions from 
 
 ### Software requirements
 - **Python 3.10+** with packages: `nltk`, `requests`, `openai`
-- **Ollama** running locally with the `gpt-oss:20b` model loaded — needed for **stage 1 only** (the two extraction scripts)
-- Realistically, this assumes you're running on a machine that can handle gpt-oss:20b, which might take 64GB, or at least mistral-small:24b. Quantized, that requires 12GB of GPU VRAM. Which probably means Apple Silicon with 16GB, or a non-Apple machine with a 4080 or 4090 GPU. Might work on Colab Pro. If that's not available, we need to rewrite this to run in some other context.
-- **An OpenRouter credential** — needed for **stage 2** (question formation), which generates its anachronistic distractors from API-hosted models rather than locally. Either set `OPENROUTER_API_KEY` in the environment, or put a `password:` line in `../../bertclassify/OpenRouterCredentials.txt`. This is the same credential the cloze and summary pipelines use.
+- **An OpenRouter credential** — now needed for **both stages**. Either set `OPENROUTER_API_KEY` in the environment, or put a `password:` line in `../../bertclassify/OpenRouterCredentials.txt`. This is the same credential the cloze and summary pipelines use.
+- **Ollama is optional**, needed only if you pass `--ollama` to fall back to a local model. If you do, the machine has to be able to run `gpt-oss:20b` (~64GB) or at least `mistral-small:24b` (~12GB of GPU VRAM quantized) — Apple Silicon with 16GB, or a 4080/4090.
 
-To check if Ollama is running:
+### Which model runs extraction
+
+Both extraction scripts default to **`google/gemini-3.5-flash-lite` via OpenRouter**, with responses constrained by a JSON schema. This replaced local `gpt-oss:20b`, which made too many extraction errors and was slow.
+
+Measured cost is about **$0.77 per 900-chunk novel** across both passes (~2.2M input, ~50K output tokens) — input dominates, because the extracted JSON is tiny. The full 92-volume corpus is on the order of $70.
+
+| Flag | Effect |
+|------|--------|
+| `--model ID` | Use a different model. `google/gemini-3.5-flash` (~3x the cost) is the next step up |
+| `--ollama` | Run locally instead. Replaces the old `--mistral`; combine with `--model mistral-small:24b` for the previous behavior |
+| `--no-schema` | Skip the JSON schema on OpenRouter, falling back to regex parsing of the reply |
+
+The schema makes malformed JSON essentially impossible, which is what the extraction error rate was mostly made of. It carries one constraint worth knowing: under a strict schema every field is required, so "nothing found here" is signalled by `"found": false` rather than an empty object. The parsers accept both forms, so the `--ollama` path still works unchanged.
+
+Only if you plan to use `--ollama`, check that Ollama is running:
 ```bash
 curl http://localhost:11434/api/tags
 ```
@@ -21,7 +34,7 @@ ollama pull gpt-oss:20b
 ```
 
 ### Input files
-- **Source texts**: Plain text files of novels (one per book), placed in the `IDI_sample_1875-25/` directory
+- **Source texts**: Plain text files of novels (one per book), placed in the `benchmarkbooks/` directory
 - **Metadata CSV**: `primary_metadata.csv` containing book and author information
 - **Book list**: `fiction_to_process.txt` listing which books to process
 
@@ -65,10 +78,10 @@ The barcode in your list maps to files in two ways:
 
 | What | Format | Example |
 |------|--------|---------|
-| Source text file | `IDI_sample_1875-25/{BARCODE}.txt` | `IDI_sample_1875-25/HNNWY1.txt` |
-| CSV metadata lookup | `hvd.{barcode}` (lowercase) | `hvd.hnnwy1` |
+| Source text file | `benchmarkbooks/{BARCODE}.txt` | `benchmarkbooks/HNNWY1.txt` |
+| CSV metadata lookup | bare barcode (lowercase) | `hnnwy1` |
 
-The scripts handle this conversion automatically.
+The scripts handle this conversion automatically — `get_source_file()` resolves the text file case-insensitively via `text_file_lookup.find_text_file()`, since `benchmarkbooks/` mixes exact-match filenames with inconsistently cased filenames inherited from the 1875-1924 generation.
 
 ---
 
@@ -85,6 +98,14 @@ This processes each book in your list, running two extraction passes:
 
 1. **Character descriptions**: Scans the novel for passages where named characters are explicitly described
 2. **Character dialogue**: Finds substantial dialogue spoken by those characters
+
+### OCR cleanup before chunking
+
+After the fixed `--skip-lines` cut, `read_novel_text()` passes the text through `clean_ocr_text()`, the same shallow OCR repair the cloze pipeline uses (`connectors/make_cloze_questions.py`). It drops bare page numbers and short ALL-CAPS lines (running heads and chapter headings), repairs words hyphenated across a line break, and reflows paragraph interiors while preserving blank-line paragraph breaks. On the ten fiction books this removes roughly 27 junk lines per 10,000 words — about 1% of the text — so running heads like `THE BARRYS.` no longer land in the middle of a chunk and get handed to the LLM as narrative.
+
+The filter is deliberately shallow and errs toward removal: it will occasionally drop a legitimate short ALL-CAPS line, such as a small-caps letter salutation. Measured against the ~2,300 junk lines it removes across the corpus, that costs roughly a dozen lines of real content.
+
+Cleanup applies **only when a book is extracted**. Books extracted before this change keep their existing chunk boundaries; to pick up the cleaning, delete that book's `_characters.jsonl` and `_dialogue.jsonl` (or use `--force`) and re-run Stage 1.
 
 ### What you'll see
 
@@ -119,7 +140,31 @@ For each book, Stage 1 creates two files in `process_files/`:
 
 ### Resuming after interruption
 
-If you stop the script (Ctrl+C) or it crashes, just run it again. Books with completed `_dialogue.jsonl` files are automatically skipped.
+**Interrupting is safe.** Both extraction scripts record every chunk as it is processed, to a progress file alongside the output (`process_files/BARCODE_characters.progress.jsonl`). Hit Ctrl+C whenever you like: the script aggregates what it has, writes a valid `_characters.jsonl` / `_dialogue.jsonl` covering the completed chunks, and keeps the progress file. Run the identical command again and it skips straight to where it stopped:
+
+```
+Resuming: 450 of 900 chunks already done
+```
+
+Chunks that failed with an error (an Ollama hiccup, say) are *not* counted as done, so a resumed run retries them.
+
+The progress file is deleted only once every chunk in the book is accounted for. Its presence is how `batch_extract.py` tells a partial extraction from a finished one, so an interrupted book is picked up again on the next batch run rather than being mistaken for complete.
+
+Two things to know:
+
+- **Keep `--skip-lines` the same across sessions for a given book.** Chunk numbers only mean anything relative to a fixed chunking. If `--skip-lines` (or the source text) changes, the script refuses to resume and tells you to use `--restart`, rather than silently mixing two different chunkings.
+- **`--restart` throws away saved progress** and extracts from scratch.
+
+### Doing only part of a long novel
+
+`--max-chunks N` stops after chunk N, so on a 900-chunk novel you can deliberately do the first half now:
+
+```bash
+python extract_character_descriptions.py ../benchmarkbooks/BARCODE.txt \
+    process_files/BARCODE_characters.jsonl --skip-lines 92 --max-chunks 450
+```
+
+The output is a perfectly usable half-book. To extend it later, re-run **without** `--max-chunks` — chunks 0-449 are skipped automatically and it continues from 450.
 
 ### Time expectations
 
@@ -213,8 +258,10 @@ These constants appear at the top of `extract_character_descriptions.py` and `ex
 
 | Parameter | Default | Effect |
 |-----------|---------|--------|
-| `MODEL` | `"gpt-oss:20b"` | Which Ollama model to use |
-| `TEMPERATURE` | `0.3` | Lower = more deterministic responses |
+| `OPENROUTER_MODEL` | `"google/gemini-3.5-flash-lite"` | Default extraction model |
+| `OLLAMA_MODEL` | `"gpt-oss:20b"` | Model used when `--ollama` is passed |
+| `REASONING_EFFORT` | `"low"` | Gemini Flash endpoints reject `"none"` outright; measured reasoning tokens at `"low"` are 0, so this costs nothing |
+| `TEMPERATURE` | `0.3` | Ollama path only — the OpenRouter client sends no temperature |
 | `MAX_WORDS_PER_CHUNK` | `700` | Chunk size for processing |
 | `DEFAULT_SKIP_LINES` | `25` | Lines to skip at start of file (headers, title pages) |
 
@@ -236,7 +283,7 @@ In `form_character_questions.py`:
 If a particular book has an unusually long front matter, you can run the extraction scripts directly with a custom skip value:
 
 ```bash
-python extract_character_descriptions.py ../IDI_sample_1875-25/MYBOOK.txt process_files/MYBOOK_characters.jsonl --skip-lines 50
+python extract_character_descriptions.py ../benchmarkbooks/MYBOOK.txt process_files/MYBOOK_characters.jsonl --skip-lines 50
 ```
 
 ---

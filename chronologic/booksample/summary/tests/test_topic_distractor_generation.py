@@ -99,11 +99,11 @@ class TestMakeSameBookDistractors:
     @pytest.fixture
     def real_sentences(self):
         """Load sentences from a real text file if available."""
-        source_dir = BOOKSAMPLE_DIR / "edgebooks"
+        source_dir = BOOKSAMPLE_DIR / "benchmarkbooks"
         # Find any available text file
         txt_files = sorted(source_dir.glob("*.txt"))
         if not txt_files:
-            pytest.skip("No text files in edgebooks/")
+            pytest.skip("No text files in benchmarkbooks/")
 
         from nltk import sent_tokenize
         with open(txt_files[0], 'r', encoding='utf-8') as f:
@@ -192,37 +192,37 @@ class TestMaskSentencesAroundTopic:
 class TestDistortParagraph:
     def test_short_paragraph(self):
         """Paragraph with only 1-2 sentences returns without crashing."""
-        para = "[masked topic sentence] This is the only real sentence."
+        para = "[masked introductory sentence] This is the only real sentence."
         similar = ["Replacement sentence one.", "Replacement sentence two."]
         result = distort_paragraph(para, similar, 1)
         # Should return unchanged since fewer than 2 real sentences
-        assert "[masked topic sentence]" in result
+        assert "[masked introductory sentence]" in result
 
     def test_n_greater_than_available(self):
         """n > available sentences should replace as many as possible."""
         para = (
-            "[masked topic sentence] First real sentence here. "
+            "[masked introductory sentence] First real sentence here. "
             "Second real sentence here. Third real sentence here."
         )
         similar = ["Replacement A.", "Replacement B."]
         result = distort_paragraph(para, similar, 10)
-        assert "[masked topic sentence]" in result
+        assert "[masked introductory sentence]" in result
 
     def test_marker_preserved(self):
-        """The [masked topic sentence] marker must always be preserved."""
+        """The [masked introductory sentence] marker must always be preserved."""
         para = (
-            "[masked topic sentence] The economy grew significantly. "
+            "[masked introductory sentence] The economy grew significantly. "
             "Trade routes expanded across the continent. "
             "New industries were established in the cities. "
             "Agriculture remained the primary occupation."
         )
         similar = ["A completely different sentence.", "Another different one."]
         result = distort_paragraph(para, similar, 2)
-        assert "[masked topic sentence]" in result
+        assert "[masked introductory sentence]" in result
 
     def test_empty_similar_sentences(self):
         """Empty similar_sentences list returns paragraph unchanged."""
-        para = "[masked topic sentence] Some content here."
+        para = "[masked introductory sentence] Some content here."
         result = distort_paragraph(para, [], 2)
         assert result == para
 
@@ -230,14 +230,14 @@ class TestDistortParagraph:
 # ---- Generate topic sentence tests (mocked) ----
 
 class TestGenerateTopicSentence:
-    @patch('topic_distractor_generator.call_ollama_model')
+    @patch('topic_distractor_generator.call_openrouter_model')
     def test_error_returns_none(self, mock_call):
         """Model returning error should result in None."""
         mock_call.return_value = {"status": "error", "reason": "Connection refused"}
         result = generate_topic_sentence("frame", "paragraph", 20, "model")
         assert result is None
 
-    @patch('topic_distractor_generator.call_ollama_model')
+    @patch('topic_distractor_generator.call_openrouter_model')
     def test_very_long_response_retries(self, mock_call):
         """500+ word response should trigger retry with length check."""
         long_response = " ".join(["word"] * 600)
@@ -250,7 +250,7 @@ class TestGenerateTopicSentence:
         assert result == short_response
         assert mock_call.call_count == 2
 
-    @patch('topic_distractor_generator.call_ollama_model')
+    @patch('topic_distractor_generator.call_openrouter_model')
     def test_strips_quotes(self, mock_call):
         """Generated text should have quotation marks stripped."""
         mock_call.return_value = {
@@ -261,7 +261,7 @@ class TestGenerateTopicSentence:
         assert not result.startswith('"')
         assert not result.endswith('"')
 
-    @patch('topic_distractor_generator.call_ollama_model')
+    @patch('topic_distractor_generator.call_openrouter_model')
     def test_takes_first_line(self, mock_call):
         """Multi-line response should use only first line."""
         mock_call.return_value = {
@@ -427,7 +427,32 @@ class TestAnachronisticPromptsContainDistortion:
         "CANARY_EPSILON verifies the replacement worked properly.",
     ]
 
-    @patch('topic_distractor_generator.call_ollama_model')
+    @patch('topic_distractor_generator.call_openrouter_model')
+    def test_no_similar_sentences_makes_one_call(self, mock_call):
+        """Without same-book sentences, distortion is a no-op: skip passes 2 and 3."""
+        mock_call.return_value = {
+            "status": "success",
+            "response": "A generated topic sentence about the subject matter at hand.",
+        }
+
+        trimmed_paragraph = (
+            "[masked introductory sentence] "
+            "The Argentine Republic occupies a vast territory in southern South America. "
+            "Its boundaries stretch from the Andes to the Atlantic Ocean."
+        )
+
+        strings, types = make_anachronistic_distractors(
+            [], "Test metadata.", trimmed_paragraph, 12
+        )
+
+        assert mock_call.call_count == 1, (
+            f"Expected 1 LLM call with no similar sentences, got {mock_call.call_count}"
+        )
+        assert len(strings) == 1
+        assert len(types) == 1
+        assert "distort" not in types[0]
+
+    @patch('topic_distractor_generator.call_openrouter_model')
     def test_distorted_prompts_contain_canary_sentences(self, mock_call):
         """Passes 2 and 3 should send prompts with substituted (canary) sentences."""
         mock_call.return_value = {
@@ -436,7 +461,7 @@ class TestAnachronisticPromptsContainDistortion:
         }
 
         trimmed_paragraph = (
-            "[masked topic sentence] "
+            "[masked introductory sentence] "
             "The Argentine Republic occupies a vast territory in southern South America. "
             "Its boundaries stretch from the Andes to the Atlantic Ocean. "
             "The climate varies greatly from the subtropical north to the cold south. "
@@ -451,7 +476,7 @@ class TestAnachronisticPromptsContainDistortion:
             self.CANARY_SENTENCES, metadata_frame, trimmed_paragraph, gt_word_count
         )
 
-        # Collect all prompts passed to call_ollama_model
+        # Collect all prompts passed to call_openrouter_model
         prompts = [call_args.args[0] for call_args in mock_call.call_args_list]
         assert len(prompts) >= 3, f"Expected at least 3 LLM calls, got {len(prompts)}"
 
@@ -472,7 +497,7 @@ class TestAnachronisticPromptsContainDistortion:
             f"PROMPT:\n{prompts[2]}"
         )
 
-    @patch('topic_distractor_generator.call_ollama_model')
+    @patch('topic_distractor_generator.call_openrouter_model')
     def test_distort1_has_fewer_canaries_than_distort2(self, mock_call):
         """Pass 2 (1 swap) should have fewer canaries than pass 3 (2 swaps)."""
         mock_call.return_value = {
@@ -481,7 +506,7 @@ class TestAnachronisticPromptsContainDistortion:
         }
 
         trimmed_paragraph = (
-            "[masked topic sentence] "
+            "[masked introductory sentence] "
             "The Argentine Republic occupies a vast territory in southern South America. "
             "Its boundaries stretch from the Andes to the Atlantic Ocean. "
             "The climate varies greatly from the subtropical north to the cold south. "
@@ -511,7 +536,7 @@ class TestAnachronisticPromptsContainDistortion:
     def test_distort_paragraph_directly_with_canaries(self):
         """distort_paragraph itself should produce output containing canary sentences."""
         trimmed_paragraph = (
-            "[masked topic sentence] "
+            "[masked introductory sentence] "
             "The Argentine Republic occupies a vast territory in southern South America. "
             "Its boundaries stretch from the Andes to the Atlantic Ocean. "
             "The climate varies greatly from the subtropical north to the cold south. "
@@ -533,7 +558,7 @@ class TestAnachronisticPromptsContainDistortion:
     def test_distort_paragraph_short_paragraph_still_distorts(self):
         """A paragraph with only 2 sentences after the marker should still be distorted.
 
-        sent_tokenize merges [masked topic sentence] with the next sentence
+        sent_tokenize merges [masked introductory sentence] with the next sentence
         (since the marker has no terminal punctuation), which reduces the count
         of 'real' (replaceable) sentences. With only 2 remaining sentences,
         sent_tokenize produces 2 tokens: one containing the marker + first sentence,
@@ -542,7 +567,7 @@ class TestAnachronisticPromptsContainDistortion:
         """
         # 2 remaining sentences after topic removal
         trimmed_paragraph = (
-            "[masked topic sentence] "
+            "[masked introductory sentence] "
             "Thus her policy in general stimulated the growth of industry "
             "and trade in the empire. "
             "Here, as in administrative reforms, failure to achieve more "
@@ -553,7 +578,7 @@ class TestAnachronisticPromptsContainDistortion:
 
         assert result != trimmed_paragraph, (
             "distort_paragraph returned a short paragraph unchanged — "
-            "sent_tokenize likely merged [masked topic sentence] with the next sentence, "
+            "sent_tokenize likely merged [masked introductory sentence] with the next sentence, "
             "reducing the replaceable sentence count below the threshold"
         )
         has_canary = any(c in result for c in self.CANARY_SENTENCES)
@@ -562,7 +587,7 @@ class TestAnachronisticPromptsContainDistortion:
             f"RESULT:\n{result}"
         )
 
-    @patch('topic_distractor_generator.call_ollama_model')
+    @patch('topic_distractor_generator.call_openrouter_model')
     def test_short_paragraph_prompts_still_distorted(self, mock_call):
         """Full pipeline: even with a short paragraph, passes 2/3 prompts must differ."""
         mock_call.return_value = {
@@ -572,7 +597,7 @@ class TestAnachronisticPromptsContainDistortion:
 
         # 2 remaining sentences — the bug-triggering case
         trimmed_paragraph = (
-            "[masked topic sentence] "
+            "[masked introductory sentence] "
             "Thus her policy in general stimulated the growth of industry "
             "and trade in the empire. "
             "Here, as in administrative reforms, failure to achieve more "

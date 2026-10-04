@@ -1,1 +1,10 @@
 *.pyc
+
+# macOS Finder metadata
+.DS_Store
+
+# API credentials — never commit
+OpenRouterCredentials.txt
+credentials.txt
+TogetherAPIKey.txt
+*.secretly

@@ -20,6 +20,7 @@ Usage:
 
 import argparse
 import json
+import random
 import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -82,6 +83,42 @@ def group_by_category(questions: List[Dict]) -> Dict[str, List[Dict]]:
             groups[cat] = []
         groups[cat].append(q)
     return groups
+
+
+def select_categories(groups: Dict[str, List[Dict]], max_n: int) -> List[str]:
+    """
+    Select up to max_n categories by weighted random sampling without replacement.
+
+    Each category's weight = len(passages) * 4 if 'sentence' in category else len(passages).
+    Sentence categories are upweighted 4x because they are less common but higher value.
+
+    Args:
+        groups: Dict mapping category names to lists of question dicts
+        max_n: Number of categories to select
+
+    Returns:
+        List of selected category names (length = min(max_n, len(groups)))
+    """
+    categories = list(groups.keys())
+    if max_n >= len(categories):
+        return categories
+
+    weights = [len(groups[cat]) * (4 if 'sentence' in cat else 1) for cat in categories]
+
+    selected = []
+    remaining_cats = categories[:]
+    remaining_weights = weights[:]
+
+    for _ in range(max_n):
+        total = sum(remaining_weights)
+        if total == 0:
+            break
+        chosen_idx = random.choices(range(len(remaining_cats)), weights=remaining_weights)[0]
+        selected.append(remaining_cats[chosen_idx])
+        remaining_cats.pop(chosen_idx)
+        remaining_weights.pop(chosen_idx)
+
+    return selected
 
 
 def present_batch_question_for_approval(question: Dict,
@@ -271,6 +308,7 @@ def apply_metadata_to_question(question: Dict, metadata: Dict,
 def process_single_file(barcode: str, questions: List[Dict],
                         output_path: Path,
                         primary_metadata_path: str,
+                        max_categories: Optional[int] = None,
                         debug: bool = False) -> int:
     """
     Full interactive approval for one book's potential questions.
@@ -307,6 +345,13 @@ def process_single_file(barcode: str, questions: List[Dict],
     # Group by category
     groups = group_by_category(questions)
     print(f"\n  Categories: {list(groups.keys())}")
+
+    # Optionally restrict to a subset of categories
+    if max_categories is not None and max_categories < len(groups):
+        selected = select_categories(groups, max_categories)
+        print(f"\n  Selecting {len(selected)} of {len(groups)} categories "
+              f"(--max {max_categories}): {selected}")
+        groups = {cat: groups[cat] for cat in selected}
 
     approved_count = 0
 
@@ -380,6 +425,12 @@ def main():
     parser.add_argument("--primary-metadata",
                         help="Path to primary_metadata.csv "
                              "(default: ../primary_metadata.csv)")
+    parser.add_argument("--max", type=int, default=None, dest='max_categories',
+                        metavar='N',
+                        help="Maximum number of categories to process. "
+                             "Selected by weighted random sampling: each category's "
+                             "weight is its passage count, multiplied by 4 for "
+                             "sentence categories.")
     parser.add_argument("--debug", action="store_true",
                         help="Enable debug output")
 
@@ -400,7 +451,7 @@ def main():
 
     questions = load_potential_questions(filepath)
     process_single_file(barcode, questions, output_path,
-                       primary_metadata, args.debug)
+                       primary_metadata, args.max_categories, args.debug)
 
     print("\nDone.")
 

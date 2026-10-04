@@ -18,7 +18,7 @@ from batched_cloze_questions import (
 )
 
 
-def _make_tagged(n_sentences=50, category='causalclause', n_tagged=10):
+def _make_tagged(n_sentences=50, category='causalsentence', n_tagged=10):
     """
     Create a fake tagged sentence list for testing.
 
@@ -51,7 +51,7 @@ class TestGenerateCandidatesForCategory:
         """Should generate up to max_candidates candidates."""
         tagged = _make_tagged(n_sentences=100, n_tagged=20)
         candidates = generate_candidates_for_category(
-            tagged, 'causalclause', max_candidates=10
+            tagged, 'causalsentence', max_candidates=10
         )
         assert len(candidates) <= 10
         assert len(candidates) > 0
@@ -60,7 +60,7 @@ class TestGenerateCandidatesForCategory:
         """Should return fewer than max if not enough tagged sentences."""
         tagged = _make_tagged(n_sentences=30, n_tagged=3)
         candidates = generate_candidates_for_category(
-            tagged, 'causalclause', max_candidates=15
+            tagged, 'causalsentence', max_candidates=15
         )
         assert len(candidates) <= 3
 
@@ -71,13 +71,13 @@ class TestGenerateCandidatesForCategory:
             entry = {
                 'sentence': 'Short.',
                 'index': i,
-                'causalclause': ('because', 0),
+                'causalsentence': ('because', 0),
             }
             tagged.append(entry)
 
         # All sentences are at the start, so build_passage should fail
         candidates = generate_candidates_for_category(
-            tagged, 'causalclause', max_candidates=5
+            tagged, 'causalsentence', max_candidates=5
         )
         assert len(candidates) == 0
 
@@ -85,7 +85,7 @@ class TestGenerateCandidatesForCategory:
         """Should not return duplicate target indices."""
         tagged = _make_tagged(n_sentences=100, n_tagged=20)
         candidates = generate_candidates_for_category(
-            tagged, 'causalclause', max_candidates=15
+            tagged, 'causalsentence', max_candidates=15
         )
         indices = [c['target_idx'] for c in candidates]
         assert len(indices) == len(set(indices))
@@ -94,7 +94,7 @@ class TestGenerateCandidatesForCategory:
         """Each candidate should be a dict with expected keys."""
         tagged = _make_tagged(n_sentences=100, n_tagged=10)
         candidates = generate_candidates_for_category(
-            tagged, 'causalclause', max_candidates=5
+            tagged, 'causalsentence', max_candidates=5
         )
         for c in candidates:
             assert 'passage' in c
@@ -106,7 +106,7 @@ class TestGenerateCandidatesForCategory:
 
     def test_empty_category(self):
         """Should return empty list when no sentences have the category."""
-        tagged = _make_tagged(n_sentences=50, category='causalclause', n_tagged=10)
+        tagged = _make_tagged(n_sentences=50, category='causalsentence', n_tagged=10)
         candidates = generate_candidates_for_category(
             tagged, 'contrastsentence', max_candidates=5
         )

@@ -11,9 +11,10 @@ The code is structured to allow reusable model interaction and error handling fo
 subsequent filtering stages (pass/fail validation and round-trip answer checking).
 """
 
-import json, os
+import json, os, sys
+import argparse
 import requests
-from typing import Optional, Dict, Any, Callable
+from typing import Optional, Dict, Any, Callable, List
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 MODEL = "gpt-oss:20b"
@@ -125,7 +126,7 @@ def call_ollama_model(
     prompt: str,
     model: str = MODEL,
     temperature: float = 0.3,
-    num_predict: int = 750,
+    num_predict: int = 1000,
     timeout: int = 120,
     debug: bool = False
 ) -> Dict[str, Any]:
@@ -244,6 +245,94 @@ def parse_question_response(response_text: str) -> Dict[str, Any]:
         return {"status": "error", "reason": f"Unexpected format: {response_text[:100]}"}
 
 
+def parse_filter_response(response_text: str) -> Dict[str, Any]:
+    """
+    Parse a question filter response into structured format.
+
+    The filter evaluates questions against quality criteria and responds with:
+    - "PASS: <reason>" if the question meets all criteria
+    - "FAIL: <criterion>: <explanation>" if it fails any criterion
+
+    Args:
+        response_text: Raw text response from the model
+
+    Returns:
+        dict with one of these structures:
+        - {"status": "pass", "reason": str} for questions that pass
+        - {"status": "fail", "criterion": str, "reason": str} for questions that fail
+        - {"status": "error", "reason": str} for unexpected formats
+    """
+
+    if response_text.startswith("PASS:"):
+        reason = response_text[5:].strip()
+        return {"status": "pass", "reason": reason}
+    elif response_text.startswith("FAIL:"):
+        # Parse FAIL: [criterion]: [explanation]
+        fail_content = response_text[5:].strip()
+        # Try to split on first colon to separate criterion from explanation
+        if ":" in fail_content:
+            criterion, explanation = fail_content.split(":", 1)
+            return {
+                "status": "fail",
+                "criterion": criterion.strip(),
+                "reason": explanation.strip()
+            }
+        else:
+            # If no colon found, just use the whole thing as reason
+            return {
+                "status": "fail",
+                "criterion": "UNKNOWN",
+                "reason": fail_content
+            }
+    else:
+        return {"status": "error", "reason": f"Unexpected format: {response_text[:100]}"}
+
+
+# ==============================================================================
+# QUESTION FILTERING
+# ==============================================================================
+
+def filter_question(question: str, answer_span: str, debug: bool = False) -> Dict[str, Any]:
+    """
+    Evaluate a generated question against quality criteria.
+
+    Uses the FILTER_PROMPT to check if a question:
+    - Tests world knowledge (not dictionary definitions)
+    - Can be answered through real entity knowledge (not text-specific)
+    - Has clear references (no opaque pronouns/abbreviations)
+    - Doesn't leak the answer in the question text
+    - Is grammatically well-formed
+    - Has an unambiguous expected answer
+
+    Args:
+        question: The generated question to evaluate
+        answer_span: The expected answer
+        debug: If True, print diagnostic information
+
+    Returns:
+        dict with one of these structures:
+        - {"status": "pass", "reason": str} if question meets criteria
+        - {"status": "fail", "criterion": str, "reason": str} if it fails
+        - {"status": "error", "reason": str} on API/parsing errors
+    """
+
+    # Fill in the FILTER_PROMPT template
+    prompt = FILTER_PROMPT.format(question=question, answer=answer_span)
+
+    if debug:
+        print(f"FILTER PROMPT LENGTH: {len(prompt)} chars")
+
+    # Call the model with general error handling
+    result = call_ollama_model(prompt, debug=debug)
+
+    # If the API call failed, return the error
+    if result["status"] == "error":
+        return result
+
+    # Parse the filter-specific response format
+    return parse_filter_response(result["response"])
+
+
 # ==============================================================================
 # QUESTION GENERATION
 # ==============================================================================
@@ -293,7 +382,12 @@ Entity type: {entity_type}
     # Parse the question-specific response format
     return parse_question_response(result["response"])
 
-def process_chunks(input_path: str, output_path: str, max_entities_per_chunk: int = 20):
+def process_chunks(
+    input_path: str,
+    output_path: str,
+    max_entities_per_chunk: int = 20,
+    start_line: int = 1
+):
     """
     Process encyclopedia chunks and generate questions for identified entities.
 
@@ -306,12 +400,21 @@ def process_chunks(input_path: str, output_path: str, max_entities_per_chunk: in
     1. Deduplicate entity spans
     2. Filter out short spans and numeric types (CARDINAL, ORDINAL)
     3. Generate a knowledge question
-    4. Write results progressively to output file
+    4. Filter the question against quality criteria
+    5. Write results progressively to output file
+
+    Each result dict contains:
+    - status: 'success', 'skip', or 'error' (from question generation)
+    - question: the generated question (if status='success')
+    - filter_status: 'pass', 'fail', or 'error' (if question was generated)
+    - filter_criterion: which criterion failed (if filter_status='fail')
+    - filter_reason: explanation of pass/fail/error
 
     Args:
         input_path: Path to input JSONL file with chunks and entities
         output_path: Path to write output JSONL file with questions
         max_entities_per_chunk: Maximum entities to process per chunk (for cost control)
+        start_line: Line number to start processing from (1-indexed, for restart capability)
 
     Returns:
         List of all result dicts (each with status, question/reason, and metadata)
@@ -319,13 +422,28 @@ def process_chunks(input_path: str, output_path: str, max_entities_per_chunk: in
 
     results = []
 
+    # If restarting, load existing results from output file
+    if start_line > 1 and os.path.exists(output_path):
+        print(f"Restarting from line {start_line}, loading existing results...")
+        with open(output_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                results.append(json.loads(line))
+        print(f"Loaded {len(results)} existing results")
+
     with open(input_path, 'r', encoding='utf-8') as f:
-        for line_num, line in enumerate(f):
+        for line_num, line in enumerate(f, start=1):
+            # Skip lines before start_line
+            if line_num < start_line:
+                continue
+
             chunk = json.loads(line)
             passage = chunk['text']
             entities = chunk['entities']
 
-            print(f"\n=== Chunk {line_num + 1} (lines {chunk['start_line']}-{chunk['end_line']}) ===")
+            # Display JSONL line number clearly for restart purposes
+            print(f"\n=== Processing JSONL line {line_num} ===")
+            if 'start_line' in chunk and 'end_line' in chunk:
+                print(f"    Source lines {chunk['start_line']}-{chunk['end_line']}")
             print(f"    {len(entities)} entities found")
 
             # Deduplicate entities (same span might appear multiple times)
@@ -361,9 +479,33 @@ def process_chunks(input_path: str, output_path: str, max_entities_per_chunk: in
                     "chunk_end": chunk['end_line'],
                 })
 
+                # If question was successfully generated, filter it for quality
+                if result['status'] == 'success':
+                    filter_result = filter_question(result['question'], span)
+                    result['filter_status'] = filter_result['status']
+
+                    if filter_result['status'] == 'pass':
+                        result['filter_reason'] = filter_result.get('reason', '')
+                    elif filter_result['status'] == 'fail':
+                        result['filter_criterion'] = filter_result.get('criterion', 'UNKNOWN')
+                        result['filter_reason'] = filter_result.get('reason', '')
+                    elif filter_result['status'] == 'error':
+                        result['filter_reason'] = filter_result.get('reason', '')
+
                 # Print status indicator
                 if result['status'] == 'success':
-                    print(f"✓ {result['question'][:60]}...")
+                    question_preview = result['question'][:60]
+                    filter_status = result.get('filter_status', 'unknown')
+
+                    if filter_status == 'pass':
+                        print(f"✓ {question_preview}...")
+                    elif filter_status == 'fail':
+                        criterion = result.get('filter_criterion', 'UNKNOWN')
+                        reason = result.get('filter_reason', '')[:40]
+                        print(f"✗ FAIL ({criterion}): {question_preview}... | {reason}")
+                    else:
+                        # Filter error - still show the question but indicate filter failed
+                        print(f"⚠ {question_preview}... (filter error)")
                 elif result['status'] == 'skip':
                     print(f"⊘ {result['reason'][:40]}...")
                 else:
@@ -381,8 +523,19 @@ def process_chunks(input_path: str, output_path: str, max_entities_per_chunk: in
             skips = sum(1 for r in results if r['status'] == 'skip')
             errors = sum(1 for r in results if r['status'] == 'error')
 
+            # Filter statistics (only for successfully generated questions)
+            passed = sum(1 for r in results
+                        if r['status'] == 'success' and r.get('filter_status') == 'pass')
+            failed = sum(1 for r in results
+                        if r['status'] == 'success' and r.get('filter_status') == 'fail')
+            filter_errors = sum(1 for r in results
+                               if r['status'] == 'success' and r.get('filter_status') == 'error')
+
             print(f"\n=== Summary ===")
             print(f"Questions generated: {successes}")
+            print(f"  - Passed filter: {passed}")
+            print(f"  - Failed filter: {failed}")
+            print(f"  - Filter errors: {filter_errors}")
             print(f"Skipped: {skips}")
             print(f"Errors: {errors}")
             print(f"Output written to: {output_path}")
@@ -396,32 +549,82 @@ def process_chunks(input_path: str, output_path: str, max_entities_per_chunk: in
 
 if __name__ == "__main__":
     """
-    Test the question generation pipeline:
-    1. Run a single test with debug output
-    2. Process all chunks in encyclopedia.jsonl
-    3. Write questions to questions.jsonl
+    Generate knowledge questions from encyclopedia chunks with entity spans.
+
+    Usage:
+        python KnowledgeQuestionWriter.py <input_file> <output_file> [options]
     """
+
+    parser = argparse.ArgumentParser(
+        description="Generate knowledge benchmark questions from encyclopedia passages with entity spans."
+    )
+
+    parser.add_argument(
+        "input_file",
+        type=str,
+        help="Path to the input JSONL file with chunks and entities"
+    )
+
+    parser.add_argument(
+        "output_file",
+        type=str,
+        help="Path to the output JSONL file for generated questions"
+    )
+
+    parser.add_argument(
+        "--max-entities",
+        type=int,
+        default=20,
+        help="Maximum entities to process per chunk (default: 20)"
+    )
+
+    parser.add_argument(
+        "--start-line",
+        type=int,
+        default=1,
+        help="JSONL line number to start processing from (1-indexed, for restart capability)"
+    )
+
+    parser.add_argument(
+        "--test",
+        action="store_true",
+        help="Run a single test with debug output before processing"
+    )
+
+    args = parser.parse_args()
+
+    # Validate input file exists
+    if not os.path.exists(args.input_file):
+        print(f"Error: Input file not found: {args.input_file}", file=sys.stderr)
+        sys.exit(1)
 
     print("Working directory:", os.getcwd())
 
-    # Change to the directory of this script
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    # Optional test mode
+    if args.test:
+        print("\n=== Running test generation with debug output ===")
+        with open(args.input_file, 'r', encoding='utf-8') as f:
+            test_chunk = json.loads(f.readline())
 
-    # Test with first entity from first chunk (with debug output)
-    print("\n=== Running test generation with debug output ===")
-    test_chunk = json.loads(open("encyclopedia.jsonl").readline())
-    result = generate_question(
-        test_chunk['text'],
-        test_chunk['entities'][0][0],  # first entity span
-        test_chunk['entities'][0][1],  # first entity type
-        debug=True
-    )
-    print("\nTest result:", result)
+        if test_chunk.get('entities'):
+            result = generate_question(
+                test_chunk['text'],
+                test_chunk['entities'][0][0],  # first entity span
+                test_chunk['entities'][0][1],  # first entity type
+                debug=True
+            )
+            print("\nTest result:", result)
+        else:
+            print("No entities found in first chunk for testing")
 
     # Process all chunks
-    print("\n=== Processing all chunks ===")
+    print(f"\n=== Processing chunks from {args.input_file} ===")
+    if args.start_line > 1:
+        print(f"Starting from JSONL line {args.start_line}")
+
     results = process_chunks(
-        input_path="encyclopedia.jsonl",
-        output_path="questions.jsonl",
-        max_entities_per_chunk=20
+        input_path=args.input_file,
+        output_path=args.output_file,
+        max_entities_per_chunk=args.max_entities,
+        start_line=args.start_line
     )
