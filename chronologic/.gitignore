@@ -54,3 +54,6 @@ booksample/averybooks.tar.gz
 booksample/benchmarkbooks/
 booksample/edgebooks/
 booksample/IDI_sample_1875-25/
+
+# --- per-question eval reports: print every question and its ground truth ---
+evalcode/**/eval_report_*.md
