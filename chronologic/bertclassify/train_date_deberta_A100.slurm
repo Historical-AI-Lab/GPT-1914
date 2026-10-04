@@ -74,14 +74,14 @@ source deberta-env/bin/activate
 SCRIPT_DIR="$SLURM_SUBMIT_DIR"
 cd "$SCRIPT_DIR"
 
-E3_DIR="$HOME/workdata/chronologic-dating-corpus/passages/e3"
+E3_DIR="$SCRIPT_DIR"
 
 python -u train_date_deberta.py \
     --model-name microsoft/deberta-v3-large \
     --train-file "$E3_DIR/train.jsonl" \
     --val-file "$E3_DIR/val.jsonl" \
     --sigma 15 \
-    --epochs 3 \
+    --epochs 5 \
     --batch-size 16 \
     --effective-batch-size 32 \
     --learning-rate 2e-5 \
@@ -89,10 +89,10 @@ python -u train_date_deberta.py \
     --adam-epsilon 1e-6 \
     --warmup-ratio 0.1 \
     --max-length 256 \
-    --best-metric crps \
+    --best-metric loss \
     --save-strategy best \
     --device cuda \
-    --run-name e3_v1
+    --run-name e3_v2
 
 echo "Job completed"
 date

@@ -30,10 +30,9 @@ cd "$SCRIPT_DIR"
 
 python benchmark_evaluation.py \
     Qwen/Qwen2.5-7B-Instruct \
-    ../booksample/chronologic_en_0.1.jsonl \
+    ../booksample/chronologic_en_0.8.jsonl \
     --lora-adapter ../qwentuning/checkpoints/run1/checkpoint-3500 \
-    --full-eval \
-    --verbose-report
+    --full-eval --output-dir prob08
 
 echo "Job completed"
 date
